@@ -10,58 +10,16 @@
 #define BAUD_RATE_SERIAL 230400 // baud rate for USB serial
 #define BAUD_RATE_ODRIVE 115200 // baud rate for ODrive
 
-// Ethernet communication parameters
-#define PORT 1178               // Ethernet connection port
 #define MAX_DATA_SIZE 128       // max number of bytes for a data array
-#define DELAY 100               // used in sendHTTPRequest
-
-// update loop parameters
-#define DT_ACTUATION 2      // motor command update period in ms
-#define DT_STATE 2          // motor state update period in ms
-#define DT_SETPOINT 50      // joint setpoint update period in ms
-#define DT_SENSOR 50        // sensor reading period in ms
-#define DT_PRINT 100        // data print period in ms
-
-// transmission parameters
-#define N_DIFF_RING 34.0    // number of teeth on differential ring gear
-#define N_DIFF_PINION 11.0  // number of teeth on the drive hub
-#define D_LEG_SPUR 17.0     // pitch diameter (in mm) of the leg spur gear
-#define D_TRANS_SPUR 19.0   // pitch diameter (in mm) of the translation spur gear
-#define N_T_LEG (N_DIFF_PINION/N_DIFF_RING)*(D_LEG_SPUR/2)    // this evaluates to 2.75
-
-// joint, actuation, and gait parameters  
-#define Q_LEG_MIN 10.       // min prismatic leg extension in mm
-#define Q_LEG_MAX 450.      // max prismatic leg extension in mm
-#define Q_LEG_OFFSET 52.0   // additional leg extension for upper prismatic legs in mm
-#define Q_TRANS_MAX 140.    // max body translation from midpoint (zero position) in mm 
-#define Q_YAW_MAX 0.15      // max body yaw from sagittal plane (zero position) in radians
-#define MAX_TILT 0.04       // max allowable pitch or roll in radians
-#define Q_DOT_LEG_MAX 300.  // max prismatic leg speed in mm/s
-#define Q_DOT_TRANS_MAX 50. // max body translation speed in mm/s
-#define Q_DOT_YAW_MAX 0.52  // max body yaw speed in rad/s
-#define E_LINEAR 5          // allowable positional error in mm
-#define E_ANGULAR 0.015     // allowable positional error in radians
-
-#define Q_LEG_STANCE 300.   // prismatic leg stance setpoint in mm
-#define Q_LEG_SWING 250.    // prismatic leg swing setpoint in mm
-#define Q_TRANS 70.         // body translation setpoint in mm 
-
-#define DQ_EARLY_STEP 0.2   // distance to Q_TRANS (in percentage) at which step down begins early
-#define DQ_EARLY_LIFT 0.    // distance to Q_LEG_STANCE (in percentage) at which lift off begins early
-#define DQ_EARLY_CORRECT 0.4// distance to Q_LEG_SWING (in percentage) at which tilt correct begins early
-#define DQ_EARLY_TRANS 0.2  // distance to tilt correction setpoint at which translation begins early
 
 // ODrive variables
-HardwareSerial SERIAL_OD[N_ODRIVE] = {SERIAL_OD1, SERIAL_OD2, SERIAL_OD3};                  // array of serial ports for ODrive motor controllers
-ODrive myODrives[N_ODRIVE] = {ODrive(SERIAL_USB, SERIAL_OD1, BAUD_RATE_ODRIVE),
-                              ODrive(SERIAL_USB, SERIAL_OD2, BAUD_RATE_ODRIVE),
-                              ODrive(SERIAL_USB, SERIAL_OD3, BAUD_RATE_ODRIVE)};  // array of ODrive objects
+ODrive myODrives[N_ODRIVE] = {ODrive(SERIAL_OD1, BAUD_RATE_ODRIVE, SERIAL_USB),
+                              ODrive(SERIAL_OD2, BAUD_RATE_ODRIVE, SERIAL_USB),
+                              ODrive(SERIAL_OD3, BAUD_RATE_ODRIVE, SERIAL_USB)};  // array of ODrive objects
 
 // communication variables
 char receivedData[MAX_DATA_SIZE] = "";
 char sentData[MAX_DATA_SIZE] = "";
-unsigned long dt;
-unsigned long t_start;
 
 //////////////////////////////////////////////////////////////////////////
 void setup() {
