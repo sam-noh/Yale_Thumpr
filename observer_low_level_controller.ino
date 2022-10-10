@@ -3,21 +3,21 @@
 
 // serial communication parameters
 #define SERIAL_USB Serial       // Serial (USB), Serial<x> (Hardware serial) e.g. Serial5
-#define SERIAL_OD1 Serial2      // hardware serial port for ODrive 1 (1 rear, 2 front)
-#define SERIAL_OD2 Serial6      // hardware serial port for ODrive 2 (1 left, 2 right)
+#define SERIAL_OD1 Serial1      // hardware serial port for ODrive 1 (1 rear, 2 front)
+#define SERIAL_OD2 Serial2      // hardware serial port for ODrive 2 (1 left, 2 right)
 #define SERIAL_OD3 Serial7      // hardware serial port for ODrive 3 (1 translate, 2 yaw)
 #define BAUD_RATE_SERIAL 230400 // baud rate for USB serial
-#define BAUD_RATE_ODRIVE 230400 // baud rate for ODrive
-//#define BAUD_RATE_ODRIVE 57600  // baud rate for ODrive
-#define DELAY_STD 20            // standard delay in ms between setup function calls
+#define BAUD_RATE_ODRIVE 115200  // baud rate for ODrive
+#define DELAY_STD 100           // standard delay in ms between setup function calls
 #define N_ODRIVE 3              // number of ODrive motor controllers
 #define N_ACTUATOR 6            // number of actuators
 #define MAX_DATA_SIZE 128       // max number of chars in sent/received data array
 
 // actuation parameters
 #define HOMING_VEL_LEG -5.        // homing velocity for the leg motor in turns/s
-#define HOMING_VEL_TRANS 2.       // homing velocity for the translation motor in turns/s
-#define HOMING_OFFSET_TRANS -2.1  // distance from the joint limit to the zero position for the translation mechanism in turns
+#define HOMING_VEL_TRANS 1.5      // homing velocity for the translation motor in turns/s
+#define HOMING_OFFSET_TRANS -1.9  // distance from the joint limit to the zero position for the translation mechanism in turns
+#define Q_YAW_ZERO -0.005         // encoder reading at yaw mechanism's zero position
 
 #define Q_ERROR_MAX 0.15          // maximum allowable position error
 
@@ -28,10 +28,10 @@
 #define N_T_LEG (N_DIFF_PINION/N_DIFF_RING)*(D_LEG_SPUR/2)    // this evaluates to 2.75
 
 // update loop parameters
-#define DT_ACTUATION 5      // motor command update period in ms
-#define DT_STATE 5          // motor state update period in ms
-#define DT_SETPOINT 10      // joint setpoint update period in ms
-#define DT_PRINT 50         // data print period in ms
+#define DT_ACTUATION 10       // motor command update period in ms
+#define DT_STATE 50           // motor state update period in ms
+#define DT_SETPOINT 10        // joint setpoint update period in ms
+#define DT_PRINT 50          // data print period in ms
 
 // ODrive and actuator variables
 ODrive myODrives[N_ODRIVE] = {ODrive(SERIAL_OD1, BAUD_RATE_ODRIVE, SERIAL_USB),
@@ -60,10 +60,10 @@ float q_cur[] = {0, 0, 0, 0, 0, 0};     // current joint position in turns (need
 float q_target[] = {0, 0, 0, 0, 0, 0};  // target joint position in turns (need to be updated to radians and mm)
 
 // joint, actuation, and gait parameters  
-float q_stance = 82;        // target position for lower body stance in turns
+float q_stance = 100;        // target position for lower body stance in turns
 float q_stance_offset = 38; // target position offset for upper body stance in turns
-float dq_swing_pcnt = 0.5;  // proportion of q_stance (for both lower and upper legs) to retract during swing
-float q_trans = 0.7;        // target position for body translation in turns
+float dq_swing_pcnt = 0.8;  // proportion of q_stance (for both lower and upper legs) to retract during swing
+float q_trans = 1.2;        // target position for body translation in turns
 float q_yaw = 0.05;         // target body yaw for turning step in turns
 float max_tilt = 0.04;      // max allowable pitch or roll in radians (not used yet)
 
@@ -71,10 +71,10 @@ float max_tilt = 0.04;      // max allowable pitch or roll in radians (not used 
 // value of 1 means one gait phase is fully completed before next one begins
 float q_0[2] = {0, 0};              // initial position of the joint corresponding to the current gait phase
                                     // used for q_leg_0 or q_trans_0 in early transition calculation
-float dq_early_step_pcnt = 0.5;     // % of (q_trans_f - q_trans_0) at which step down begins early
-float dq_early_lift_pcnt = 1;       // % of (q_leg_f - q_leg_0) in stance at which lift off begins early
-float dq_early_correct_pcnt = 0.6;  // % of (q_leg_f - q_leg_0) in swing at which tilt correction begins early
-float dq_early_trans_pcnt = 0.8;    // % of (q_leg_f - q_leg_0) in tilt correction at which translation begins early
+float dq_early_step_pcnt = 0.4;     // % of (q_trans_f - q_trans_0) at which step down begins early
+float dq_early_lift_pcnt = 0.95;       // % of (q_leg_f - q_leg_0) in stance at which lift off begins early
+float dq_early_correct_pcnt = 0.4;  // % of (q_leg_f - q_leg_0) in swing at which tilt correction begins early
+float dq_early_trans_pcnt = 0.4;    // % of (q_leg_f - q_leg_0) in tilt correction at which translation begins early
 
 float gaitSetpoints[2][3] = {           // joint target positions for upper/lower body gait phases
   {-q_trans, q_stance + q_stance_offset, q_stance*(1-dq_swing_pcnt) + q_stance_offset},
@@ -112,54 +112,27 @@ bool stopSignal = false;
 void setup() {
   initUSBSerial();
   initODrives();    // check motor/encoder calibration
-  homeMotors();     // actuator position after homing is assumed to be the new zero position
+//  retractLegs();    // retract all prismatic legs to the endstop
+//  homeMotors();     // actuator position after homing is assumed to be the new zero position
   initActuators();  // set zero position and enter closed-loop control
 
-  updateStates();
-  updateSetpoints();
-  updateMotorCommands();
-  transmitData();
-
-//  myActuators[0].setPosition(120);
-//  myActuators[1].setPosition(120);
-//  delay(1700);
-//  myActuators[4].setPosition(0.7);
-//  delay(1000);
-//  myActuators[2].setPosition(82);
-//  myActuators[3].setPosition(82);
-//  delay(2000);
+//  updateStates();
+//  updateSetpoints();
+//  updateMotorCommands();
+//  transmitData();
 }
 
 void loop() {
   while (!stopSignal & (gaitCycles < 20)) {
     updateStates();
-    updateGait();
-    updateMotorCommands();
+//    updateGait();
+//    updateMotorCommands();
     transmitData();
   }
-//  
-//  while (!stopSignal & (gaitCycles < 20)) {
-//    myActuators[0].setPosition(70);
-//    myActuators[1].setPosition(70);
-//    delay(1000);
-//    myActuators[4].setPosition(-0.7);
-//    delay(1500);
-//    myActuators[0].setPosition(120);
-//    myActuators[1].setPosition(120);
-//    delay(2000);
-//  
-//    myActuators[2].setPosition(32);
-//    myActuators[3].setPosition(32);
-//    delay(1000);
-//    myActuators[4].setPosition(0.7);
-//    delay(1500);
-//    myActuators[2].setPosition(82);
-//    myActuators[3].setPosition(82);
-//    delay(2000);
-//  }
-//  stopActuators();
-//  Serial.println("End.");
-//  delay(10000);
+  
+  stopActuators();
+  Serial.println("End.");
+  delay(10000);
 }
 
 void updateGait() {
@@ -185,7 +158,6 @@ void updateGait() {
 
     // if ready for gait phase transition
     if (isReadyForTransition(idx[0], idx[1], gaitPhase)) {
-//      SERIAL_USB.println("switching gait phase");
       gaitPhase = (gaitPhase + 1) % 4; // move to next gait phase
       if(gaitPhase == 2 ) {            // if a gait cycle is completed, switch the swing body
         swing = (swing + 1) % 2;
@@ -203,8 +175,6 @@ void updateGait() {
       
       updateSetpoints();
     }
-    snprintf(sentData, sizeof(sentData), "updateGait() took %lu ms\n", (millis()-curT));
-    transmitMsg(sentData);
   }
 }
 
@@ -247,13 +217,13 @@ void updateStates() {
     prevTState = curT;
 
     // update motor position, velocity, torque, current, error
-    for (uint8_t i = 0; i < N_ACTUATOR; i++) {  // update motor states
+    for (uint8_t i = 0; i < 6; i++) {  // update motor states
       motorStates[i][0] = myActuators[i].getPosition();
       q_cur[i] = motorStates[i][0];   // for now, just track states in units of motor turns
-      motorStates[i][1] = myActuators[i].getVelocity();
-      motorStates[i][2] = myActuators[i].getTorque();
-      motorStates[i][3] = myActuators[i].getCurrent();
-      motorErrors[i] = myActuators[i].getError();
+//      motorStates[i][1] = myActuators[i].getVelocity();
+//      motorStates[i][2] = myActuators[i].getTorque();
+//      motorStates[i][3] = myActuators[i].getCurrent();
+//      motorErrors[i] = myActuators[i].getError();
 
       if (motorErrors[i]) { // if ODrive reports an axis error
         myODrives[i/2].clearErrors();  // try to clear the error and enter closed-loop control again
@@ -271,22 +241,22 @@ void updateStates() {
     }
 
     // update controller voltage, current, power
-    for (uint8_t i = 0; i < N_ODRIVE; i++) {    // update ODrive power states
-      odrivePower[i][0] = myODrives[i].getBusVoltage();
-      odrivePower[i][1] = myODrives[i].getBusCurrent();
-      odrivePower[i][2] = odrivePower[i][0]*odrivePower[i][1];
-    }
-
-    // calculate system voltage, current, power, energy consumption
-    systemPower[0] = (odrivePower[0][0] + odrivePower[1][0] + odrivePower[2][0])/3;
-    systemPower[1] = odrivePower[0][1] + odrivePower[1][1] + odrivePower[2][1];
-    systemPower[2] = odrivePower[0][2] + odrivePower[1][2] + odrivePower[2][2];
-    systemPower[3] += systemPower[2]*(dt*0.001);
+//    for (uint8_t i = 0; i < N_ODRIVE; i++) {    // update ODrive power states
+//      odrivePower[i][0] = myODrives[i].getBusVoltage();
+//      odrivePower[i][1] = myODrives[i].getBusCurrent();
+//      odrivePower[i][2] = odrivePower[i][0]*odrivePower[i][1];
+//    }
+//
+//    // calculate system voltage, current, power, energy consumption
+//    systemPower[0] = (odrivePower[0][0] + odrivePower[1][0] + odrivePower[2][0])/3;
+//    systemPower[1] = odrivePower[0][1] + odrivePower[1][1] + odrivePower[2][1];
+//    systemPower[2] = odrivePower[0][2] + odrivePower[1][2] + odrivePower[2][2];
+//    systemPower[3] += systemPower[2]*(dt*0.001);
 
     // update IMU pose estimation
     // update any other sensors
-    snprintf(sentData, sizeof(sentData), "updateStates() took %lu ms\n", (millis()-curT));
-    transmitMsg(sentData);
+//    snprintf(sentData, sizeof(sentData), "updateStates took %lu ms\n", millis()-curT);
+//    transmitMsg(sentData);
   }
 }
 
@@ -297,8 +267,6 @@ void updateMotorCommands() {
     for (uint8_t i = 0; i < N_ACTUATOR; i++) {
       myActuators[i].setPosition(q_target[i]);   // may be replaced with torque control with MPC
     }
-    snprintf(sentData, sizeof(sentData), "updateMotorCommands() took %lu ms\n", (millis()-curT));
-    transmitMsg(sentData);
   }
 }
 
@@ -308,12 +276,12 @@ void initActuators() {
     transmitMsg(sentData);
     myActuators[i].setHome();
     myActuators[i].enable();
+    
     delay(DELAY_STD);
   }
 
   snprintf(sentData, sizeof(sentData), "Actuators initialized.\n---------------------------------------------\n\n");
   transmitMsg(sentData);
-  delay(500);
 }
 
 void stopActuators() {
@@ -330,7 +298,7 @@ void stopActuators() {
 
 void initUSBSerial() {
   SERIAL_USB.begin(BAUD_RATE_SERIAL);
-  delay(100);
+  delay(DELAY_STD);
   snprintf(sentData, sizeof(sentData), "Teensy started.\n\n");
   transmitMsg(sentData);
 }
@@ -346,7 +314,6 @@ void initODrives() {
 
   snprintf(sentData, sizeof(sentData), "ODrives initialized.\n---------------------------------------------\n\n");
   transmitMsg(sentData);
-  delay(500);
 }
 
 void stopODrives() {
@@ -358,6 +325,40 @@ void stopODrives() {
   }
 
   snprintf(sentData, sizeof(sentData), "ODrives stopped.\n---------------------------------------------\n\n");
+  transmitMsg(sentData);
+}
+
+void retractLegs() {
+  snprintf(sentData, sizeof(sentData), "Retracting all legs...\n\n");
+  transmitMsg(sentData);
+
+  for (uint8_t i = 0; i < 4; i++) {
+    myActuators[i].enable();
+    delay(DELAY_STD);
+    myActuators[i].switchToVelocityControl();
+    myActuators[i].setVelocity(HOMING_VEL_LEG);
+  }
+
+  delay(DELAY_STD);
+  bool moving[4] = {true, true, true, true};
+
+  while (moving[0] || moving[1] || moving[2] || moving[3]) {
+    curT = millis();
+    if (curT - prevTState >= 20) {
+      prevTState= curT;
+      for (uint8_t i = 0; i < 4; i++) {
+        if (moving[i] && abs(myActuators[i].getVelocity()) < 1) {
+          myActuators[i].setVelocity(0);
+          myActuators[i].switchToPositionControl();
+          myActuators[i].disable();
+          moving[i] = false;
+          snprintf(sentData, sizeof(sentData), "Leg actuator %d done retracting.\n******************************************************\n", i+1);
+          transmitMsg(sentData);
+        }
+      }
+    }
+  }
+  snprintf(sentData, sizeof(sentData), "Finished retracting legs.\n---------------------------------------------\n\n");
   transmitMsg(sentData);
 }
 
@@ -378,7 +379,7 @@ void homeMotors() {
 
   snprintf(sentData, sizeof(sentData), "Homing the yaw mechanism...\n");
   transmitMsg(sentData);
-  myODrives[2].setPosition(1, 0.18);  // yaw mechanism's range of motion is < 1 rev so the abs encoder can be used directly
+  myODrives[2].setPosition(1, Q_YAW_ZERO);  // yaw mechanism's range of motion is < 1 rev so the abs encoder can be used directly
 
   snprintf(sentData, sizeof(sentData), "Homing finished.\n---------------------------------------------\n\n");
   transmitMsg(sentData);
@@ -388,12 +389,12 @@ void transmitData() {
   curT = millis();
   if (curT - prevTPrint >= DT_PRINT) {
     prevTPrint = curT;
-    snprintf(sentData, sizeof(sentData), "%lu\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t\
+    snprintf(sentData, sizeof(sentData), "%lu\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\
             %.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t",
             curT, q_cur[0], q_cur[1], q_cur[2], q_cur[3], q_cur[4], q_cur[5],   // time and joint positions
             q_target[0], q_target[1], q_target[2], q_target[3], q_target[4], q_target[5]);
     transmitMsg(sentData);
-    snprintf(sentData, sizeof(sentData), "%d\t%d\t%lu\t\
+    snprintf(sentData, sizeof(sentData), "%d\t%d\t%lu\
             %.2f\t%.2f\t%.2f\t%.2f\n", 
             swing, gaitPhase, gaitCycles,
             systemPower[0], systemPower[1], systemPower[2], systemPower[3]);    // system voltage, current, power, energy consumption
