@@ -1,8 +1,7 @@
-#ifndef Actuator_h
-#define Actuator_h
+#ifndef ACTUATOR_H
+#define ACTUATOR_H
 
-#include "ODriveTeensyCAN.h"
-#include "float.h"
+#include "..\ODriveTeensyCAN\ODriveTeensyCAN.h"
 
 class Actuator {
 
@@ -10,19 +9,20 @@ class Actuator {
   // all position commands are converted to pos_abs by subtracting pos_home (when not homed, pos_home = 0)
   // e.g. if pos_home is -3 and the position command is 50, the actuator will move to pos_abs = 53
   struct axisStates{
-    uint8_t state;          // ODrive axis current state (odrv<>.axis<>.current_state)
+    uint8_t axis_state;     // ODrive axis current state (odrv<>.axis<>.current_state)
     uint8_t ctrl_mode;      // ODrive axis control mdoe (odrv<>.axis<>.controller.config.control_mode)
-    uint32_t axisError;     // ODrive axis error (odrv<>.axis<>.error)
+    uint32_t axis_error;    // ODrive axis error (odrv<>.axis<>.error)
     bool homed;             // false until homed and manually to true
     bool holding;           // true if fabs(q-q_d) < Q_MAX_ERROR
 
-    // "actuator space" values
+    // "motor space" values
     float pos_abs;          // motor position reported by the ODrive after powerup (turns)
-    float pos_rel;          // pos_rel = pos_abs - pos_home (turns)
     float pos_home;         // pos_abs at home
+    float pos_rel;          // pos_rel = pos_abs - pos_home (turns)
     float vel;              // motor velocity (turns/s)
     float current;          // motor current draw (amps)
     float torque;           // motor torque (Nm)
+    float torque_setpoint;  // motor torque setpoint (Nm)
 
     // joint space values
     float q;                // joint position in mm or deg (transmission ratio*pos_rel)
@@ -35,6 +35,10 @@ class Actuator {
 
     float tau;              // joint force/torque in F or Nm (equal to motor torque for now)
     float tau_d;            // joint force/torque setpoint in F or Nm
+
+    // additional ODrive states
+    float fet_temp;         // FET thermistor temperature
+    float motor_temp;       // motor thermistor temperature
   };
 
   // constant values
@@ -46,14 +50,15 @@ class Actuator {
   };
 
   private:
-    ODriveTeensyCAN myODrive;                 // ODrive object to call member functions
-    usb_serial_class & myUSBSerial = Serial;  // Serial object for printing debug info
-    char sentData[128] = "";
-    
+    ODriveTeensyCAN ODrive_;                 // ODrive object to call member functions
+    usb_serial_class & USB_serial_ = Serial;  // Serial object for printing debug info
 
   public:
-    struct axisStates states;
-    struct axisParams params;
+    struct axisStates states_;
+    struct axisParams params_;
+
+    // default constructor
+    // Actuator();
 
     // alternate constructor
     Actuator(const ODriveTeensyCAN & _ODrive, usb_serial_class & _USB_Serial,  uint8_t _axis, int _direction, float _transmissionRatio, float _torqueConstant, float _minPos, float _maxPos);
