@@ -5,13 +5,27 @@
 // Actuator::Actuator() {}
 
 // alternate constructor
-Actuator::Actuator(const ODriveTeensyCAN & _ODrive, usb_serial_class & _USB_Serial, uint8_t _axis, int _direction, float _T, float _K_T, float _qMin, float _qMax): ODrive_(_ODrive), USB_serial_(_USB_Serial) {
-    states_.homed = false;
-    states_.holding = false;
+Actuator::Actuator(const ODriveTeensyCAN & _ODrive, usb_serial_class & _USB_Serial, uint8_t _axis, int _direction, float _T, float _K_T, float _qMin, float _qMax,
+                   float _vel_lim, float _cur_lim, float _tt_accel_limit, float _tt_decel_limit, float _tt_vel_limit): ODrive_(_ODrive), USB_serial_(_USB_Serial) {
+    
     states_.axis_state = 0;
     states_.ctrl_mode = 0;
     states_.axis_error = 0;
+
+    states_.velocity_limit = _vel_lim;
+    states_.current_limit = _cur_lim;
+
+    states_.trap_traj_accel_limit = _tt_accel_limit;
+    states_.trap_traj_decel_limit = _tt_decel_limit;
+    states_.trap_traj_vel_limit = _tt_vel_limit;
+
+    states_.homed = false;
+    states_.holding = false;
+
     states_.pos_home = 0;
+    states_.q_d = 0;
+    states_.q_dot_d = 0;
+    states_.tau_d = 0;
     states_.q_min = _qMin;
     states_.q_max = _qMax;
     params_.axis = _axis;
@@ -24,10 +38,10 @@ bool Actuator::enable() {
     bool success = ODrive_.RunState(params_.axis, ODriveTeensyCAN::AxisState_t::kAxisStateClosedLoopControl);
     if (success) {
         states_.axis_state = ODriveTeensyCAN::AxisState_t::kAxisStateClosedLoopControl;
-        snprintf(sent_data, sizeof(sent_data), "Actuator %d entered closed-loop control.\n", params_.axis+1);
+        snprintf(sent_data, sizeof(sent_data), "Actuator %d entered closed-loop control.\n\n", params_.axis+1);
         USB_serial_.print(sent_data);
     } else {
-        snprintf(sent_data, sizeof(sent_data), "Actuator %d failed to enter closed-loop control.\n", params_.axis+1);
+        snprintf(sent_data, sizeof(sent_data), "Actuator %d failed to enter closed-loop control.\n\n", params_.axis+1);
         USB_serial_.print(sent_data);
     }
     return success;
@@ -38,16 +52,16 @@ bool Actuator::disable() {
         bool success = ODrive_.RunState(params_.axis, ODriveTeensyCAN::AxisState_t::kAxisStateIdle);
         if (success) {
             states_.axis_state = ODriveTeensyCAN::AxisState_t::kAxisStateIdle;
-            snprintf(sent_data, sizeof(sent_data), "Actuator %d entered idle mode.\n", params_.axis+1);
+            snprintf(sent_data, sizeof(sent_data), "Actuator %d entered idle mode.\n\n", params_.axis+1);
             USB_serial_.print(sent_data);
         } else {
-            snprintf(sent_data, sizeof(sent_data), "Actuator %d failed to enter idle mode.\n", params_.axis+1);
+            snprintf(sent_data, sizeof(sent_data), "Actuator %d failed to enter idle mode.\n\n", params_.axis+1);
             USB_serial_.print(sent_data);
         }
         return success;
         
     } else {
-        snprintf(sent_data, sizeof(sent_data), "Actuator %d already in idle.\n", params_.axis+1);
+        snprintf(sent_data, sizeof(sent_data), "Actuator %d already in idle.\n\n", params_.axis+1);
         USB_serial_.print(sent_data);
         return true;
     }
@@ -55,7 +69,7 @@ bool Actuator::disable() {
 
 void Actuator::sendCommand(uint8_t mode, float val) {
     if (mode != states_.ctrl_mode) {
-        snprintf(sent_data, sizeof(sent_data), "Actuator %d is in incorrect control mode.\n", params_.axis+1);
+        snprintf(sent_data, sizeof(sent_data), "Actuator %d is in incorrect control mode.\n\n", params_.axis+1);
         USB_serial_.print(sent_data);
         return;
     }
@@ -91,27 +105,38 @@ void Actuator::setControlMode(uint8_t mode) {
                                    ODriveTeensyCAN::ControlMode_t::kPositionControl,
                                    ODriveTeensyCAN::InputMode_t::kTrapTraj);     // 3 = pos ctrl, 5 = trapezoidal trajectory
         states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
+
+        #ifdef DEBUG_MOTOR_CONTROLLER
         snprintf(sent_data, sizeof(sent_data), "Entering position control.\n");
-        USB_serial_.print(sent_data);
+        writeToSerial();
+        #endif
 
     } else if (mode == ODriveTeensyCAN::ControlMode_t::kVelocityControl) {
         ODrive_.SetControllerModes(params_.axis,
                                    ODriveTeensyCAN::ControlMode_t::kVelocityControl,
                                    ODriveTeensyCAN::InputMode_t::kPassthrough);  // 2 = vel ctrl, 1 = passthrough input
         states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kVelocityControl;
+
+        #ifdef DEBUG_MOTOR_CONTROLLER
         snprintf(sent_data, sizeof(sent_data), "Entering velocity control.\n");
-        USB_serial_.print(sent_data);
+        writeToSerial();
+        #endif
 
     } else if (mode  == ODriveTeensyCAN::ControlMode_t::kTorqueControl) {
         ODrive_.SetControllerModes(params_.axis,
                                    ODriveTeensyCAN::ControlMode_t::kTorqueControl,
                                    ODriveTeensyCAN::InputMode_t::kPassthrough);  // 1 = torque ctrl, 1 = passthrough input
         states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;
+
+        #ifdef DEBUG_MOTOR_CONTROLLER
         snprintf(sent_data, sizeof(sent_data), "Entering torque control.\n");
-        USB_serial_.print(sent_data);
+        writeToSerial();
+        #endif
         
     } else {
+        #ifdef DEBUG_MOTOR_CONTROLLER
         snprintf(sent_data, sizeof(sent_data), "Invalid control mode.\n");
-        USB_serial_.print(sent_data);
+        writeToSerial();
+        #endif
     }
 }

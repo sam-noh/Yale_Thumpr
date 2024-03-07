@@ -3,6 +3,8 @@
 
 #include "..\ODriveTeensyCAN\ODriveTeensyCAN.h"
 
+// #define DEBUG_MOTOR_CONTROLLER
+
 class Actuator {
 
   // the ODrive only knows pos_abs
@@ -12,17 +14,26 @@ class Actuator {
     uint8_t axis_state;     // ODrive axis current state (odrv<>.axis<>.current_state)
     uint8_t ctrl_mode;      // ODrive axis control mdoe (odrv<>.axis<>.controller.config.control_mode)
     uint32_t axis_error;    // ODrive axis error (odrv<>.axis<>.error)
+
+    // motor limits
+    float velocity_limit;
+    float current_limit;
+
+    float trap_traj_accel_limit;
+    float trap_traj_decel_limit;
+    float trap_traj_vel_limit;
+
     bool homed;             // false until homed and manually to true
     bool holding;           // true if fabs(q-q_d) < Q_MAX_ERROR
 
     // "motor space" values
-    float pos_abs;          // motor position reported by the ODrive after powerup (turns)
+    float pos_abs;          // motor position reported by the ODrive after powerup (turns); <axis>.pos_vel_mapper.pos_rel or <axis>.pos_vel_mapper.pos_abs, depending on ODrive.Controller.Config.absolute_setpoints
     float pos_home;         // pos_abs at home
     float pos_rel;          // pos_rel = pos_abs - pos_home (turns)
     float vel;              // motor velocity (turns/s)
     float current;          // motor current draw (amps)
     float torque;           // motor torque (Nm)
-    float torque_setpoint;  // motor torque setpoint (Nm)
+    float torque_d;         // motor torque setpoint (Nm)
 
     // joint space values
     float q;                // joint position in mm or deg (transmission ratio*pos_rel)
@@ -39,6 +50,9 @@ class Actuator {
     // additional ODrive states
     float fet_temp;         // FET thermistor temperature
     float motor_temp;       // motor thermistor temperature
+
+    float bus_voltage;
+    float bus_current;
   };
 
   // constant values
@@ -61,7 +75,8 @@ class Actuator {
     // Actuator();
 
     // alternate constructor
-    Actuator(const ODriveTeensyCAN & _ODrive, usb_serial_class & _USB_Serial,  uint8_t _axis, int _direction, float _transmissionRatio, float _torqueConstant, float _minPos, float _maxPos);
+    Actuator(const ODriveTeensyCAN & _ODrive, usb_serial_class & _USB_Serial,  uint8_t _axis, int _direction, float _transmissionRatio, float _torqueConstant, float _minPos, float _maxPos,
+             float _vel_lim, float _cur_lim, float _tt_accel_limit, float _tt_decel_limit, float _tt_vel_limit);
 
     bool enable();                // enters closed-loop control
     bool disable();               // enters idle state

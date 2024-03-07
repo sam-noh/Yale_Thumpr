@@ -11,12 +11,13 @@ static const float feedforwardFactor = 1 / 0.001;
 template<class T> inline Print& operator <<(Print &obj,     T arg) { obj.print(arg);    return obj; }
 template<>        inline Print& operator <<(Print &obj, float arg) { obj.print(arg, 4); return obj; }
 
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> myCAN;
+FlexCAN_T4<CAN1, RX_SIZE_512, TX_SIZE_128> myCAN;    // CAN1, RX_SIZE_512, TX_SIZE_128
 
 ODriveTeensyCAN::ODriveTeensyCAN(int CANBaudRate) {
     this->CANBaudRate = CANBaudRate;
 	myCAN.begin();
     myCAN.setBaudRate(CANBaudRate);
+    myCAN.enableFIFO();
 }
 
 void ODriveTeensyCAN::sendMessage(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes) {
@@ -41,6 +42,12 @@ bool ODriveTeensyCAN::ReadMsg(CAN_message_t& inMsg) {
 		return false;
 	}
 }
+
+// void ODriveTeensyCAN::RxSdo(int axis_id, uint16 endpoint_id) {
+// 	byte* node_id_b = (byte*) &node_id;
+	
+// 	sendMessage(axis_id, kCmdIdRxSdo, false, 4, node_id_b);
+// }
 
 void ODriveTeensyCAN::Heartbeat(HeartbeatMsg_t &returnVals, CAN_message_t &inMsg) {
 	returnVals.parseMessage(inMsg);
@@ -281,7 +288,7 @@ bool ODriveTeensyCAN::RunState(int axis_id, int requested_state) {
     return true;
 }
 
-std::string ODriveTeensyCAN::error_to_string(ODriveError err) {
+std::string ODriveTeensyCAN::error_to_string(uint32_t err) {
 switch(err) {
     case ODRIVE_ERROR_NONE:
     return "ODRIVE_ERROR_NONE";

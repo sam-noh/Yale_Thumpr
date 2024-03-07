@@ -221,7 +221,7 @@ public:
     // State helper
     bool RunState(int axis_id, int requested_state);
 
-    std::string error_to_string(ODriveError err);
+    std::string error_to_string(uint32_t err);
 
 };
 

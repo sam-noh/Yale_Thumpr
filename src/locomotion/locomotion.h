@@ -19,17 +19,17 @@ enum ActuationPhases {
 };
 
 // kRetractLeg parameters
-const float kDqUnevenTerrain = 20;      // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
+const float kDqUnevenTerrain = 50;      // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
 
-// kTouchDown/contact detection parameters
-const float kDqStartContact = 20;       // leg displacment in mm past which contact detection begins
-const float kQdotContact = 0.5;         // joint velocity in mm/s below which contact is likely
+// body height regulation parameters
+const float k_zBodyMin = 100;           // minimum allowable value for z_body_local
+const float k_zBodyMax = 300;           // maximum allowable value for z_body_local
 
 // blocking motion primitive parameters
-const float kdzMax = 40;                // maximum allowed body height deviation in mm
+const float kdzMax = 30;                // maximum allowed body height deviation in mm
 const float kTiltNominal = 3;           // acceptable body tilt from zero in degrees
 const float kDqLegMaxTilt = 100;        // max total leg displacements per tilt correction
-const float kGyroStable = 0.04;         // calibrated gyro output value below which the robot body is considered to be not oscillating due to dynamics
+const float kOmegaStable = 5;           // lateral body angular velocity value in deg/s below which the robot body's inertial force is assumed to be negligible
 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
@@ -48,26 +48,22 @@ extern uint8_t actuation_phase;         // current actuation phase of the swing 
 extern uint32_t gait_cycles;            // number of completed gait cycles
 extern std::vector<int> inContact;      // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
 extern bool isBlocking;                 // true if any motion primitive outside of the standard gait cycle is in progress
-extern bool corrected;                  // true if a motion primitive has been completed during the gait cycle
+extern bool isCorrected;                // true if a motion primitive has been completed during the gait cycle
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
-extern float q_leg_stance;              // nominal (lower) leg stroke in stance (tested 250)
-extern float q_leg_swing;               // nominal (lower) leg stroke at max clearance in swing (tested 35 and 70)
-extern float q_trans;                   // nominal translation position in swing
-extern float q_yaw;                     // nominal yaw rotation per step
+extern float q_leg_stance;                  // nominal leg stroke in stance (tested 250)
+extern float leg_swing_percent;             // min leg stroke in swing as a percentage of q_leg_stance
+extern float q_trans;                       // nominal translation position in swing
+extern float q_yaw;                         // nominal yaw rotation per step
 
-extern float dq_leg_trans;              // remaining swing leg retraction at which forward translation begins (tested 50)
-extern float q_trans_transition;         // translation position at which swing leg step down begins; negative value is before the midpoint regardless of gait_phase
-extern float z_body_nominal;            // nominal body height over local terrain; currently taken as avg of stance leg motors joint position
+extern float swing_percent_at_translate;    // remaining swing leg retraction at which forward translation begins (tested 50)
+extern float q_trans_transition;            // translation position at which swing leg step down begins; negative value is before the midpoint regardless of gait_phase
+extern float z_body_nominal;                // nominal body height over local terrain; currently taken as avg of stance leg motors joint position
+extern float dz_body_local;                 // amount of body height change applied
 
-// motor setpoints that parameterize leg motion
-// 1. leg stroke at max clearance in swing; can change to speed up locomotion or clear taller obstacles
-// 2. translation position in swing; can change each step based on higher level planning
-// 3. leg stroke in stance; can change each step based on proprioceptive sensing (terrain slope change)
-extern std::vector<std::vector<float>> gait_setpoints;
-
-extern std::vector<float> q_leg_contacts;
+extern std::vector<float> q_leg_contact;    // position of the swing leg actuators when they were last in contact
+extern std::vector<float> q_leg_swing;      // position setpoint of swing leg actuators during leg retraction
 
 void homeLeggedRobot();
 
@@ -75,14 +71,12 @@ void standUp();
 
 void updateGait();
 
-void updateCmdVector();
+void updateTrajectory();
 
 void regulateBodyPose();
 
 bool isReadyForTransition(uint8_t phase);
 
 void updateSetpoints();
-
-void updateContactState();
 
 #endif

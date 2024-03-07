@@ -1,23 +1,44 @@
 #include "motor_control.h"
 #include "..\..\include\joint_defs.h"
 #include "..\mcu_util\mcu_util.h"
+#include "..\state_estimation\state_estimation.h"
 
 ODriveTeensyCAN ODrive_CAN = ODriveTeensyCAN(kODriveCANBaudRate);
 
-std::vector<Actuator> motors = {Actuator(ODrive_CAN, SERIAL_USB, 0, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax),
-                                Actuator(ODrive_CAN, SERIAL_USB, 1, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax),
-                                Actuator(ODrive_CAN, SERIAL_USB, 2, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax),
-                                Actuator(ODrive_CAN, SERIAL_USB, 3, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax),
-                                Actuator(ODrive_CAN, SERIAL_USB, 4, kDirectionTrans, kTxRatioTrans, k_KV_to_KT / k_KV_GL60, -kQTransMax, kQTransMax),
-                                Actuator(ODrive_CAN, SERIAL_USB, 5, kDirectionYaw, kTxRatioYaw, k_KV_to_KT / k_KV_GL60, -kQYawMax, kQYawMax)
-                                };
+std::vector<Actuator> motors = {Actuator(ODrive_CAN, SERIAL_USB, 0, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax,
+                                kVelLegMax, kCurrentLegMax, kAccelLegTrajSwing, kDecelLegTrajSwing, kVelLegTrajSwing),
+
+                                Actuator(ODrive_CAN, SERIAL_USB, 1, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax,
+                                kVelLegMax, kCurrentLegMax, kAccelLegTrajSwing, kDecelLegTrajSwing, kVelLegTrajSwing),
+
+                                Actuator(ODrive_CAN, SERIAL_USB, 2, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax,
+                                kVelLegMax, kCurrentLegMax, kAccelLegTrajSwing, kDecelLegTrajSwing, kVelLegTrajSwing),
+
+                                Actuator(ODrive_CAN, SERIAL_USB, 3, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax,
+                                kVelLegMax, kCurrentLegMax, kAccelLegTrajSwing, kDecelLegTrajSwing, kVelLegTrajSwing),
+
+                                Actuator(ODrive_CAN, SERIAL_USB, 4, kDirectionTrans, kTxRatioTrans, k_KV_to_KT / k_KV_GL60, -kQTransMax, kQTransMax,
+                                kVelTransMax, kCurrentTransMax, kAccelTransTraj, kDecelTransTraj, kVelTransTraj),
+
+                                Actuator(ODrive_CAN, SERIAL_USB, 5, kDirectionYaw, kTxRatioYaw, k_KV_to_KT / k_KV_GL60, -kQYawMax, kQYawMax,
+                                kVelYawMax, kCurrentYawMax, kAccelYawTraj, kDecelYawTraj, kVelYawTraj)};
 
 // reads the next CAN msg from an ODrive CAN node
 // calls member variables of Actuator objects
 uint32_t handleODriveCANMsg() {
   CAN_message_t msg;
   uint32_t msg_id = 0;  // this value corresponds to node_id = 0, cmd_id = 0
+
+  // stop code if the CAN messages have stopped coming in
+  if (t_last_CAN_msg > 0 && millis() - t_last_CAN_msg > kODriveCANWatchdogTimeout) {
+    snprintf(sent_data, sizeof(sent_data), "CAN watchdog timeout\n\n");
+    writeToSerial();
+    stop_signal = true;
+  }
+
   if (ODrive_CAN.ReadMsg(msg)) {
+    t_last_CAN_msg = millis();    // feed the watchdog
+
     msg_id = msg.id;
     uint8_t axis_id = getAxisID(msg_id);
     uint8_t cmd_id = getCmdID(msg_id);
@@ -27,10 +48,14 @@ uint32_t handleODriveCANMsg() {
       readHeartbeat(axis_id, msg);
 
       if (motors[axis_id].states_.axis_error) {
-        snprintf(sent_data, sizeof(sent_data), "ERROR: Axis %d encountered error %lu.\n", axis_id + 1, motors[axis_id].states_.axis_error);
-        transmitMsg();
+        snprintf(sent_data, sizeof(sent_data), "ERROR: Axis %d %s.\n\n", axis_id + 1, ODrive_CAN.error_to_string(motors[axis_id].states_.axis_error).c_str());
+        writeToSerial();
+        #ifdef ENABLE_SD_CARD
         writeToCard(sent_data);
-        stop_signal = true;
+        #endif
+        if (motors[axis_id].states_.axis_error != ODriveTeensyCAN::ODriveError::ODRIVE_ERROR_INITIALIZING) {
+          stop_signal = true;
+        }
       }
 
     // read active_error
@@ -59,7 +84,7 @@ uint32_t handleODriveCANMsg() {
       TorqueMsg_t torque_msg;
       ODrive_CAN.GetTorquesResponse(torque_msg, msg);
       motors[axis_id].states_.torque = torque_msg.Torque_Estimate;
-      motors[axis_id].states_.torque_setpoint = torque_msg.Torque_Target;
+      motors[axis_id].states_.torque_d = torque_msg.Torque_Target;
 
     // read temperature
     } else if (cmd_id == ODriveTeensyCAN::CommandId_t::kCmdIdGetTemperature) {
@@ -67,6 +92,23 @@ uint32_t handleODriveCANMsg() {
       ODrive_CAN.GetTemperatureResponse(temp_msg, msg);
       motors[axis_id].states_.fet_temp = temp_msg.FET_Temperature;
       motors[axis_id].states_.motor_temp = temp_msg.Motor_Temperature;
+
+      if (motors[axis_id].states_.motor_temp > kTemperatureLegMotorMax) {
+        snprintf(sent_data, sizeof(sent_data), "Motor %d over %.1f degrees Celsius.\n\n", axis_id + 1, kTemperatureLegMotorMax);
+        writeToSerial();
+        #ifdef ENABLE_SD_CARD
+        writeToCard(sent_data);
+        #endif
+        stop_signal = true;
+      }
+
+    // read bus voltage/current
+    } else if (cmd_id == ODriveTeensyCAN::CommandId_t::kCmdIdGetBusVoltageCurrent) {
+      BusViMsg_t bus_vi_msg;
+      ODrive_CAN.GetBusVoltageCurrentResponse(bus_vi_msg, msg);
+      motors[axis_id].states_.bus_voltage = bus_vi_msg.Bus_Voltage;
+      motors[axis_id].states_.bus_current = bus_vi_msg.Bus_Current;
+      
     }
   }
   return msg_id;
@@ -104,58 +146,133 @@ void readHeartbeat(uint8_t axis_id, CAN_message_t msg) {
 
 // looks for the ODrive CAN heartbeat msg and enters closed-loop control
 void initActuators() {
-  for (uint8_t i = 0; i < kNumOfActuators; i++) {
-    snprintf(sent_data, sizeof(sent_data), "Checking ODrive axis %d...\n", i + 1);
-    transmitMsg();
+  snprintf(sent_data, sizeof(sent_data), "Waiting for ODrives to power on...\n");
+  writeToSerial();
 
-    waitForHeartbeat(i);
-    snprintf(sent_data, sizeof(sent_data), "Current state: %d\tAxis error: %lu\n\n", motors[i].states_.axis_state, motors[i].states_.axis_error);
-    transmitMsg();
+  // wait for the first CAN message to come in
+  while (!handleODriveCANMsg()) {
+  }
+  uint32_t t_start = millis();
+  while(millis() - t_start < 1000) {
+    handleODriveCANMsg();
+  }
+  
+  // powering on the motor controllers after the logic leads to ODRIVE_ERROR_INITIALIZING, which can be cleared
+  for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
+    ODrive_CAN.ClearErrors(axis_id);
+  }
+  t_start = millis();
+  while(millis() - t_start < 1000) {
+    handleODriveCANMsg();
+  }
 
-    if (motors[i].states_.axis_error) {
+  for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
+    snprintf(sent_data, sizeof(sent_data), "Checking ODrive axis %d...\n", axis_id + 1);
+    writeToSerial();
+
+    waitForHeartbeat(axis_id);
+    snprintf(sent_data, sizeof(sent_data), "Current state: %d\tAxis error: %lu\n\n", motors[axis_id].states_.axis_state, motors[axis_id].states_.axis_error);
+    writeToSerial();
+
+    if (motors[axis_id].states_.axis_error) {
       digitalWrite(LED, HIGH);
+
       snprintf(sent_data, sizeof(sent_data), "Stopping. Check the axis error.\n");
-      transmitMsg();
+      writeToSerial();
+      
       while (true) {} // if there's an axis error, do not proceed
       
     } else {
-      snprintf(sent_data, sizeof(sent_data), "Putting actuator %d in closed-loop control...\n", i + 1);
-      transmitMsg();
-      motors[i].enable();
+      snprintf(sent_data, sizeof(sent_data), "Putting actuator %d in closed-loop control...\n", axis_id + 1);
+      writeToSerial();
+      motors[axis_id].enable();
     }
   }
 
   snprintf(sent_data, sizeof(sent_data), "All actuators in closed-loop control.\n---------------------------------------------\n\n");
-  transmitMsg();
+  writeToSerial();
 }
 
 // calls the Estop() function on all axes
 void stopActuators() {
-  for (uint8_t i = 0; i < kNumOfActuators; i++) {
-    snprintf(sent_data, sizeof(sent_data), "Stopping actuator %d...\n", i + 1);
-    transmitMsg();
-    ODrive_CAN.Estop(i);     // calling the Estop function will raise the error flag; needs ClearErrors(axis_id) or power cycling
+  for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
+    snprintf(sent_data, sizeof(sent_data), "Stopping actuator %d...\n", axis_id + 1);
+    writeToSerial();
+    ODrive_CAN.Estop(axis_id);     // calling the Estop function will raise the error flag; needs ClearErrors(axis_id) or power cycling
   }
 
   snprintf(sent_data, sizeof(sent_data), "Actuators stopped.\n---------------------------------------------\n\n");
-  transmitMsg();
+  writeToSerial();
+}
+
+// updates motor controller limits on all axes
+void updateMotorLimits() {
+  uint32_t t_current = millis();
+  if (t_current - t_last_motor_limits_update >= k_dtMotorLimitsUpdate) {
+    t_last_motor_limits_update = t_current;
+    
+    #ifdef DEBUG_TIMER
+    elapsedMicros timer;
+    #endif
+
+    for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
+
+      // update motor and controller limits
+      ODrive_CAN.SetLimits(axis_id, motors[axis_id].states_.velocity_limit, motors[axis_id].states_.current_limit);
+      ODrive_CAN.SetTrajVelLimit(axis_id, motors[axis_id].states_.trap_traj_vel_limit);
+      ODrive_CAN.SetTrajAccelLimits(axis_id, motors[axis_id].states_.trap_traj_accel_limit, motors[axis_id].states_.trap_traj_decel_limit);
+    }
+
+    #ifdef DEBUG_TIMER
+    SERIAL_USB.print("updating controller limits took\t\t");
+    SERIAL_USB.print(timer);
+    SERIAL_USB.print(" microseconds\n");
+    #endif
+
+  }
 }
 
 // updates motor commands on all axes
 void updateMotorCommands() {
   uint32_t t_current = millis();
-  if (t_current - t_last_motor_cmd >= k_dtMotorCmd) {
-    t_last_motor_cmd = t_current;
+  if (t_current - t_last_motor_cmd_update >= k_dtMotorCmdUpdate) {
+    t_last_motor_cmd_update = t_current;
     
-    for (uint8_t i = 0; i < kNumOfActuators; i++) {
-      if (motors[i].states_.ctrl_mode == ODriveTeensyCAN::ControlMode_t::kPositionControl) {  // if in position control
-        motors[i].sendCommand(ODriveTeensyCAN::ControlMode_t::kPositionControl, motors[i].states_.q_d);
-        motors[i].states_.holding = fabs(motors[i].states_.q - motors[i].states_.q_d) < kQErrorMax;
+    #ifdef DEBUG_TIMER
+    elapsedMicros timer;
+    #endif
 
-      } else if (motors[i].states_.ctrl_mode == ODriveTeensyCAN::ControlMode_t::kTorqueControl) {  // if in torque control
-        motors[i].sendCommand(ODriveTeensyCAN::ControlMode_t::kTorqueControl, motors[i].states_.tau_d);
+    for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
+
+      // update motor and controller limits
+      ODrive_CAN.SetLimits(axis_id, motors[axis_id].states_.velocity_limit, motors[axis_id].states_.current_limit);
+      ODrive_CAN.SetTrajVelLimit(axis_id, motors[axis_id].states_.trap_traj_vel_limit);
+      ODrive_CAN.SetTrajAccelLimits(axis_id, motors[axis_id].states_.trap_traj_accel_limit, motors[axis_id].states_.trap_traj_decel_limit);
+      motors[axis_id].setControlMode(motors[axis_id].states_.ctrl_mode);
+    }
+
+    // delay(15);
+
+    for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
+      // update motor command
+      if (motors[axis_id].states_.ctrl_mode == ODriveTeensyCAN::ControlMode_t::kPositionControl) {  // if in position control
+        motors[axis_id].sendCommand(ODriveTeensyCAN::ControlMode_t::kPositionControl, motors[axis_id].states_.q_d);
+        motors[axis_id].states_.holding = fabs(motors[axis_id].states_.q - motors[axis_id].states_.q_d) < kQErrorMax;
+
+      } else if (motors[axis_id].states_.ctrl_mode == ODriveTeensyCAN::ControlMode_t::kTorqueControl) {  // if in torque control
+        motors[axis_id].sendCommand(ODriveTeensyCAN::ControlMode_t::kTorqueControl, motors[axis_id].states_.tau_d);
+
+      } else if (motors[axis_id].states_.ctrl_mode == ODriveTeensyCAN::ControlMode_t::kVelocityControl) {  // if in velocity control
+        motors[axis_id].sendCommand(ODriveTeensyCAN::ControlMode_t::kVelocityControl, motors[axis_id].states_.q_dot_d);
       }
     }
+
+    #ifdef DEBUG_TIMER
+    SERIAL_USB.print("updating motor commands took\t\t");
+    SERIAL_USB.print(timer);
+    SERIAL_USB.print(" microseconds\n");
+    #endif
+
   }
 }
 

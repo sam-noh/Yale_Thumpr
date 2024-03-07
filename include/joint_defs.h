@@ -13,8 +13,8 @@ enum JointID {
     kJointMedialRearRight = 2,
     kJointMedialRearLeft = 3,
     kJointLateralFrontRight = 4,
-    kJointLateralFrontLeft = 5,
-    kJointLateralRearRight = 6,
+    kJointLateralRearRight = 5,
+    kJointLateralFrontLeft = 6,
     kJointLateralRearLeft = 7,
     kJointTranslate = 8,
     kJointYaw = 9
@@ -33,10 +33,10 @@ enum MotorID {
 const float kNumOfTeethDiffInput = 60.0;        // number of teeth of differential input gear
 const float kNumOfTeethDiffOutput = 30.0;       // number of teeth of differential output gear
 const float kWormGearRatio = 10.0;              // gear ratio of the worm drive
-const float kPitchDiaLegDrive = 30.0;           // pitch diameter in mm of the leg timing belt pulley
-const float kPitchDiaTrans = 24.0;              // pitch diameter in mm of the translation spur gear
-const float kPitchDiaYawInput = 20.0;           // pitch diameter in mm of the yaw input gear
-const float kPitchDiaYawOutput = 120.0;         // pitch diameter in mm of the yaw output gear
+const float kPitchDiaLegDrive = 19.101;         // pitch diameter in mm of the leg timing belt pulley
+const float kPitchDiaTrans = 20.0;              // pitch diameter in mm of the translation spur gear
+const float kPitchDiaYawInput = 15;             // pitch diameter in mm of the yaw input gear
+const float kPitchDiaYawOutput = 80;            // pitch diameter in mm of the yaw output gear
 
 // transmission ratio: joint position in mm or deg = T*motor revolutions
 const float kTxRatioLeg = PI*kPitchDiaLegDrive/(kWormGearRatio*kNumOfTeethDiffOutput/kNumOfTeethDiffInput);
@@ -46,18 +46,19 @@ const float kTxRatioYaw = 360*kPitchDiaYawInput/kPitchDiaYawOutput;
 
 // quadrature encoder counts per revolution
 const int k_CPR_AMT102_V = 8192;            // counts per revolution for the worm gearbox output encoder
+const int kDirectionWorm[] = {1, -1, -1, 1, 1, -1, -1, 1};
 
 // kinematic parameters
-const float kL_1 = 736.4;                 // perpendicular distance between opposite legs on the medial body
-const float kW_1 = 433.4;                 // perpendicular distance between opposite legs on the lateral body
-const float kBodyZOffset = 70;           // vertical distance between medial and lateral bodies
-const float stanceWidth[2] = {kW_1, kL_1};  // perpendiculuar distance between opposite legs in stance; used to calculate the required joint displacement for tilt control
+const float kL_1 = 728;                     // perpendicular distance between opposite legs on the medial body
+const float kW_1 = 468;                     // perpendicular distance between opposite legs on the lateral body
+const float kBodyZOffset = 0;               // vertical distance between medial body's and lateral body's shoulders
+const float stance_width[2] = {kW_1, kL_1};  // perpendiculuar distance between opposite legs in stance; used to calculate the required joint displacement for tilt control
 
 // mechanical joint limits and offsets
 const float kQLegMin = 0;               // min leg joint position in mm
-const float kQLegMax = 420;             // max leg joint position in mm
-const float kLegOffset = 71;            // vertical distance between medial and lateral body in mm; used to adjust leg setpoints
-const float kQTransMax = 90;            // max/min translation position from zero position in mm
+const float kQLegMax = 450;             // max leg joint position in mm
+const float kLegOffset = 0;             // vertical distance between medial and lateral body in mm; used to adjust leg setpoints
+const float kQTransMax = 115;            // max/min translation position from zero position in mm
 const float kQYawMax = 15;              // max/min yaw position from zero position in degrees
 
 #endif
