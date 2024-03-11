@@ -154,7 +154,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // robot trajectory parameters
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t", cmd_vector[0], cmd_vector[2], q_leg_stance, leg_swing_percent);
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t", cmd_vector[0], cmd_vector[2], z_body_nominal, leg_swing_percent);
 
     #ifdef DEBUG_TRAJECTORY
     SERIAL_USB.print("trajectory: ");

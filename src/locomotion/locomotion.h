@@ -29,7 +29,8 @@ const float k_zBodyMax = 300;           // maximum allowable value for z_body_lo
 const float kdzMax = 30;                // maximum allowed body height deviation in mm
 const float kTiltNominal = 3;           // acceptable body tilt from zero in degrees
 const float kDqLegMaxTilt = 100;        // max total leg displacements per tilt correction
-const float kOmegaStable = 5;           // lateral body angular velocity value in deg/s below which the robot body's inertial force is assumed to be negligible
+const float kOmegaStable = 5;           // lateral body angular velocity value in deg/s below which the blocking of normal gait behavior ends
+const float kQdotStable = 15;           // leg motor velocity in mm/s below which the blocking of normal gait behavior ends
 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
@@ -52,8 +53,7 @@ extern bool isCorrected;                // true if a motion primitive has been c
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
-extern float q_leg_stance;                  // nominal leg stroke in stance (tested 250)
-extern float leg_swing_percent;             // min leg stroke in swing as a percentage of q_leg_stance
+extern float leg_swing_percent;             // swing leg stroke as a percentage of its stroke at last stance phase
 extern float q_trans;                       // nominal translation position in swing
 extern float q_yaw;                         // nominal yaw rotation per step
 

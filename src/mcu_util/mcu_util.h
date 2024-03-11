@@ -69,7 +69,7 @@
 #define TIME_HEADER  "T"                        // Header tag for serial time sync message
 
 // control loop periods
-const uint8_t k_dtPrint = 10;              // data print period in ms
+const uint8_t k_dtPrint = 20;              // data print period in ms
 const uint8_t k_dtSetpointUpdate = 2;      // joint setpoint update period in ms
 const uint8_t k_dtMotorLimitsUpdate = 50;  // motor controller limits update period in ms
 const uint8_t k_dtMotorCmdUpdate = 20;     // motor command update period in ms; 50

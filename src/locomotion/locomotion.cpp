@@ -22,18 +22,12 @@ bool isCorrected = false;                               // true if a motion prim
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
-float q_leg_stance = 180;         // nominal leg stroke in stance (tested 250)
-float leg_swing_percent = 0.75;   // min leg stroke in swing as a percentage of q_leg_stance
-float q_trans = kQTransMax - 20;  // nominal translation position in swing
-float q_yaw = kQYawMax - 3;       // nominal yaw rotation per step
+float z_body_nominal = 180;       // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
+float leg_swing_percent = 0.75;   // swing leg stroke as a percentage of its stroke at last stance phase
+float q_yaw = kQYawMax - 3;       // nominal yaw rotation per step in degrees
 
-// change to percentage
 float swing_percent_at_translate = 0.5;   // percentage of swing leg retraction after which forward translation begins
-float q_trans_transition = 30;            // translational joint position at which swing leg step down begins; zero position is at midpoint; regardless of gait_phase, negative position indicates before crossing the midpoint and positive position indicates after crossing the midpoint
-                                          // ! setting this value to < 0 results in tilt correct being skipped because tilt correct is currently set to occur at midpoint (q_trans = 0) !
-                                          // ! setting this value not large enough (positive) can lead to leg touchdown occurring before the translational joint is finished moving forward, !
-                                          // ! resulting in some backward motion before moving forward after stance switch !
-float z_body_nominal = q_leg_stance;      // nominal body height over local terrain; currently taken as avg of stance leg motors joint position
+float trans_percent_at_touchdown = 0.4;   // percentage of forward translaton command from midpoint; small values can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
 float dz_body_local = 0;                  // amount of body height change applied; used as an offset for the leg stroke in contact estimation
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};    // position of the swing leg actuators when they were last in contact
@@ -196,8 +190,8 @@ void standUp() {
   
   uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
 
-  motors[stance * 2].states_.q_d = q_leg_stance;
-  motors[stance * 2 + 1].states_.q_d = q_leg_stance;
+  motors[stance * 2].states_.q_d = z_body_nominal;
+  motors[stance * 2 + 1].states_.q_d = z_body_nominal;
 
   motors[stance * 2].states_.trap_traj_vel_limit = kVelLegTrajStandup;
   motors[stance * 2 + 1].states_.trap_traj_vel_limit = kVelLegTrajStandup;
@@ -239,9 +233,7 @@ void updateTrajectory() {
   cmd_vector[2] = pow(-1, gait_phase) * atan2(cmd_vector[1], cmd_vector[0]) * 180 / PI;
 
   leg_swing_percent = input_swing;
-
-  q_leg_stance = (k_zBodyMax - k_zBodyMin)*input_height + k_zBodyMin;
-  z_body_nominal = q_leg_stance;    // for now, nominal body height is equal to the leg actuator setpoint in stance
+  z_body_nominal = (k_zBodyMax - k_zBodyMin)*input_height + k_zBodyMin; // for now, nominal body height is equal to the leg actuator setpoint in stance
   
   if (cmd_vector[2] > 90) {
     cmd_vector[2] -= 180;
@@ -270,8 +262,8 @@ void regulateBodyPose() {
 
         // adjust velocity, acceleration, deceleration limits for trapezoidal trajectory during this maneuver
         motors[axis_id].states_.trap_traj_vel_limit = kVelLegTrajStandup;
-        motors[axis_id].states_.trap_traj_accel_limit = kAccelLegTrajTilt;
-        motors[axis_id].states_.trap_traj_decel_limit = kDecelLegTrajTilt;
+        motors[axis_id].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
+        motors[axis_id].states_.trap_traj_decel_limit = kDecelLegTrajStandup;
         
         // move all leg motors by dz_body_local
         motors[axis_id].states_.q_d = motors[axis_id].states_.q - dz_body_local;
@@ -283,8 +275,7 @@ void regulateBodyPose() {
     // nominal body tilt control
     } else if (actuation_phase == ActuationPhases::kTranslateForward              // if currently translating forward
                && fabs(rpy_lateral[gait_phase]) > kTiltNominal                    // AND the body tilt is not within nominal range
-               && fabs(motors[MotorID::kMotorTranslate].states_.q) < kQErrorMax   // AND the translational joint is near the midpoint
-               && fabs(motors[MotorID::kMotorTranslate].states_.q_dot) < 5) {     // AND the translational joint velocity is near zero
+               && fabs(motors[MotorID::kMotorTranslate].states_.q) < 20) {        // AND the translational joint is near the midpoint
 
       uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
       float dq = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * PI / 180);
@@ -313,10 +304,10 @@ void regulateBodyPose() {
      }
 
 
-  } else if (isBlocking                                                                                           // if the body pose regulation is currently happening
-             && fabs(omega_lateral[0]) < kOmegaStable && fabs(omega_lateral[1]) < kOmegaStable                  // AND the body angular velocity is near zero
-             && fabs(motors[0].states_.q_dot) < kQdotContact && fabs(motors[1].states_.q_dot) < kQdotContact      // AND all leg motor velocities are near zero
-             && fabs(motors[2].states_.q_dot) < kQdotContact && fabs(motors[3].states_.q_dot) < kQdotContact) {
+  } else if (isBlocking                                                                                         // if the body pose regulation is currently happening
+             && fabs(omega_lateral[0]) < kOmegaStable && fabs(omega_lateral[1]) < kOmegaStable                  // AND the body angular velocities are below a threshold
+             && fabs(motors[0].states_.q_dot) < kQdotStable && fabs(motors[1].states_.q_dot) < kQdotStable      // AND all leg motor velocities are below a threshold
+             && fabs(motors[2].states_.q_dot) < kQdotStable && fabs(motors[3].states_.q_dot) < kQdotStable) {
 
     isBlocking = false;
     
@@ -332,19 +323,20 @@ void regulateBodyPose() {
 // returns true if ready for transition to the next actuation phase
 bool isReadyForTransition(uint8_t phase) {
   
-  if (phase == ActuationPhases::kRetractLeg) {                                        // if currently retracting leg
+  if (phase == ActuationPhases::kRetractLeg) {  // if currently retracting leg
     float q_leg_transition_1 = q_leg_swing[0] + swing_percent_at_translate*(q_leg_contact[0] - q_leg_swing[0]);
     float q_leg_transition_2 = q_leg_swing[1] + swing_percent_at_translate*(q_leg_contact[1] - q_leg_swing[1]);
 
     return motors[gait_phase*2].states_.q < q_leg_transition_1 && motors[gait_phase*2 + 1].states_.q < q_leg_transition_2;
 
-  } else if (phase == ActuationPhases::kTranslateForward) {  // if currently translating forward
-    int sgn = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);
+  } else if (phase == ActuationPhases::kTranslateForward) { // if currently translating forward
+    int sgn = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                    // direction of translation command
+    float q_trans_transition = fabs(trans_percent_at_touchdown*kQTransMax*cmd_vector[0]);   // this value is always positive since it represents forward motion, regardless of direction
 
     return fabs(cmd_vector[0]) > 0.01                                                           // if there's a forward command
            && sgn * pow(-1, gait_phase + 1) * q[JointID::kJointTranslate] > q_trans_transition; // AND the translational joint has reached the transition point
 
-  } else if (phase == ActuationPhases::kTouchDown) {                    // if currently touching down
+  } else if (phase == ActuationPhases::kTouchDown) {  // if currently touching down
         
     return inContact[gait_phase * 2] && inContact[gait_phase * 2 + 1]
            && ((fabs(z_body_local - z_body_nominal) < kdzMax)
@@ -363,15 +355,20 @@ void updateSetpoints() {
   // update setpoints at gait phase transitions here
   if (!isBlocking && isReadyForTransition(actuation_phase)) {
 
-    if (actuation_phase == ActuationPhases::kRetractLeg) {              // if currently retracting leg
-      if (fabs(cmd_vector[0]) < 0.01 || fabs(rpy_lateral[gait_phase]) > kTiltNominal) {                                   // if no forward command OR if body is tilted, stop at the neutral body translation
-        motors[MotorID::kMotorTranslate].states_.q_d = 0;                                                                 // move to the neutral point and stop
+    if (actuation_phase == ActuationPhases::kRetractLeg) {  // if currently retracting leg
+
+      if (fabs(cmd_vector[0]) < 0.01) {   // if no forward command
+        motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].states_.q;  // stop at current translation and yaw
         motors[MotorID::kMotorYaw].states_.q_d = 0;
-      } else {                                                                                                            // else, actuate the locomotion mechanism according to cmd_vector
-        motors[MotorID::kMotorTranslate].states_.q_d =
-            pow(-1, gait_phase + 1) * q_trans*cmd_vector[0];                                                              // forward translation scaled by x-component of cmd_vector
-        motors[MotorID::kMotorYaw].states_.q_d =
-            min(motors[MotorID::kMotorYaw].states_.q_max, max(motors[MotorID::kMotorYaw].states_.q_min, cmd_vector[2]));  // limit the max turn per step
+
+      } else {  // else, move according to the current command
+        motors[MotorID::kMotorTranslate].states_.q_d = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];                                                    // forward translation scaled by x-component of cmd_vector
+        motors[MotorID::kMotorYaw].states_.q_d = min(motors[MotorID::kMotorYaw].states_.q_max, max(motors[MotorID::kMotorYaw].states_.q_min, cmd_vector[2])); // limit the max turn per step  
+      }
+
+      // if there is body tilt, change forward motion behavior
+      if (fabs(rpy_lateral[gait_phase]) > kTiltNominal) {
+      // TODO: reduce translational velocity?
       }
 
     } else if (actuation_phase == ActuationPhases::kTranslateForward) { // if currently translating forward
@@ -389,10 +386,8 @@ void updateSetpoints() {
       motors[gait_phase * 2 + 1].states_.tau_d = touchdown_torque[gait_phase * 2 + 1][0];
 
       // reapply locomotion mechanism setpoints in the case of resuming locomotion from standstill
-      motors[MotorID::kMotorTranslate].states_.q_d =
-            pow(-1, gait_phase + 1) * q_trans*cmd_vector[0];                                                              // forward translation scaled by x-component of cmd_vector
-      motors[MotorID::kMotorYaw].states_.q_d =
-          min(motors[MotorID::kMotorYaw].states_.q_max, max(motors[MotorID::kMotorYaw].states_.q_min, cmd_vector[2]));    // limit the max turn per step
+      motors[MotorID::kMotorTranslate].states_.q_d = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];                                                    // forward translation scaled by x-component of cmd_vector
+      motors[MotorID::kMotorYaw].states_.q_d = min(motors[MotorID::kMotorYaw].states_.q_max, max(motors[MotorID::kMotorYaw].states_.q_min, cmd_vector[2])); // limit the max turn per step
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
       // clear these flags for the next gait cycle
@@ -459,20 +454,18 @@ void updateSetpoints() {
       
     } else if (actuation_phase == ActuationPhases::kTranslateForward) { // if currently translating forward
       
-      // if the forward command stops, stop at the current translation position
-      if (fabs(cmd_vector[0]) < 0.01) {
-        motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].states_.q;
-        motors[MotorID::kMotorYaw].states_.q_d = motors[MotorID::kMotorYaw].states_.q;
-
-      // else if there's body tilt and hasn't been corrected yet, stop at the neutral translation position
-      } else if (fabs(rpy_lateral[gait_phase]) > kTiltNominal) {
-        motors[MotorID::kMotorTranslate].states_.q_d = 0;
+      if (fabs(cmd_vector[0]) < 0.01) {   // if no forward command
+        motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].states_.q;  // stop at current translation and yaw
         motors[MotorID::kMotorYaw].states_.q_d = 0;
 
-      // else, continue moving according to the current command
-      } else {
-        motors[MotorID::kMotorTranslate].states_.q_d = pow(-1, gait_phase + 1) * q_trans*cmd_vector[0];                        // forward translation scaled by x-component of cmd_vector
+      } else {  // else, move according to the current command
+        motors[MotorID::kMotorTranslate].states_.q_d = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];                                                    // forward translation scaled by x-component of cmd_vector
         motors[MotorID::kMotorYaw].states_.q_d = min(motors[MotorID::kMotorYaw].states_.q_max, max(motors[MotorID::kMotorYaw].states_.q_min, cmd_vector[2])); // limit the max turn per step  
+      }
+
+      // if there is body tilt, change forward motion behavior
+      if (fabs(rpy_lateral[gait_phase]) > kTiltNominal) {
+      // TODO: reduce translational velocity?
       }
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down

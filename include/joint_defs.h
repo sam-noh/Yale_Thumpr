@@ -58,7 +58,7 @@ const float stance_width[2] = {kW_1, kL_1};  // perpendiculuar distance between 
 const float kQLegMin = 0;               // min leg joint position in mm
 const float kQLegMax = 450;             // max leg joint position in mm
 const float kLegOffset = 0;             // vertical distance between medial and lateral body in mm; used to adjust leg setpoints
-const float kQTransMax = 115;            // max/min translation position from zero position in mm
+const float kQTransMax = 95;            // max/min translation position from zero position in mm
 const float kQYawMax = 15;              // max/min yaw position from zero position in degrees
 
 #endif
