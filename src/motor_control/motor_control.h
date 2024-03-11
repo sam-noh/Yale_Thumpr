@@ -41,23 +41,23 @@ const float kVelTransMax = 22;                  // translation motor controller 
 const float kVelYawMax = 5.8;                   // yaw motor controller velocity limit in turns/s
 
 const float kVelLegTrajSwing = 35;              // leg motor trapezoidal trajectory velocity in swing phase in turns/s
-const float kVelLegTrajStandup = 25;            // leg motor trapezoidal trajectory velocity when standing up in turns/s
+const float kVelLegTrajStandup = 20;            // leg motor trapezoidal trajectory velocity when standing up in turns/s
 const float kVelLegTrajTilt = 10;               // leg motor trapezoidal trajectory velocity when tilt correcting in turns/s (tested 10)
 const float kVelTransTraj = 12;                 // translation motor trapezoidal trajectory velocity
-const float kVelYawTraj = 0.15;                 // yaw motor trapezoidal trajectory velocity
+const float kVelYawTraj = 0.4;                  // yaw motor trapezoidal trajectory velocity
 
 // motor trapezoidal trajectory accel/deceleratioin parameters
 const float kAccelLegTrajSwing = 180;           // leg motor trapezoidal trajectory acceleration when retracting legs in turns/s^2
 const float kAccelLegTrajStandup = 80;          // leg motor trapezoidal trajectory acceleration when changing height in turns/s^2
 const float kAccelLegTrajTilt = 80;             // leg motor trapezoidal trajectory acceleration when tilt correcting in turns/s^2
 const float kAccelTransTraj = 15;               // translation motor trapezoidal trajectory acceleration;
-const float kAccelYawTraj = 3;                  // yaw motor trapezoidal trajectory acceleration
+const float kAccelYawTraj = 10;                 // yaw motor trapezoidal trajectory acceleration
 
 const float kDecelLegTrajSwing = 100;           // leg motor trapezoidal trajectory deceleration when retracting legs in turns/s^2
 const float kDecelLegTrajStandup = 60;          // leg motor trapezoidal trajectory deceleration when changing height in turns/s^2;
 const float kDecelLegTrajTilt = 30;             // leg motor trapezoidal trajectory deceleration when tilt correcting in turns/s^2;
 const float kDecelTransTraj = 15;               // translation motor trapezoidal trajectory acceleration;
-const float kDecelYawTraj = 0.2;                // yaw motor trapezoidal trajectory acceleration
+const float kDecelYawTraj = 5;                  // yaw motor trapezoidal trajectory acceleration
 
 // motor current limits
 const float kCurrentLegMax = 60;                // leg motor current limit in ampere

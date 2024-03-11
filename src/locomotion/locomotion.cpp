@@ -24,7 +24,6 @@ bool isCorrected = false;                               // true if a motion prim
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 float z_body_nominal = 180;       // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
 float leg_swing_percent = 0.75;   // swing leg stroke as a percentage of its stroke at last stance phase
-float q_yaw = kQYawMax - 3;       // nominal yaw rotation per step in degrees
 
 float swing_percent_at_translate = 0.5;   // percentage of swing leg retraction after which forward translation begins
 float trans_percent_at_touchdown = 0.4;   // percentage of forward translaton command from midpoint; small values can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
@@ -416,18 +415,12 @@ void updateSetpoints() {
         q_leg_contact[i] = motors[gait_phase*2 + i].states_.q;      // remember the leg motor position at ground contact
         float q_leg_retract = q_leg_contact[i]*leg_swing_percent;   // nominal swing leg setpoint; NOT necessarily equal to the actual setpoint
 
-        // put the legs into position control now
-        motors[gait_phase * 2 + i].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
-
-        // change this logic to account for robot kinematics (body tilt)
+        // TODO: change this logic to account for robot kinematics (body tilt)
         if (fabs(q[gait_phase * 4 + i * 2] - q[gait_phase * 4 + i * 2 + 1]) > kDqUnevenTerrain) { // if the previous stance legs are standing on uneven ground
           float q_max = max(q[gait_phase * 4 + i * 2], q[gait_phase * 4 + i * 2 + 1]);            // calculate the additional leg stroke due to uneven terrain
           float dq = q_max - motors[gait_phase * 2 + i].states_.q;
           
           motors[gait_phase * 2 + i].states_.q_d = max(kQLegMin, q_leg_retract - dq); // retract more by dq to ensure proper ground clearance
-          
-          // snprintf(sent_data, sizeof(sent_data), "leg 1: %.2f\tleg2: %.2f\n", q[gait_phase * 4 + i * 2], q[gait_phase * 4 + i * 2 + 1]);
-          // writeToSerial();
 
         } else {  
           motors[gait_phase * 2 + i].states_.q_d = q_leg_retract;  // if even terrain, use the nominal swing leg setpoint
@@ -436,12 +429,13 @@ void updateSetpoints() {
         // remember the swing leg position setpoint
         q_leg_swing[i] = motors[gait_phase * 2 + i].states_.q_d;
         
-        // update the motor limits for leg retraction
-        motors[gait_phase*2 + i].states_.velocity_limit = kVelLegMax;
-        motors[gait_phase*2 + i].states_.current_limit = kCurrentLegMax;
-        motors[gait_phase*2 + i].states_.trap_traj_vel_limit = kVelLegTrajSwing;
-        motors[gait_phase*2 + i].states_.trap_traj_accel_limit = kAccelLegTrajSwing;
-        motors[gait_phase*2 + i].states_.trap_traj_decel_limit = kDecelLegTrajSwing;
+        // update the motor control mode and limits for swing phase
+        motors[gait_phase * 2 + i].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
+        motors[gait_phase * 2 + i].states_.velocity_limit = kVelLegMax;
+        // motors[gait_phase*2 + i].states_.current_limit = kCurrentLegMax;
+        motors[gait_phase * 2 + i].states_.trap_traj_vel_limit = kVelLegTrajSwing;
+        motors[gait_phase * 2 + i].states_.trap_traj_accel_limit = kAccelLegTrajSwing;
+        motors[gait_phase * 2 + i].states_.trap_traj_decel_limit = kDecelLegTrajSwing;
         
         inContact[gait_phase * 2 + i] = false;
       }

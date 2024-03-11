@@ -55,7 +55,6 @@ extern bool isCorrected;                // true if a motion primitive has been c
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 extern float leg_swing_percent;             // swing leg stroke as a percentage of its stroke at last stance phase
 extern float q_trans;                       // nominal translation position in swing
-extern float q_yaw;                         // nominal yaw rotation per step
 
 extern float swing_percent_at_translate;    // remaining swing leg retraction at which forward translation begins (tested 50)
 extern float q_trans_transition;            // translation position at which swing leg step down begins; negative value is before the midpoint regardless of gait_phase

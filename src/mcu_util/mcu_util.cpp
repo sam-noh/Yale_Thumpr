@@ -26,11 +26,7 @@ void initTeensy() {
   delay(100);   // short delay after the start to ensure the first serial print is not missed over USB
   SERIAL_USB.println("Teensy started.\n");
 
-  delay(1000);
-
   // add digital pin initialization here
-  pinMode(ACS711EX_FAULT, INPUT);
-  pinMode(SEL, INPUT_PULLUP);
   pinMode(LED, OUTPUT);
 
   initSerial();                   // start serial connections with other devices such as Jetson, a 2nd Teensy
