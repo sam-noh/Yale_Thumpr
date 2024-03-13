@@ -193,12 +193,12 @@ void initActuators() {
   writeToSerial();
 }
 
-// calls the Estop() function on all axes
+// enters idle state on all axes
 void stopActuators() {
   for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
     snprintf(sent_data, sizeof(sent_data), "Stopping actuator %d...\n", axis_id + 1);
     writeToSerial();
-    ODrive_CAN.Estop(axis_id);     // calling the Estop function will raise the error flag; needs ClearErrors(axis_id) or power cycling
+    motors[axis_id].disable();
   }
 
   snprintf(sent_data, sizeof(sent_data), "Actuators stopped.\n---------------------------------------------\n\n");

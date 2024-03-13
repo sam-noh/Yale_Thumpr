@@ -101,7 +101,7 @@ void readHeartbeat(uint8_t axis_id, CAN_message_t msg);
 // enters closed-loop control
 void initActuators();
 
-// calls the Estop() function on all axes
+// enters idle state on all axes
 void stopActuators();
 
 // updates motor controller limits on all axes

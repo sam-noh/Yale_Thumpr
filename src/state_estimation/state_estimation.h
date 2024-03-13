@@ -12,10 +12,10 @@
 // control loop periods
 const uint16_t k_dtLegEncoderUpdate = 1000;        // leg encoder sampling period in microseconds
 const uint8_t k_dtIMUUpdate = 5;                   // IMU sampling period in ms
-const uint8_t k_dtContactUpdate = 2;               // leg ground contact update period in ms
+const uint8_t k_dtContactUpdate = 1;               // leg ground contact update period in ms
 const uint8_t k_dtPowerUpdate = 50;                // motor power update period in ms
 const uint8_t k_dtMotorTorqueFilterUpdate = 10;    // motor torque filtering period in ms
-const uint8_t k_dtKinematicsUpdate = 2;            // robot kinematics update period in ms
+const uint8_t k_dtKinematicsUpdate = 1;            // robot kinematics update period in ms
 
 // time variables
 extern elapsedMicros dt_last_leg_encoder_update;    // time since last encoder sampling in microseconds 
