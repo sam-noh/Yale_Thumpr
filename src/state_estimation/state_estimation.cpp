@@ -7,7 +7,9 @@
 #include "..\locomotion\locomotion.h"
 
 // time variables
-elapsedMicros dt_last_leg_encoder_update = 0;     // time since last encoder sampling in microseconds 
+elapsedMicros dt_last_pos_update = 0;         // time since last leg position sampling in microseconds
+elapsedMicros dt_last_vel_update = 0;         // time since last leg velocity sampling in microseconds
+elapsedMicros dt_last_accel_update = 0;       // time since last leg acceleration sampling in microseconds
 uint32_t t_last_IMU_update = 0;                   // timestamp in milliseconds at last IMU sampling
 uint32_t t_last_contact_update = 0;               // timestamp in milliseconds at last leg ground contact update
 uint32_t t_last_power_update = 0;                 // timestamp in milliseconds at last power update
@@ -40,11 +42,25 @@ float battery_voltage = 0;                      // current battery voltage in vo
 float battery_current = 0;                      // current battery current in ampere
 float battery_power = 0;                        // current battery power in watt
 
-std::vector<float> q = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};      // see JointID for joint indices
-std::vector<float> q_prev = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // see JointID for joint indices
-std::vector<float> q_dot = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};  // see JointID for joint indices
-float z_body_local = 0;                                     // height of body above local terrain
+// moving average filter for joint acceleration
+std::vector<MovingAvgFilter> q_ddot_filters = {MovingAvgFilter(kLegAccelFilterLength),
+                                               MovingAvgFilter(kLegAccelFilterLength),
+                                               MovingAvgFilter(kLegAccelFilterLength),
+                                               MovingAvgFilter(kLegAccelFilterLength),
+                                               MovingAvgFilter(kLegAccelFilterLength),
+                                               MovingAvgFilter(kLegAccelFilterLength),
+                                               MovingAvgFilter(kLegAccelFilterLength),
+                                               MovingAvgFilter(kLegAccelFilterLength),
+                                               MovingAvgFilter(kLegAccelFilterLength),
+                                               MovingAvgFilter(kLegAccelFilterLength)};
 
+std::vector<float> q = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};          // see JointID for joint indices
+std::vector<float> q_prev = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};     // see JointID for joint indices
+std::vector<float> q_dot = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};      // see JointID for joint indices
+std::vector<float> q_dot_prev = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // see JointID for joint indices
+std::vector<float> q_ddot = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};     // see JointID for joint indices
+float z_body_local = 0;                                         // height of body above local terrain
+float dist_traveled = 0;                                        // distance traveled estimated with translational joint displacement
 
 std::vector<float> rpy_lateral_0 = {0, 0, 0};               // lateral body roll pitch yaw after homing
 std::vector<float> rpy_lateral = {0, 0, 0};                 // lateral body roll pitch yaw relative to rpy_lateral_0
@@ -249,8 +265,9 @@ void ACS711EX_Sensor::readCurrentSensor() {
   }
 }
 
-MovingAvgFilter::MovingAvgFilter(uint8_t size) {
-  std::queue<float> tmp( ( std::deque<float>(size) ) );
+MovingAvgFilter::MovingAvgFilter(uint8_t _size) {
+  std::queue<float> tmp( ( std::deque<float>(_size) ) );
+  size = _size;
   filter_queue = tmp;
 }
 
@@ -259,7 +276,7 @@ void MovingAvgFilter::updateFilter(float val) {
     filter_queue.pop();
     filter_queue.push(val);
     queue_sum += val;
-    filtered_value = queue_sum / kTorqueFilterLength;
+    filtered_value = queue_sum / size;
 }
 
 // determine the initial body pose by averaging the IMU roll pitch yaw readings
@@ -321,7 +338,7 @@ void zeroIMUReading() {
 
 // update robot states and sensor feedback
 void updateStates() {
-  readJointEncoders();
+  updateJointEstimates();
   updateIMUEstimate();
   updateContactState();
   updatePowerMeasurement();
@@ -329,28 +346,64 @@ void updateStates() {
   updateKinematics();
 }
 
-// update robot joint positions and velocities from encoder feedback
-void readJointEncoders() {
+// update robot joint position, velocity, accelerations
+void updateJointEstimates() {
 
-  // this entire function runs in <= 1 microsecond
-  // so the same time period can be used to calculate all joints' velocity estimates
-  if (dt_last_leg_encoder_update >= k_dtLegEncoderUpdate) {
+  // update joint position
+  if (dt_last_pos_update >= k_dtPosUpdate) {
 
-    // read leg encoders and update position and velocity estimates
+    // read leg encoders and update position estimates
     for (uint8_t i = 0; i < kNumOfLegs; i++) {
       q[i] = kTxRatioLegDrive * (kDirectionWorm[i]*(float)encoders[i].read() / k_CPR_AMT102_V);
-      q_dot[i] = (q[i] - q_prev[i]) / ((float)dt_last_leg_encoder_update / 1e6);
+    }
+
+    // update translation and yaw joint position estimates
+    q[JointID::kJointTranslate] = motors[MotorID::kMotorTranslate].states_.q;
+    q[JointID::kJointYaw] = motors[MotorID::kMotorYaw].states_.q;
+
+    dt_last_pos_update = 0;
+  }
+
+  // update joint velocity
+  // this entire function runs in <= 1 microsecond
+  // so the same time period can be used to calculate all joints' velocity estimates
+  if (dt_last_vel_update >= k_dtVelUpdate) {
+
+    // update velocity estimates
+    for (uint8_t i = 0; i < kNumOfLegs; i++) {
+      q_dot[i] = (q[i] - q_prev[i]) / ((float)dt_last_vel_update / 1e6);
       q_prev[i] = q[i];
     }
 
-    dt_last_leg_encoder_update = 0;
-
-    // update translation and yaw joint position and velocity estimates
-    q[JointID::kJointTranslate] = motors[MotorID::kMotorTranslate].states_.q;
+    // update translation and yaw joint velocity estimates
     q_dot[JointID::kJointTranslate] = motors[MotorID::kMotorTranslate].states_.q_dot;
-
-    q[JointID::kJointYaw] = motors[MotorID::kMotorYaw].states_.q;
     q_dot[JointID::kJointYaw] = motors[MotorID::kMotorYaw].states_.q_dot;
+    q_prev[JointID::kJointTranslate] = q[JointID::kJointTranslate];
+    q_prev[JointID::kJointYaw] = q[JointID::kJointYaw];
+
+    dt_last_vel_update = 0;
+  }
+
+  // update joint acceleration
+  // this entire function runs in <= 1 microsecond
+  // so the same time period can be used to calculate all joints' acceleration estimates
+  if (dt_last_accel_update >= k_dtAccelUpdate) {
+
+    // update acceleration estimates
+    for (uint8_t i = 0; i < kNumOfLegs; i++) {
+      q_ddot[i] = (q_dot[i] - q_dot_prev[i]) / ((float)dt_last_accel_update / 1e6);
+      q_dot_prev[i] = q_dot[i];
+    }
+
+    // update translation and yaw joint acceleration estimates
+    q_ddot[JointID::kJointTranslate] = (motors[MotorID::kMotorTranslate].states_.q_dot - q_dot_prev[JointID::kJointTranslate]) / ((float)dt_last_accel_update / 1e6);
+    q_ddot[JointID::kJointYaw] = (motors[MotorID::kMotorYaw].states_.q_dot - q_dot_prev[JointID::kJointYaw]) / ((float)dt_last_accel_update / 1e6);
+    q_dot_prev[JointID::kJointTranslate] = q_dot[JointID::kJointTranslate];
+    q_dot_prev[JointID::kJointYaw] = q_dot[JointID::kJointYaw];
+
+    updateAccelFilters();
+
+    dt_last_accel_update = 0;
   }
 }
 
@@ -421,7 +474,7 @@ void updateContactState() {
   }
 }
 
-// call the updateFilter() function for all the moving average filters
+// call the updateFilter() function for motor torque filters
 void updateMotorTorqueFilters() {
   uint32_t t_current = millis();
   if (t_current - t_last_motor_torque_filter_update >= k_dtMotorTorqueFilterUpdate) {
@@ -433,13 +486,28 @@ void updateMotorTorqueFilters() {
   }
 }
 
+// call the updateFilter() function for joint acceleration filters
+// does not track loop frequency since it is automatically called with joint acceleration sampling
+void updateAccelFilters() {
+  for (uint8_t i = 0; i < kNumOfJoints; i++) {
+    q_ddot_filters[i].updateFilter(q_ddot[i]);
+  }
+}
+
 // update robot body pose based on kinematics
 void updateKinematics() {
   uint32_t t_current = millis();
   if (t_current - t_last_kinematics_update >= k_dtKinematicsUpdate) {
     t_last_kinematics_update = t_current;
 
+    // update local body height
     uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
     z_body_local = (motors[stance * 2].states_.q + motors[stance * 2 + 1].states_.q) / 2 - gait_phase * kBodyZOffset;
+
+    // update distance traveled by summing the translational joint displacement
+    float dq_trans = fabs(q[JointID::kJointTranslate] - q_prev[JointID::kJointTranslate]);
+    if (dq_trans < 1e-1) dq_trans = 0;
+    dist_traveled += dq_trans;
+    
   }
 }

@@ -16,11 +16,12 @@
 // #define DEBUG_TIMER
 // #define DEBUG_ACTUATOR_POSITION
 // #define DEBUG_ACTUATOR_SETPOINT
-#define DEBUG_ACTUATOR_TORQUE
+// #define DEBUG_ACTUATOR_TORQUE
 // #define DEBUG_ACTUATOR_TEMP
 // #define DEBUG_LEG_POSITION
-#define DEBUG_LEG_VELOCITY
-#define DEBUG_CONTACT
+// #define DEBUG_LEG_VELOCITY
+// #define DEBUG_LEG_ACCELERATION
+// #define DEBUG_CONTACT
 #define DEBUG_POWER
 #define DEBUG_RPY
 #define DEBUG_OMEGA
@@ -69,7 +70,7 @@
 #define TIME_HEADER  "T"                        // Header tag for serial time sync message
 
 // control loop periods
-const uint8_t k_dtPrint = 20;              // data print period in ms
+const uint8_t k_dtPrint = 10;              // data print period in ms
 const uint8_t k_dtSetpointUpdate = 2;      // joint setpoint update period in ms
 const uint8_t k_dtMotorLimitsUpdate = 50;  // motor controller limits update period in ms
 const uint8_t k_dtMotorCmdUpdate = 20;     // motor command update period in ms; 50
@@ -139,5 +140,8 @@ void parseJetsonSerial();
 
 // extracts the IMU data sent from a 2nd Teensy over serial
 void parseTeensySerial();
+
+// write telemetry data to serial and SD card, if enabled
+void sendTelemetry();
 
 #endif

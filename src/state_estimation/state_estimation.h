@@ -10,20 +10,27 @@
 
 //////////////////////////////////////////////////////////////////////////////////////
 // control loop periods
-const uint16_t k_dtLegEncoderUpdate = 1000;        // leg encoder sampling period in microseconds
-const uint8_t k_dtIMUUpdate = 5;                   // IMU sampling period in ms
-const uint8_t k_dtContactUpdate = 1;               // leg ground contact update period in ms
-const uint8_t k_dtPowerUpdate = 50;                // motor power update period in ms
-const uint8_t k_dtMotorTorqueFilterUpdate = 10;    // motor torque filtering period in ms
-const uint8_t k_dtKinematicsUpdate = 1;            // robot kinematics update period in ms
+const uint16_t k_dtPosUpdate = 1000;                // position sampling period in microseconds
+const uint16_t k_dtVelUpdate = 5000;                // velocity sampling period in microseconds
+const uint16_t k_dtAccelUpdate = 10000;             // acceleration sampling period in microseconds
+const uint8_t k_dtContactUpdate = 1;                // leg ground contact update period in ms
+const uint8_t k_dtKinematicsUpdate = 1;             // robot kinematics update period in ms
+
+const uint8_t k_dtIMUUpdate = 5;                    // IMU sampling period in ms
+const uint8_t k_dtPowerUpdate = 50;                 // motor power update period in ms
+const uint8_t k_dtMotorTorqueFilterUpdate = 10;     // motor torque filtering period in ms
 
 // time variables
-extern elapsedMicros dt_last_leg_encoder_update;    // time since last encoder sampling in microseconds 
-extern uint32_t t_last_IMU_update;                  // timestamp in milliseconds at last IMU sampling
+extern elapsedMicros dt_last_pos_update;            // time since last position sampling in microseconds
+extern elapsedMicros dt_last_vel_update;            // time since last velocity sampling in microseconds
+extern elapsedMicros dt_last_accel_update;          // time since last acceleration sampling in microseconds
 extern uint32_t t_last_contact_update;              // timestamp in milliseconds at last leg ground contact update
+extern uint32_t t_last_kinematics_update;           // timestamp in milliseconds at last kinematics update
+
+extern uint32_t t_last_IMU_update;                  // timestamp in milliseconds at last IMU sampling
 extern uint32_t t_last_power_update;                // timestamp in milliseconds at last power update
 extern uint32_t t_last_motor_torque_filter_update;  // timestamp in milliseconds at last motor torque filter update
-extern uint32_t t_last_kinematics_update;           // timestamp in milliseconds at last kinematics update
+
 
 // joystick
 const float kJoystickXDeadZone = 100;
@@ -42,6 +49,9 @@ const float k_mVPerAmpere = 45;             // output sensitivity in mV per ampe
 // motor torque moving average filter
 const int kTorqueFilterLength = 5;          // number of torque samples to hold in the FIFO queue
 
+// leg acceleration moving average filter
+const int kLegAccelFilterLength = 5;        // number of leg acceleration samples to hold in the FIFO queue
+
 // IMU parameters
 const int kIMUAvgSize = 100;                                // IMU pose estimation initial value average sample size
 const std::vector<int> kBodyFrameAxisIndex = {2, -1, 3};    // IMU frame to body frame mapping
@@ -52,7 +62,7 @@ const std::vector<int> kBodyFrameAxisIndex = {2, -1, 3};    // IMU frame to body
 
 // contact detection parameters
 const float kDqStartContact = 8;            // leg displacment in mm past which contact detection begins; this value MUST BE AT LEAST less than the leg retraction amount (see leg_swing_percent)
-const float kQdotContact = 3;               // joint velocity in mm/s below which contact is likely; 3
+const float kQdotContact = 5;               // joint velocity in mm/s below which contact is likely; 3-80
 
 //////////////////////////////////////////////////////////////////////////////////////
 // sensor and filter structs
@@ -114,18 +124,18 @@ struct ACS711EX_Sensor {
 
 struct MovingAvgFilter {
     std::queue<float> filter_queue;     // queue of motor torque for moving average filter
+    uint16_t size = 0;                  // FIFO queue size
     float queue_sum = 0;                // running sum of each motor's recent torque readings
     float filtered_value = 0;           // estimated motor torque from proprioceptive sensing
 
-    MovingAvgFilter(uint8_t size);
+    MovingAvgFilter(uint8_t _size);
 
     void updateFilter(float val);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////
 // global variables
-// extern std::vector<Encoder> encoders;                       // hardware interrupt encoders
-extern Encoder encoders[];
+extern Encoder encoders[];                                  // hardware interrupt encoders
 extern TwoAxisJoystick two_axis_joystick;                   // 2-axis joystick with select button
 extern BNO08X_IMU bno08x_imu;                               // BNO08x 9-DoF IMU
 extern ACS711EX_Sensor acs711ex_sensor;                     // ACS711EX currrent sensor
@@ -137,7 +147,11 @@ extern float battery_power;                                 // current battery p
 extern std::vector<float> q;                                // see JointID for joint indices
 extern std::vector<float> q_prev;                           // see JointID for joint indices
 extern std::vector<float> q_dot;                            // see JointID for joint indices
+extern std::vector<float> q_dot_prev;                       // see JointID for joint indices
+extern std::vector<float> q_ddot;                           // see JointID for joint indices
+extern std::vector<MovingAvgFilter> q_ddot_filters;         // moving average filter for leg joint acceleration
 extern float z_body_local;                                  // height of body above local terrain
+extern float dist_traveled;                                 // distance traveled estimated with translational joint displacement
 
 extern std::vector<float> rpy_lateral_0;                    // lateral body roll pitch yaw after homing
 extern std::vector<float> rpy_lateral;                      // lateral body roll pitch yaw relative to rpy_lateral_0
@@ -152,8 +166,8 @@ void zeroIMUReading();
 // update robot states and sensor feedback
 void updateStates();
 
-// update robot joint positions and velocities from encoder feedback
-void readJointEncoders();
+// update robot joint position, velocity, accelerations
+void updateJointEstimates();
 
 // fetch IMU reading and update the body orientation relative to the initial orientation
 void updateIMUEstimate();
@@ -166,6 +180,10 @@ void updatePowerMeasurement();
 
 // call the updateFilter() function for all the moving average filters
 void updateMotorTorqueFilters();
+
+// call the updateFilter() function for joint acceleration filters
+// does not track loop frequency since it is automatically called with joint acceleration sampling
+void updateAccelFilters();
 
 // update robot body pose based on kinematics
 void updateKinematics();
