@@ -251,7 +251,7 @@ void updateMotorCommands() {
       motors[axis_id].setControlMode(motors[axis_id].states_.ctrl_mode);
     }
 
-    // delay(5);
+    delayMicroseconds(200); // give ODrive some time to process the limit changes
 
     for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
       // update motor command

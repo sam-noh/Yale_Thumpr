@@ -471,6 +471,16 @@ void updateContactState() {
       inContact[gait_phase * 2 + 1] = fabs(q_dot[gait_phase*4 + 2]) < kQdotContact && fabs(q_dot[gait_phase*4 + 3]) < kQdotContact
                                       && motors[gait_phase * 2 + 1].states_.q + dz_body_local - q_leg_swing[1] > kDqStartContact;
 
+      if (inContact[gait_phase*2]) {
+        snprintf(sent_data, sizeof(sent_data), "q_dot_1: %.2f\tqdot_2: %.2f\n", q_dot[gait_phase*4], q_dot[gait_phase*4+1]);
+        writeToSerial();
+      }
+
+      if (inContact[gait_phase*2 + 1]) {
+        snprintf(sent_data, sizeof(sent_data), "q_dot_3: %.2f\tqdot_4: %.2f\n", q_dot[gait_phase*4+2], q_dot[gait_phase*4+3]);
+        writeToSerial();
+      }
+
       #else
       inContact[gait_phase * 2] = fabs(motors[gait_phase * 2].states_.q_dot) < kQdotContact                                  // if the actuator velocity is below a threshold
                                   && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact;    // AND the actuator position is past some inital displacement

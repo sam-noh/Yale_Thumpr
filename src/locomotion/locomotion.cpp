@@ -7,8 +7,8 @@
 std::vector<std::vector<float>> touchdown_torque = {
   {0.2, 0.14},  // 0.18 last good values
   {0.17, 0.13}, // 0.15
-  {0.2, 0.16},  // 0.18
-  {0.19, 0.15}  // 0.17
+  {0.2, 0.18},  // 0.18
+  {0.19, 0.17}  // 0.17
 };
 
 // gait variables
@@ -54,7 +54,7 @@ void homeLeggedRobot() {
 
     for (uint8_t axis_id = 0; axis_id < kNumOfLegs/2; ++axis_id) {
       // if the motor has slowed down, it's at the joint limit
-      if (moving[axis_id] && millis() - t_current > 1000 && fabs(motors[axis_id].states_.q_dot) < fabs(kQdotLegHomingStop)) {
+      if (moving[axis_id] && millis() - t_current > 750 && fabs(motors[axis_id].states_.q_dot) < fabs(kQdotLegHomingStop)) {
         moving[axis_id] = false;
         
         motors[axis_id].states_.q_dot_d = 0;
@@ -85,8 +85,8 @@ void homeLeggedRobot() {
   // lift the body slightly to allow locomotion mechanism homing
   snprintf(sent_data, sizeof(sent_data), "Lifting body off the ground...\n\n");
   writeToSerial();
-  motors[MotorID::kMotorMedialFront].states_.q_d = 20;
-  motors[MotorID::kMotorMedialRear].states_.q_d = 20;
+  motors[MotorID::kMotorMedialFront].states_.q_d = 40;
+  motors[MotorID::kMotorMedialRear].states_.q_d = 40;
 
   t_current = millis();
   while (millis() - t_current < 2000 || (fabs(motors[MotorID::kMotorLateralFront].states_.q_dot) > fabs(kQdotLegHomingStop)
@@ -109,7 +109,7 @@ void homeLeggedRobot() {
                                                 // if the ODrive firmware changes, check the API to ensure this is the correct command for absolute position control
 
   t_current = millis();
-  while (millis() - t_current < 500 || fabs(motors[MotorID::kMotorYaw].states_.q_dot) > fabs(kQdotYawHomingStop)) {
+  while (millis() - t_current < 300 || fabs(motors[MotorID::kMotorYaw].states_.q_dot) > fabs(kQdotYawHomingStop)) {
     handleODriveCANMsg();
     updateStates();
     updateMotorCommands();
@@ -422,7 +422,7 @@ void updateSetpoints() {
           float q_max = max(q[gait_phase * 4 + i * 2], q[gait_phase * 4 + i * 2 + 1]);            // calculate the additional leg stroke due to uneven terrain
           float dq = q_max - motors[gait_phase * 2 + i].states_.q;
           
-          motors[gait_phase * 2 + i].states_.q_d = max(kQLegMin, q_leg_retract - dq); // retract more by dq to ensure proper ground clearance
+          motors[gait_phase * 2 + i].states_.q_d = max(kQLegMin + 5, q_leg_retract - dq); // retract more by dq to ensure proper ground clearance
 
         } else {  
           motors[gait_phase * 2 + i].states_.q_d = q_leg_retract;  // if even terrain, use the nominal swing leg setpoint
