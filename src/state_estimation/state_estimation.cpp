@@ -375,6 +375,14 @@ void updateJointEstimates() {
       q_prev[i] = q[i];
     }
 
+    // update distance traveled by summing the translational joint displacement
+    // distance traveled tracks the medial body since it is the outer frame in fore-aft
+    if (gait_phase == GaitPhases::kMedialSwing) {
+      float dq_trans = fabs(q[JointID::kJointTranslate] - q_prev[JointID::kJointTranslate]);
+      if (dq_trans < 1e-1) dq_trans = 0;
+      dist_traveled += dq_trans;
+    }
+
     // update translation and yaw joint velocity estimates
     q_dot[JointID::kJointTranslate] = motors[MotorID::kMotorTranslate].states_.q_dot;
     q_dot[JointID::kJointYaw] = motors[MotorID::kMotorYaw].states_.q_dot;
@@ -503,11 +511,6 @@ void updateKinematics() {
     // update local body height
     uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
     z_body_local = (motors[stance * 2].states_.q + motors[stance * 2 + 1].states_.q) / 2 - gait_phase * kBodyZOffset;
-
-    // update distance traveled by summing the translational joint displacement
-    float dq_trans = fabs(q[JointID::kJointTranslate] - q_prev[JointID::kJointTranslate]);
-    if (dq_trans < 1e-1) dq_trans = 0;
-    dist_traveled += dq_trans;
     
   }
 }

@@ -387,7 +387,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // gait variables
-    snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%lu\t%.1f\t", gait_phase, actuation_phase, gait_cycles, dist_traveled/1000);
+    snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%lu\t%.2f\t", gait_phase, actuation_phase, gait_cycles, dist_traveled/1000);
 
     #ifdef DEBUG_GAIT
     SERIAL_USB.print("gait, actuation, cycles, dist: ");

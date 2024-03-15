@@ -28,8 +28,8 @@ const int kDirectionYaw = 1;                // positive direction for yaw motor
 const float kQdotLegHoming = -90;               // leg motor homing velocity in mm/s
 const float kQdotLegHomingStop = -6;            // leg motor homing stop condition velocity in mm/s
 
-const float kQdotTransHoming = 60;              // translation motor homing velocity in mm/s
-const float kQdotTransHomingStop = 25;          // translation motor homing stop condition velocity in mm/s
+const float kQdotTransHoming = 90;              // translation motor homing velocity in mm/s
+const float kQdotTransHomingStop = 10;          // translation motor homing stop condition velocity in mm/s
 const float kQTransHomingOffset = -120;         // distance from the joint limit to the translation zero position in mm
 
 const float kQdotYawHomingStop = 0.5;           // yaw motor homing stop condition velocity in deg/s

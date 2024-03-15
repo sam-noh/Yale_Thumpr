@@ -5,10 +5,10 @@
 #include "..\state_estimation\state_estimation.h"
 
 std::vector<std::vector<float>> touchdown_torque = {
-  {0.2, 0.18},  // 0.18 last good values
-  {0.17, 0.15}, // 0.15
-  {0.2, 0.18},  // 0.18
-  {0.19, 0.17}  // 0.17
+  {0.2, 0.14},  // 0.18 last good values
+  {0.17, 0.13}, // 0.15
+  {0.2, 0.16},  // 0.18
+  {0.19, 0.15}  // 0.17
 };
 
 // gait variables
@@ -23,7 +23,7 @@ bool isCorrected = false;                               // true if a motion prim
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 float z_body_nominal = 180;       // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
-float leg_swing_percent = 0.75;    // swing leg stroke as a percentage of its stroke at last stance phase
+float leg_swing_percent = 0.9;    // swing leg stroke as a percentage of its stroke at last stance phase
 
 float swing_percent_at_translate = 0.5;   // percentage of swing leg retraction after which forward translation begins
 float trans_percent_at_touchdown = 0.4;   // percentage of forward translaton command from midpoint; small values can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
@@ -383,8 +383,8 @@ void updateSetpoints() {
       motors[gait_phase * 2 + 1].states_.velocity_limit = kVelLegMaxContact;      
 
       // set torque command for leg touchdown
-      motors[gait_phase * 2].states_.tau_d = touchdown_torque[gait_phase * 2][0];
-      motors[gait_phase * 2 + 1].states_.tau_d = touchdown_torque[gait_phase * 2 + 1][0];
+      motors[gait_phase * 2].states_.tau_d = touchdown_torque[gait_phase * 2][1];
+      motors[gait_phase * 2 + 1].states_.tau_d = touchdown_torque[gait_phase * 2 + 1][1];
 
       // reapply locomotion mechanism setpoints in the case of resuming locomotion from standstill
       motors[MotorID::kMotorTranslate].states_.q_d = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];                                                    // forward translation scaled by x-component of cmd_vector

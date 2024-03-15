@@ -26,7 +26,7 @@ const float k_zBodyMin = 100;           // minimum allowable value for z_body_lo
 const float k_zBodyMax = 300;           // maximum allowable value for z_body_local
 
 // blocking motion primitive parameters
-const float kdzMax = 30;                // maximum allowed body height deviation in mm
+const float kdzMax = 60;                // maximum allowed body height deviation in mm
 const float kTiltNominal = 3;           // acceptable body tilt from zero in degrees
 const float kDqLegMaxTilt = 100;        // max total leg displacements per tilt correction
 const float kOmegaStable = 5;           // lateral body angular velocity value in deg/s below which the blocking of normal gait behavior ends
