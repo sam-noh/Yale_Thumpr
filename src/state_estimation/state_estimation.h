@@ -7,6 +7,7 @@
 #include <Adafruit_BNO08x.h>
 
 #define USE_LEG_CONTACT
+#define USE_HIGH_IMPULSE_CONTACT
 
 //////////////////////////////////////////////////////////////////////////////////////
 // control loop periods
@@ -60,9 +61,11 @@ const std::vector<int> kBodyFrameAxisIndex = {2, -1, 3};    // IMU frame to body
                                                             // body y-axis is negative IMU x-axis
                                                             // body z-axis is positive IMU z-axis
 
-// contact detection parameters
+// contact detection
 const float kDqStartContact = 8;            // leg displacment in mm past which contact detection begins; this value MUST BE AT LEAST less than the leg retraction amount (see leg_swing_percent)
-const float kQdotContact = 3;              // joint velocity in mm/s below which contact is likely; 3-80
+const float kQdotContactLowImpulse = 3;     // joint velocity in mm/s below which contact is likely
+const float kQddotContact = -1800;          // joint acceleration in mm/s^2 above which (more negative) leg contact is likely
+const float kQdotContactHighImpulse = 70;   // joint velocity in mm/s below which contact is likely if the leg has undergone large deceleration (high impulse)
 
 //////////////////////////////////////////////////////////////////////////////////////
 // sensor and filter structs
@@ -156,6 +159,9 @@ extern float dist_traveled;                                 // distance traveled
 extern std::vector<float> rpy_lateral_0;                    // lateral body roll pitch yaw after homing
 extern std::vector<float> rpy_lateral;                      // lateral body roll pitch yaw relative to rpy_lateral_0
 extern std::vector<float> omega_lateral;                    // lateral body angular velocity with respect to body frame axes
+
+extern std::vector<int> inContact;                          // true if the corresponding motor's legs are on the ground; see contact estimation
+extern std::vector<int> isDecelerated;                      // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
 
 //////////////////////////////////////////////////////////////////////////////////////
 // global functions

@@ -66,6 +66,10 @@ std::vector<float> rpy_lateral_0 = {0, 0, 0};               // lateral body roll
 std::vector<float> rpy_lateral = {0, 0, 0};                 // lateral body roll pitch yaw relative to rpy_lateral_0
 std::vector<float> omega_lateral = {0, 0, 0};               // lateral body angular velocity with respect to body frame axes
 
+std::vector<int> inContact = {0,0,0,0};                         // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
+std::vector<int> isDecelerated = {false, false, false, false,   // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
+                                  false, false, false, false};
+
 bool stop_signal = false;
 
 // read the joystick XY analog voltages and the select button and normalize
@@ -463,13 +467,27 @@ void updateContactState() {
     if (t_current - t_last_contact_update >= k_dtContactUpdate) {
       t_last_contact_update = t_current;
 
+      // allows earlier detection of ground contact by tracking leg acceleration
+      // even if this fails due to the acceleration not exceeding the threshold,
+      // the low impulse contact detection will catch the event later
+      #ifdef USE_HIGH_IMPULSE_CONTACT
+      
+      for (uint8_t i = 0; i < kNumOfLegs/2; ++i) {
+        isDecelerated[gait_phase*4 + i] = isDecelerated[gait_phase*4 + i] || (q_ddot_filters[gait_phase*4 + i].filtered_value < kQddotContact && q_dot[gait_phase*4 + i] < kQdotContactHighImpulse);
+      }
+
+      inContact[gait_phase * 2] = isDecelerated[gait_phase*4] && isDecelerated[gait_phase*4 + 1];
+      inContact[gait_phase * 2 + 1] = isDecelerated[gait_phase*4 + 2] && isDecelerated[gait_phase*4 + 3];
+
+      #endif
+
       // use either leg encoder velocity or motor velocity for contact estimation
       #ifdef USE_LEG_CONTACT
-      inContact[gait_phase * 2] = fabs(q_dot[gait_phase*4]) < kQdotContact && fabs(q_dot[gait_phase*4 + 1]) < kQdotContact      // if the leg velocities are below a threshold
-                                  && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact;       // AND the actuator position is past some inital displacement
+      inContact[gait_phase * 2] = inContact[gait_phase * 2] || (fabs(q_dot[gait_phase*4]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 1]) < kQdotContactLowImpulse    // if the leg velocities are below a threshold
+                                                                && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact);                        // AND the actuator position is past some inital displacement
 
-      inContact[gait_phase * 2 + 1] = fabs(q_dot[gait_phase*4 + 2]) < kQdotContact && fabs(q_dot[gait_phase*4 + 3]) < kQdotContact
-                                      && motors[gait_phase * 2 + 1].states_.q + dz_body_local - q_leg_swing[1] > kDqStartContact;
+      inContact[gait_phase * 2 + 1] = inContact[gait_phase * 2 + 1] || (fabs(q_dot[gait_phase*4 + 2]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 3]) < kQdotContactLowImpulse
+                                                                        && motors[gait_phase * 2 + 1].states_.q + dz_body_local - q_leg_swing[1] > kDqStartContact);
 
       if (inContact[gait_phase*2]) {
         snprintf(sent_data, sizeof(sent_data), "q_dot_1: %.2f\tqdot_2: %.2f\n", q_dot[gait_phase*4], q_dot[gait_phase*4+1]);
@@ -482,10 +500,10 @@ void updateContactState() {
       }
 
       #else
-      inContact[gait_phase * 2] = fabs(motors[gait_phase * 2].states_.q_dot) < kQdotContact                                  // if the actuator velocity is below a threshold
+      inContact[gait_phase * 2] = fabs(motors[gait_phase * 2].states_.q_dot) < kQdotContactLowImpulse                                  // if the actuator velocity is below a threshold
                                   && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact;    // AND the actuator position is past some inital displacement
 
-      inContact[gait_phase * 2 + 1] = fabs(motors[gait_phase * 2 + 1].states_.q_dot) < kQdotContact
+      inContact[gait_phase * 2 + 1] = fabs(motors[gait_phase * 2 + 1].states_.q_dot) < kQdotContactLowImpulse
                                       && motors[gait_phase * 2 + 1].states_.q + dz_body_local - q_leg_swing[1] > kDqStartContact;
       #endif
     }

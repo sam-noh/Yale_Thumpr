@@ -16,7 +16,6 @@ std::vector<float> cmd_vector = {0, 0, 0};              // command vector: {forw
 uint8_t gait_phase = GaitPhases::kLateralSwing;         // current gait phase/swing body; (0 medial swing/lateral stance) -> (1 medial stance/lateral swing); double support is omitted
 uint8_t actuation_phase = ActuationPhases::kRetractLeg; // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 uint32_t gait_cycles = 0;                               // number of completed gait cycles
-std::vector<int> inContact = {0,0,0,0};                 // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
 bool isBlocking = false;                                // true if any motion primitive outside of the standard gait cycle is in progress
 bool isCorrected = false;                               // true if a motion primitive has been completed during the gait cycle
 
