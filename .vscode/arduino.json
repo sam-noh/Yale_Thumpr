@@ -1,7 +1,7 @@
 {
     "configuration": "usb=serial,speed=600,opt=o2std,keys=en-us",
     "board": "teensy:avr:teensy41",
-    "sketch": "Robot control.ino",
+    "sketch": "robot_control.ino",
     "port": "COM8",
     "output": "../build"
 }

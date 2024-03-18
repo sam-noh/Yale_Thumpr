@@ -161,10 +161,6 @@ void initActuators() {
   for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
     ODrive_CAN.ClearErrors(axis_id);
   }
-  t_start = millis();
-  while(millis() - t_start < 1000) {
-    handleODriveCANMsg();
-  }
 
   for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
     snprintf(sent_data, sizeof(sent_data), "Checking ODrive axis %d...\n", axis_id + 1);
@@ -251,7 +247,7 @@ void updateMotorCommands() {
       motors[axis_id].setControlMode(motors[axis_id].states_.ctrl_mode);
     }
 
-    delayMicroseconds(200); // give ODrive some time to process the limit changes
+    delayMicroseconds(100); // give ODrive some time to process the limit changes
 
     for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
       // update motor command

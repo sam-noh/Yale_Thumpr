@@ -93,6 +93,7 @@ void initRTC() {
 }
 
 // initialize microSD card and set file name
+// TODO: try waiting a bit after bootup to see if the SD card is found and can be initialized
 void initSDCard() {
   #ifdef ENABLE_SD_CARD
 
@@ -354,6 +355,17 @@ void sendTelemetry() {
 
     #ifdef DEBUG_POWER
     SERIAL_USB.print("battery V, A, P: ");
+    writeToSerial();
+    #endif
+    writeToCard(sent_data);
+
+    // individual motor power
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t",
+              motors[0].states_.bus_voltage*motors[0].states_.bus_current, motors[1].states_.bus_voltage*motors[1].states_.bus_current, motors[2].states_.bus_voltage*motors[2].states_.bus_current,
+              motors[3].states_.bus_voltage*motors[3].states_.bus_current, motors[4].states_.bus_voltage*motors[4].states_.bus_current, motors[5].states_.bus_voltage*motors[5].states_.bus_current);
+
+    #ifdef DEBUG_POWER
+    SERIAL_USB.print("motor P: ");
     writeToSerial();
     #endif
     writeToCard(sent_data);
