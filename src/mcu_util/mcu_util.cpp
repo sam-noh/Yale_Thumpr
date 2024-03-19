@@ -105,6 +105,7 @@ void initSDCard() {
   while (!success && millis() - t_current < 1000) {
     if (SD.begin(chip_select)) {
       success = true;
+      delay(100);
     }
   }
 
@@ -131,7 +132,7 @@ void initSDCard() {
   file_name.toCharArray(data_file_name, sizeof(data_file_name));
   data_file = SD.open(data_file_name, FILE_WRITE);
   SERIAL_USB.printf("Data being saved to: %s\n\n", data_file_name);
-
+  
   #endif
 }
 

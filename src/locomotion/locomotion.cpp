@@ -177,6 +177,7 @@ void homeLeggedRobot() {
   motors[MotorID::kMotorTranslate].states_.homed = true;
   motors[MotorID::kMotorTranslate].states_.pos_home = motors[MotorID::kMotorTranslate].states_.pos_abs;
   motors[MotorID::kMotorTranslate].states_.pos_rel = motors[MotorID::kMotorTranslate].states_.pos_abs - motors[MotorID::kMotorTranslate].states_.pos_home;
+  motors[MotorID::kMotorTranslate].states_.q_d = 0;
 
   snprintf(sent_data, sizeof(sent_data), "Finished homing the translation mechanism.\n\n");
   writeToSerial();

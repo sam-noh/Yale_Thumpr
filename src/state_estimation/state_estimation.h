@@ -7,7 +7,7 @@
 #include <Adafruit_BNO08x.h>
 
 #define USE_LEG_CONTACT
-#define USE_HIGH_IMPULSE_CONTACT
+// #define USE_HIGH_IMPULSE_CONTACT
 
 //////////////////////////////////////////////////////////////////////////////////////
 // control loop periods
