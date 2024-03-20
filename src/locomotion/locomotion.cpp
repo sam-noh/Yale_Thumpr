@@ -5,10 +5,10 @@
 #include "..\state_estimation\state_estimation.h"
 
 std::vector<std::vector<float>> touchdown_torque = {
-  {0.2, 0.14},  // 0.18 last good values
-  {0.17, 0.13}, // 0.15
-  {0.2, 0.18},  // 0.18
-  {0.19, 0.17}  // 0.17
+  {0.2, 0.07},  // 0.18 last good values
+  {0.17, 0.07}, // 0.15
+  {0.2, 0.12},  // 0.18
+  {0.19, 0.12}  // 0.17
 };
 
 // gait variables
@@ -128,59 +128,59 @@ void homeLeggedRobot() {
   snprintf(sent_data, sizeof(sent_data), "Finished homing the yaw mechanism.\n\n");
   writeToSerial();
 
-  // translation actuator homing
-  snprintf(sent_data, sizeof(sent_data), "Homing the translation mechanism...\n");
-  writeToSerial();
+  // // translation actuator homing
+  // snprintf(sent_data, sizeof(sent_data), "Homing the translation mechanism...\n");
+  // writeToSerial();
 
-  motors[MotorID::kMotorTranslate].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kVelocityControl;
-  motors[MotorID::kMotorTranslate].states_.current_limit = kCurrentTransMaxHoming;
-  motors[MotorID::kMotorTranslate].states_.q_dot_d = kQdotTransHoming;
+  // motors[MotorID::kMotorTranslate].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kVelocityControl;
+  // motors[MotorID::kMotorTranslate].states_.current_limit = kCurrentTransMaxHoming;
+  // motors[MotorID::kMotorTranslate].states_.q_dot_d = kQdotTransHoming;
 
-  bool moving2 = true;
-  t_current = millis();
+  // bool moving2 = true;
+  // t_current = millis();
 
-  while (moving2) {
-    handleODriveCANMsg();
-    updateStates();
-    updateMotorCommands();
-    if (stop_signal) {
-      stopActuators();
-      while (1) {}
-    }
+  // while (moving2) {
+  //   handleODriveCANMsg();
+  //   updateStates();
+  //   updateMotorCommands();
+  //   if (stop_signal) {
+  //     stopActuators();
+  //     while (1) {}
+  //   }
     
-    if (millis() - t_current > 500 && fabs(motors[MotorID::kMotorTranslate].states_.q_dot) < fabs(kQdotTransHomingStop)) {
-      moving2 = false;
+  //   if (millis() - t_current > 500 && fabs(motors[MotorID::kMotorTranslate].states_.q_dot) < fabs(kQdotTransHomingStop)) {
+  //     moving2 = false;
 
-      snprintf(sent_data, sizeof(sent_data), "Reached translation joint limit.\n");
-      writeToSerial();
+  //     snprintf(sent_data, sizeof(sent_data), "Reached translation joint limit.\n");
+  //     writeToSerial();
 
-      motors[MotorID::kMotorTranslate].states_.q_dot_d = 0;
-      motors[MotorID::kMotorTranslate].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
-      motors[MotorID::kMotorTranslate].states_.current_limit = kCurrentTransMax;
-      motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].params_.direction*
-                                                     motors[MotorID::kMotorTranslate].states_.pos_abs*
-                                                     motors[MotorID::kMotorTranslate].params_.T + kQTransHomingOffset; // move to the zero position
-    }
-  }
+  //     motors[MotorID::kMotorTranslate].states_.q_dot_d = 0;
+  //     motors[MotorID::kMotorTranslate].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
+  //     motors[MotorID::kMotorTranslate].states_.current_limit = kCurrentTransMax;
+  //     motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].params_.direction*
+  //                                                    motors[MotorID::kMotorTranslate].states_.pos_abs*
+  //                                                    motors[MotorID::kMotorTranslate].params_.T + kQTransHomingOffset; // move to the zero position
+  //   }
+  // }
 
-  t_current = millis();
-  while (millis() - t_current < 500 || fabs(motors[MotorID::kMotorTranslate].states_.q_dot) > fabs(kQdotTransHomingStop)) {
-    handleODriveCANMsg();
-    updateStates();
-    updateMotorCommands();
-    if (stop_signal) {
-      stopActuators();
-      while (1) {}
-    }
-  }
+  // t_current = millis();
+  // while (millis() - t_current < 500 || fabs(motors[MotorID::kMotorTranslate].states_.q_dot) > fabs(kQdotTransHomingStop)) {
+  //   handleODriveCANMsg();
+  //   updateStates();
+  //   updateMotorCommands();
+  //   if (stop_signal) {
+  //     stopActuators();
+  //     while (1) {}
+  //   }
+  // }
 
-  motors[MotorID::kMotorTranslate].states_.homed = true;
-  motors[MotorID::kMotorTranslate].states_.pos_home = motors[MotorID::kMotorTranslate].states_.pos_abs;
-  motors[MotorID::kMotorTranslate].states_.pos_rel = motors[MotorID::kMotorTranslate].states_.pos_abs - motors[MotorID::kMotorTranslate].states_.pos_home;
-  motors[MotorID::kMotorTranslate].states_.q_d = 0;
+  // motors[MotorID::kMotorTranslate].states_.homed = true;
+  // motors[MotorID::kMotorTranslate].states_.pos_home = motors[MotorID::kMotorTranslate].states_.pos_abs;
+  // motors[MotorID::kMotorTranslate].states_.pos_rel = motors[MotorID::kMotorTranslate].states_.pos_abs - motors[MotorID::kMotorTranslate].states_.pos_home;
+  // motors[MotorID::kMotorTranslate].states_.q_d = 0;
 
-  snprintf(sent_data, sizeof(sent_data), "Finished homing the translation mechanism.\n\n");
-  writeToSerial();
+  // snprintf(sent_data, sizeof(sent_data), "Finished homing the translation mechanism.\n\n");
+  // writeToSerial();
 
   snprintf(sent_data, sizeof(sent_data), "Homing finished.\n---------------------------------------------\n\n");
   writeToSerial();
@@ -200,8 +200,8 @@ void standUp() {
   motors[stance * 2].states_.trap_traj_vel_limit = kVelLegTrajStandup;
   motors[stance * 2 + 1].states_.trap_traj_vel_limit = kVelLegTrajStandup;
   
-  inContact[stance * 2] = true;
-  inContact[stance * 2 + 1] = true;
+  isInContact[stance * 2] = true;
+  isInContact[stance * 2 + 1] = true;
 
   // update states while standing up
   while (!motors[stance * 2].states_.holding && !motors[stance * 2 + 1].states_.holding) {
@@ -253,7 +253,7 @@ void regulateBodyPose() {
 
     // nominal body height control
     if (actuation_phase == ActuationPhases::kTouchDown                                    // if currently touching down
-        && inContact[gait_phase * 2] && inContact[gait_phase * 2 + 1]                     // AND the swing legs are now also on the ground
+        && isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]                     // AND the swing legs are now also on the ground
         && fabs(z_body_local - z_body_nominal) > kdzMax                                   // AND the body height is not within nominal range
         && fabs(rpy_lateral[0]) < kTiltNominal && fabs(rpy_lateral[1]) < kTiltNominal) {  // AND the body tilt is within nominal range
 
@@ -342,7 +342,7 @@ bool isReadyForTransition(uint8_t phase) {
 
   } else if (phase == ActuationPhases::kTouchDown) {  // if currently touching down
         
-    return inContact[gait_phase * 2] && inContact[gait_phase * 2 + 1]
+    return isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]
            && ((fabs(z_body_local - z_body_nominal) < kdzMax)
            ||
            (fabs(z_body_local - z_body_nominal) > kdzMax && !(fabs(rpy_lateral[0]) < kTiltNominal && fabs(rpy_lateral[1]) < kTiltNominal)));  // true if both swing legs have made contact and body height regulation is not needed
@@ -362,50 +362,23 @@ void updateSetpoints() {
     if (actuation_phase == ActuationPhases::kRetractLeg) {  // if currently retracting leg
 
       if (fabs(cmd_vector[0]) < 0.01) {   // if no forward command
-        motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].states_.q;  // stop at current translation and yaw
-        motors[MotorID::kMotorYaw].states_.q_d = 0;
+        holdLocomotionMechanism();
 
       } else {  // else, move according to the current command
-        motors[MotorID::kMotorTranslate].states_.q_d = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];                                                    // forward translation scaled by x-component of cmd_vector
-        motors[MotorID::kMotorYaw].states_.q_d = min(motors[MotorID::kMotorYaw].states_.q_max, max(motors[MotorID::kMotorYaw].states_.q_min, cmd_vector[2])); // limit the max turn per step  
-      }
-
-      // if there is body tilt, change forward motion behavior
-      if (fabs(rpy_lateral[gait_phase]) > kTiltNominal) {
+        moveLocomotionMechanism();
       }
 
     } else if (actuation_phase == ActuationPhases::kTranslateForward) { // if currently translating forward
-
-      // change to torque control for leg touchdown
-      motors[gait_phase * 2].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;
-      motors[gait_phase * 2 + 1].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;
-
-      // limit velocity in torque control during touchdown
-      motors[gait_phase * 2].states_.velocity_limit = kVelLegMaxContact;
-      motors[gait_phase * 2 + 1].states_.velocity_limit = kVelLegMaxContact;      
-
-      // set torque command for leg touchdown
-      motors[gait_phase * 2].states_.tau_d = touchdown_torque[gait_phase * 2][1];
-      motors[gait_phase * 2 + 1].states_.tau_d = touchdown_torque[gait_phase * 2 + 1][1];
-
-      // reapply locomotion mechanism setpoints in the case of resuming locomotion from standstill
-      motors[MotorID::kMotorTranslate].states_.q_d = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];                                                    // forward translation scaled by x-component of cmd_vector
-      motors[MotorID::kMotorYaw].states_.q_d = min(motors[MotorID::kMotorYaw].states_.q_max, max(motors[MotorID::kMotorYaw].states_.q_min, cmd_vector[2])); // limit the max turn per step
+      updateLegMotorsForTouchdown();
+      moveLocomotionMechanism();      // reapply locomotion mechanism setpoints in the case of resuming locomotion from standstill
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
-      // clear these flags for the next gait cycle
+      // clear these flags/variables for the next gait cycle
       isBlocking = false;
       isCorrected = false;
-
       dz_body_local = 0;
 
-      // set desired position for telemetry purposes and possible control changes
-      motors[gait_phase*2].states_.q_d = motors[gait_phase*2].states_.q;
-      motors[gait_phase*2 + 1].states_.q_d = motors[gait_phase*2 + 1].states_.q;
-
-      // zero out torque command
-      motors[gait_phase*2].states_.tau_d = 0;
-      motors[gait_phase*2 + 1].states_.tau_d = 0;
+      updateLegMotorsForStance();
 
       // advance the gait phase
       gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
@@ -413,37 +386,11 @@ void updateSetpoints() {
         gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles
       }
 
-      // update and/or reset swing/stance setpoints based on last contact conditions
-      for (uint8_t i = 0; i < 2; i++) {
-
-        q_leg_contact[i] = motors[gait_phase*2 + i].states_.q;      // remember the leg motor position at ground contact
-        float q_leg_retract = q_leg_contact[i]*leg_swing_percent;   // nominal swing leg setpoint; NOT necessarily equal to the actual setpoint
-
-        // TODO: change this logic to account for robot kinematics (body tilt)
-        if (fabs(q[gait_phase * 4 + i * 2] - q[gait_phase * 4 + i * 2 + 1]) > kDqUnevenTerrain) { // if the previous stance legs are standing on uneven ground
-          float q_max = max(q[gait_phase * 4 + i * 2], q[gait_phase * 4 + i * 2 + 1]);            // calculate the additional leg stroke due to uneven terrain
-          float dq = q_max - motors[gait_phase * 2 + i].states_.q;
-          
-          motors[gait_phase * 2 + i].states_.q_d = max(kQLegMin + 5, q_leg_retract - dq); // retract more by dq to ensure proper ground clearance
-
-        } else {  
-          motors[gait_phase * 2 + i].states_.q_d = q_leg_retract;  // if even terrain, use the nominal swing leg setpoint
-        }
-
-        // remember the swing leg position setpoint
-        q_leg_swing[i] = motors[gait_phase * 2 + i].states_.q_d;
-        
-        // update the motor control mode and limits for swing phase
-        motors[gait_phase * 2 + i].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
-        motors[gait_phase * 2 + i].states_.velocity_limit = kVelLegMax;
-        // motors[gait_phase*2 + i].states_.current_limit = kCurrentLegMax;
-        motors[gait_phase * 2 + i].states_.trap_traj_vel_limit = kVelLegTrajSwing;
-        motors[gait_phase * 2 + i].states_.trap_traj_accel_limit = kAccelLegTrajSwing;
-        motors[gait_phase * 2 + i].states_.trap_traj_decel_limit = kDecelLegTrajSwing;
-        
-        inContact[gait_phase * 2 + i] = false;
-      }
+      updateSwingLegSetpoints();
+      updateLegMotorsForSwing();
+      resetSwingLegContactState();
     }
+
     actuation_phase = (actuation_phase + 1) % kNumOfActuationPhases;
 
     // update setpoints that do not involve a gait phase transition here
@@ -453,21 +400,89 @@ void updateSetpoints() {
     } else if (actuation_phase == ActuationPhases::kTranslateForward) { // if currently translating forward
       
       if (fabs(cmd_vector[0]) < 0.01) {   // if no forward command
-        motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].states_.q;  // stop at current translation and yaw
-        motors[MotorID::kMotorYaw].states_.q_d = 0;
+        holdLocomotionMechanism();
 
       } else {  // else, move according to the current command
-        motors[MotorID::kMotorTranslate].states_.q_d = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];                                                    // forward translation scaled by x-component of cmd_vector
-        motors[MotorID::kMotorYaw].states_.q_d = min(motors[MotorID::kMotorYaw].states_.q_max, max(motors[MotorID::kMotorYaw].states_.q_min, cmd_vector[2])); // limit the max turn per step  
-      }
-
-      // if there is body tilt, change forward motion behavior
-      if (fabs(rpy_lateral[gait_phase]) > kTiltNominal) {
+        moveLocomotionMechanism();
       }
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
-      
+      updateSwingLegTorque();
+      updateLegMotorsForStance();
     }
   }
 }
 
+void updateLegMotorsForTouchdown() {
+  for (uint8_t axis_id = gait_phase*2; axis_id < gait_phase*2 + 2; ++axis_id) {
+    motors[axis_id].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl; // change to torque control for leg touchdown
+    motors[axis_id].states_.velocity_limit = kVelLegMaxContact;                         // limit velocity in torque control during touchdown
+    motors[axis_id].states_.tau_d = touchdown_torque[axis_id][0];                       // set torque command for leg touchdown
+  }
+}
+
+void updateSwingLegTorque() {
+  for (uint8_t i = 0; i < 2; ++i) {
+    if (!isInContact[gait_phase*2 + i]                                                          // if the motor is not in contact
+        && (motors[gait_phase*2 + i].states_.q + dz_body_local - q_leg_swing[i]) > kDqLegRamp) {  // AND the leg stroke is past the initial displacement
+
+          motors[gait_phase*2 + i].states_.tau_d = touchdown_torque[gait_phase*2 + i][1];        // apply the lower torque command
+          digitalWrite(LED, HIGH);
+        }
+  }
+}
+
+// update and/or reset swing/stance setpoints based on last contact conditions
+void updateSwingLegSetpoints() {
+  for (uint8_t i = 0; i < 2; i++) {
+
+    q_leg_contact[i] = motors[gait_phase*2 + i].states_.q;      // remember the leg motor position at ground contact
+    float q_leg_retract = q_leg_contact[i]*leg_swing_percent;   // nominal swing leg setpoint; NOT necessarily equal to the actual setpoint
+
+    // TODO: change this logic to account for robot kinematics (body tilt)
+    if (fabs(q[gait_phase * 4 + i * 2] - q[gait_phase * 4 + i * 2 + 1]) > kDqUnevenTerrain) { // if the previous stance legs are standing on uneven ground
+      float q_max = max(q[gait_phase * 4 + i * 2], q[gait_phase * 4 + i * 2 + 1]);            // calculate the additional leg stroke due to uneven terrain
+      float dq = q_max - motors[gait_phase * 2 + i].states_.q;
+      
+      motors[gait_phase * 2 + i].states_.q_d = max(kQLegMin + 5, q_leg_retract - dq); // retract more by dq to ensure proper ground clearance
+
+    } else {  
+      motors[gait_phase * 2 + i].states_.q_d = q_leg_retract;  // if even terrain, use the nominal swing leg setpoint
+    }
+
+    // remember the swing leg position setpoint
+    q_leg_swing[i] = motors[gait_phase * 2 + i].states_.q_d;
+  }
+}
+
+// update the motor control mode and limits for swing phase
+void updateLegMotorsForSwing() {
+  for (uint8_t axis_id = gait_phase*2; axis_id < gait_phase*2 + 2; ++axis_id) {
+    motors[axis_id].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
+    motors[axis_id].states_.holding = false;
+    motors[axis_id].states_.velocity_limit = kVelLegMax;
+    motors[axis_id].states_.trap_traj_vel_limit = kVelLegTrajSwing;
+    motors[axis_id].states_.trap_traj_accel_limit = kAccelLegTrajSwing;
+    motors[axis_id].states_.trap_traj_decel_limit = kDecelLegTrajSwing;
+  }
+}
+
+void updateLegMotorsForStance() {
+  for (uint8_t axis_id = gait_phase*2; axis_id < gait_phase*2 + 2; ++axis_id) {
+    if(isInContact[axis_id]) {
+      motors[axis_id].states_.q_d = motors[axis_id].states_.q;    // set desired position for telemetry purposes and possible control changes
+      motors[axis_id].states_.tau_d = 0;                          // zero out torque command
+      motors[axis_id].sendCommand(ODriveTeensyCAN::ControlMode_t::kTorqueControl, motors[axis_id].states_.tau_d);
+    }
+  }
+}
+
+void moveLocomotionMechanism() {
+  motors[MotorID::kMotorTranslate].states_.q_d = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];                                                    // forward translation scaled by x-component of cmd_vector
+  motors[MotorID::kMotorYaw].states_.q_d = min(motors[MotorID::kMotorYaw].states_.q_max, max(motors[MotorID::kMotorYaw].states_.q_min, cmd_vector[2])); // limit the max turn per step
+}
+
+void holdLocomotionMechanism() {
+  motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].states_.q;  // stop at current translation and yaw
+  motors[MotorID::kMotorYaw].states_.q_d = 0;
+}

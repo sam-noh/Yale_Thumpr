@@ -25,7 +25,7 @@ char data_file_name[128] = "";
 
 // initialize Teensy 4.1 digital pins, RTC and etc.
 void initTeensy() {
-  delay(100);   // short delay after the start to ensure the first serial print is not missed over USB
+  delay(500);   // short delay after the start to ensure the first serial print is not missed over USB
   SERIAL_USB.println("Teensy started.\n");
 
   // add digital pin initialization here
@@ -105,7 +105,7 @@ void initSDCard() {
   while (!success && millis() - t_current < 1000) {
     if (SD.begin(chip_select)) {
       success = true;
-      delay(100);
+      delay(100); // immediately calling SD.open() after SD.begin() causes sporadic failures
     }
   }
 
@@ -323,7 +323,7 @@ void sendTelemetry() {
 
     // leg velocities
     snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t",
-             q_dot[0], q_dot[1], q_dot[2], q_dot[3], q_dot[4], q_dot[5], q_dot[6], q_dot[7]);
+             q_dot_filters[0].filtered_value, q_dot_filters[1].filtered_value, q_dot_filters[2].filtered_value, q_dot_filters[3].filtered_value, q_dot_filters[4].filtered_value, q_dot_filters[5].filtered_value, q_dot_filters[6].filtered_value, q_dot_filters[7].filtered_value);
 
     #ifdef DEBUG_LEG_VELOCITY
     SERIAL_USB.print("leg q_dot (mm/s): ");
@@ -343,7 +343,7 @@ void sendTelemetry() {
 
     // ground contacts
     snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%d\t%d\t",
-             inContact[0], inContact[1], inContact[2], inContact[3]);
+             isInContact[0], isInContact[1], isInContact[2], isInContact[3]);
 
     #ifdef DEBUG_CONTACT
     SERIAL_USB.print("contacts: ");

@@ -7,6 +7,9 @@
 //////////////////////////////////////////////////////////////////////////////////////
 // constants
 
+// battery parameters
+const float kMinBatteryVoltage = 22.5;              // min battery voltage
+
 // ODrive Pro CAN parameters
 const int kODriveCANBaudRate = 1000000;             // baud rate for ODrive CAN2.0
 const int kAxisIDLength = 6;                        // number of bits of the CAN message's axis ID
@@ -61,7 +64,7 @@ const float kDecelYawTraj = 5;                  // yaw motor trapezoidal traject
 
 // motor current limits
 const float kCurrentLegMax = 60;                // leg motor current limit in ampere
-const float kCurrentLegMaxHoming = 10;          // leg motor current limit while homing in ampere
+const float kCurrentLegMaxHoming = 11;          // leg motor current limit while homing in ampere
 const float kCurrentTransMax = 8;               // translation motor current limit in ampere
 const float kCurrentYawMax = 5;                 // yaw motor current limit in ampere
 const float kCurrentTransMaxHoming = 6;         // translation motor current limit while homing in ampere

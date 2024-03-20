@@ -46,7 +46,7 @@ const float kTxRatioYaw = 360*kPitchDiaYawInput/kPitchDiaYawOutput;
 
 // quadrature encoder counts per revolution
 const int k_CPR_AMT102_V = 8192;            // counts per revolution for the worm gearbox output encoder
-const int kDirectionWorm[] = {1, -1, -1, 1, 1, -1, -1, 1};
+const int kDirectionWorm[] = {-1, 1, 1, -1, 1, -1, -1, 1};
 
 // kinematic parameters
 const float kL_1 = 728;                     // perpendicular distance between opposite legs on the medial body

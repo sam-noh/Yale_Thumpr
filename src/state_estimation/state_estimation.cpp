@@ -7,9 +7,9 @@
 #include "..\locomotion\locomotion.h"
 
 // time variables
-elapsedMicros dt_last_pos_update = 0;         // time since last leg position sampling in microseconds
-elapsedMicros dt_last_vel_update = 0;         // time since last leg velocity sampling in microseconds
-elapsedMicros dt_last_accel_update = 0;       // time since last leg acceleration sampling in microseconds
+elapsedMicros dt_last_pos_update = 0;             // time since last leg position sampling in microseconds
+elapsedMicros dt_last_vel_update = 0;             // time since last leg velocity sampling in microseconds
+elapsedMicros dt_last_accel_update = 0;           // time since last leg acceleration sampling in microseconds
 uint32_t t_last_IMU_update = 0;                   // timestamp in milliseconds at last IMU sampling
 uint32_t t_last_contact_update = 0;               // timestamp in milliseconds at last leg ground contact update
 uint32_t t_last_power_update = 0;                 // timestamp in milliseconds at last power update
@@ -17,10 +17,10 @@ uint32_t t_last_motor_torque_filter_update = 0;   // timestamp in milliseconds a
 uint32_t t_last_kinematics_update = 0;            // timestamp in milliseconds at last kinematics update
 
 // hardware interrupt encoders
-Encoder encoders[] = {Encoder(ENC_1_A, ENC_1_B),  // medial body; front right leg
-                      Encoder(ENC_2_A, ENC_2_B),  // medial body; front left leg
-                      Encoder(ENC_3_A, ENC_3_B),  // medial body; rear right leg
-                      Encoder(ENC_4_A, ENC_4_B),  // medial body; rear left leg
+Encoder encoders[] = {Encoder(ENC_2_A, ENC_2_B),  // medial body; front right leg
+                      Encoder(ENC_1_A, ENC_1_B),  // medial body; front left leg
+                      Encoder(ENC_4_A, ENC_4_B),  // medial body; rear right leg
+                      Encoder(ENC_3_A, ENC_3_B),  // medial body; rear left leg
                       Encoder(ENC_6_A, ENC_6_B),  // lateral body; front right leg
                       Encoder(ENC_8_A, ENC_8_B),  // lateral body; rear right leg
                       Encoder(ENC_5_A, ENC_5_B),  // lateral body; front left leg
@@ -41,6 +41,18 @@ ACS711EX_Sensor acs711ex_sensor;                // ACS711EX current sensor
 float battery_voltage = 0;                      // current battery voltage in voltage
 float battery_current = 0;                      // current battery current in ampere
 float battery_power = 0;                        // current battery power in watt
+
+// moving average filter for joint velocity
+std::vector<MovingAvgFilter> q_dot_filters = {MovingAvgFilter(kLegVelFilterLength),
+                                               MovingAvgFilter(kLegVelFilterLength),
+                                               MovingAvgFilter(kLegVelFilterLength),
+                                               MovingAvgFilter(kLegVelFilterLength),
+                                               MovingAvgFilter(kLegVelFilterLength),
+                                               MovingAvgFilter(kLegVelFilterLength),
+                                               MovingAvgFilter(kLegVelFilterLength),
+                                               MovingAvgFilter(kLegVelFilterLength),
+                                               MovingAvgFilter(kLegVelFilterLength),
+                                               MovingAvgFilter(kLegVelFilterLength)};
 
 // moving average filter for joint acceleration
 std::vector<MovingAvgFilter> q_ddot_filters = {MovingAvgFilter(kLegAccelFilterLength),
@@ -66,9 +78,12 @@ std::vector<float> rpy_lateral_0 = {0, 0, 0};               // lateral body roll
 std::vector<float> rpy_lateral = {0, 0, 0};                 // lateral body roll pitch yaw relative to rpy_lateral_0
 std::vector<float> omega_lateral = {0, 0, 0};               // lateral body angular velocity with respect to body frame axes
 
-std::vector<int> inContact = {0,0,0,0};                         // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
+std::vector<int> isInContact = {0,0,0,0};                       // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
 std::vector<int> isDecelerated = {false, false, false, false,   // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
                                   false, false, false, false};
+
+std::vector<int> isSlowed = {false, false, false, false,          // true if a leg's velocity is below a threshold during touchdown; reset after each cycle
+                           false, false, false, false};
 
 bool stop_signal = false;
 
@@ -358,7 +373,7 @@ void updateJointEstimates() {
 
     // read leg encoders and update position estimates
     for (uint8_t i = 0; i < kNumOfLegs; i++) {
-      q[i] = kTxRatioLegDrive * (kDirectionWorm[i]*(float)encoders[i].read() / k_CPR_AMT102_V);
+      q[i] = kTxRatioLegDrive * (kDirectionWorm[i]*(float)(encoders[i].read()) / k_CPR_AMT102_V);
     }
 
     // update translation and yaw joint position estimates
@@ -393,6 +408,8 @@ void updateJointEstimates() {
     q_prev[JointID::kJointTranslate] = q[JointID::kJointTranslate];
     q_prev[JointID::kJointYaw] = q[JointID::kJointYaw];
 
+    updateVelFilters();
+
     dt_last_vel_update = 0;
   }
 
@@ -403,8 +420,8 @@ void updateJointEstimates() {
 
     // update acceleration estimates
     for (uint8_t i = 0; i < kNumOfLegs; i++) {
-      q_ddot[i] = (q_dot[i] - q_dot_prev[i]) / ((float)dt_last_accel_update / 1e6);
-      q_dot_prev[i] = q_dot[i];
+      q_ddot[i] = (q_dot_filters[i].filtered_value - q_dot_prev[i]) / ((float)dt_last_accel_update / 1e6);
+      q_dot_prev[i] = q_dot_filters[i].filtered_value;
     }
 
     // update translation and yaw joint acceleration estimates
@@ -467,46 +484,48 @@ void updateContactState() {
     if (t_current - t_last_contact_update >= k_dtContactUpdate) {
       t_last_contact_update = t_current;
 
-      // allows earlier detection of ground contact by tracking leg acceleration
-      // even if this fails due to the acceleration not exceeding the threshold,
-      // the low impulse contact detection will catch the event later
+      // high impulse contact detection
+      // watches leg acceleration to detect ground contact
+      // if this doesn't detect contact, the low impulse contact detection will catch the event later
       #ifdef USE_HIGH_IMPULSE_CONTACT
       
-      for (uint8_t i = 0; i < kNumOfLegs/2; ++i) {
-        isDecelerated[gait_phase*4 + i] = isDecelerated[gait_phase*4 + i] || (q_ddot_filters[gait_phase*4 + i].filtered_value < kQddotContact && q_dot[gait_phase*4 + i] < kQdotContactHighImpulse);
+      for (uint8_t axis_id = gait_phase*4; axis_id < gait_phase*4 + 4; ++axis_id) {
+        isDecelerated[axis_id] = isDecelerated[axis_id] || (q_ddot_filters[axis_id].filtered_value < kQddotContact);
       }
 
-      inContact[gait_phase * 2] = isDecelerated[gait_phase*4] && isDecelerated[gait_phase*4 + 1];
-      inContact[gait_phase * 2 + 1] = isDecelerated[gait_phase*4 + 2] && isDecelerated[gait_phase*4 + 3];
+      isInContact[gait_phase * 2] = isDecelerated[gait_phase*4] && isDecelerated[gait_phase*4 + 1];
+      isInContact[gait_phase * 2 + 1] = isDecelerated[gait_phase*4 + 2] && isDecelerated[gait_phase*4 + 3];
 
       #endif
 
-      // use either leg encoder velocity or motor velocity for contact estimation
+      // low impulse contact detection
+      // use leg encoder velocity for contact estimation
       #ifdef USE_LEG_CONTACT
-      inContact[gait_phase * 2] = inContact[gait_phase * 2] || (fabs(q_dot[gait_phase*4]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 1]) < kQdotContactLowImpulse    // if the leg velocities are below a threshold
+      isInContact[gait_phase * 2] = isInContact[gait_phase * 2] || (fabs(q_dot[gait_phase*4]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 1]) < kQdotContactLowImpulse    // if the leg velocities are below a threshold
                                                                 && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact);                        // AND the actuator position is past some inital displacement
 
-      inContact[gait_phase * 2 + 1] = inContact[gait_phase * 2 + 1] || (fabs(q_dot[gait_phase*4 + 2]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 3]) < kQdotContactLowImpulse
+      isInContact[gait_phase * 2 + 1] = isInContact[gait_phase * 2 + 1] || (fabs(q_dot[gait_phase*4 + 2]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 3]) < kQdotContactLowImpulse
                                                                         && motors[gait_phase * 2 + 1].states_.q + dz_body_local - q_leg_swing[1] > kDqStartContact);
 
-      if (inContact[gait_phase*2]) {
-        snprintf(sent_data, sizeof(sent_data), "q_dot_1: %.2f\tqdot_2: %.2f\n", q_dot[gait_phase*4], q_dot[gait_phase*4+1]);
-        writeToSerial();
-      }
-
-      if (inContact[gait_phase*2 + 1]) {
-        snprintf(sent_data, sizeof(sent_data), "q_dot_3: %.2f\tqdot_4: %.2f\n", q_dot[gait_phase*4+2], q_dot[gait_phase*4+3]);
-        writeToSerial();
-      }
-
+      // or use motor velocity for contact estimation
       #else
-      inContact[gait_phase * 2] = fabs(motors[gait_phase * 2].states_.q_dot) < kQdotContactLowImpulse                                  // if the actuator velocity is below a threshold
+      isInContact[gait_phase * 2] = fabs(motors[gait_phase * 2].states_.q_dot) < kQdotContactLowImpulse                                  // if the actuator velocity is below a threshold
                                   && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact;    // AND the actuator position is past some inital displacement
 
-      inContact[gait_phase * 2 + 1] = fabs(motors[gait_phase * 2 + 1].states_.q_dot) < kQdotContactLowImpulse
+      isInContact[gait_phase * 2 + 1] = fabs(motors[gait_phase * 2 + 1].states_.q_dot) < kQdotContactLowImpulse
                                       && motors[gait_phase * 2 + 1].states_.q + dz_body_local - q_leg_swing[1] > kDqStartContact;
       #endif
     }
+  }
+}
+
+void resetSwingLegContactState() {
+  for (uint8_t i = 0; i < 2; i++) {
+    isInContact[gait_phase * 2 + i] = false;
+    isDecelerated[gait_phase*4 + i*2] = false;
+    isDecelerated[gait_phase*4 + i*2 + 1] = false;
+    isSlowed[gait_phase*4 + i*2] = false;
+    isSlowed[gait_phase*4 + i*2 + 1] = false;
   }
 }
 
@@ -522,8 +541,16 @@ void updateMotorTorqueFilters() {
   }
 }
 
+// call the updateFilter() function for joint velocity filters
+// update frequency tracks sampling rate
+void updateVelFilters() {
+  for (uint8_t i = 0; i < kNumOfJoints; i++) {
+    q_dot_filters[i].updateFilter(q_dot[i]);
+  }
+}
+
 // call the updateFilter() function for joint acceleration filters
-// does not track loop frequency since it is automatically called with joint acceleration sampling
+// update frequency tracks sampling rate
 void updateAccelFilters() {
   for (uint8_t i = 0; i < kNumOfJoints; i++) {
     q_ddot_filters[i].updateFilter(q_ddot[i]);

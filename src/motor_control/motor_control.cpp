@@ -178,6 +178,14 @@ void initActuators() {
       
       while (true) {} // if there's an axis error, do not proceed
       
+    } else if (motors[axis_id].states_.bus_voltage < kMinBatteryVoltage) {
+      digitalWrite(LED, HIGH);
+
+      snprintf(sent_data, sizeof(sent_data), "Battery voltage below %.1f.\n", kMinBatteryVoltage);
+      writeToSerial();
+      
+      while (true) {} // if there's an axis error, do not proceed
+
     } else {
       snprintf(sent_data, sizeof(sent_data), "Putting actuator %d in closed-loop control...\n", axis_id + 1);
       writeToSerial();
@@ -247,7 +255,7 @@ void updateMotorCommands() {
       motors[axis_id].setControlMode(motors[axis_id].states_.ctrl_mode);
     }
 
-    delayMicroseconds(200); // give ODrive some time to process the limit changes; 100 us too low
+    delayMicroseconds(250); // give ODrive some time to process the limit changes; 100 us too low
 
     for (uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
       // update motor command

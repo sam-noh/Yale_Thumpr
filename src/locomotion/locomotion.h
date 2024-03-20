@@ -18,6 +18,9 @@ enum ActuationPhases {
     kTouchDown = 2
 };
 
+// touchdown torque step command parameters
+const float kDqLegRamp = 60;            // leg displacement during touchidown after which the lower torque command is applied
+
 // kRetractLeg parameters
 const float kDqUnevenTerrain = 50;      // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
 
@@ -76,5 +79,21 @@ void regulateBodyPose();
 bool isReadyForTransition(uint8_t phase);
 
 void updateSetpoints();
+
+void updateLegMotorsForTouchdown();
+
+void updateSwingLegTorque();
+
+// update and/or reset swing/stance setpoints based on last contact conditions
+void updateSwingLegSetpoints();
+
+// update the motor control mode and limits for swing phase
+void updateLegMotorsForSwing();
+
+void updateLegMotorsForStance();
+
+void moveLocomotionMechanism();
+
+void holdLocomotionMechanism();
 
 #endif

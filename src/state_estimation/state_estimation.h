@@ -11,14 +11,14 @@
 
 //////////////////////////////////////////////////////////////////////////////////////
 // control loop periods
-const uint16_t k_dtPosUpdate = 1000;                // position sampling period in microseconds
-const uint16_t k_dtVelUpdate = 5000;                // velocity sampling period in microseconds
-const uint16_t k_dtAccelUpdate = 10000;             // acceleration sampling period in microseconds
+const uint16_t k_dtPosUpdate = 250;                 // position sampling period in microseconds; encoders use hardware interrupt, but the pulse counts need to be transformed to joint space at an interval
+const uint16_t k_dtVelUpdate = 2000;                // velocity sampling period in microseconds; numerical difference on position and filtering frequency
+const uint16_t k_dtAccelUpdate = 10000;             // acceleration sampling period in microseconds; numerical difference on velocity and filtering frequency
 const uint8_t k_dtContactUpdate = 1;                // leg ground contact update period in ms
 const uint8_t k_dtKinematicsUpdate = 1;             // robot kinematics update period in ms
 
 const uint8_t k_dtIMUUpdate = 5;                    // IMU sampling period in ms
-const uint8_t k_dtPowerUpdate = 50;                 // motor power update period in ms
+const uint8_t k_dtPowerUpdate = 10;                 // motor power update period in ms
 const uint8_t k_dtMotorTorqueFilterUpdate = 10;     // motor torque filtering period in ms
 
 // time variables
@@ -48,10 +48,13 @@ const float kGUIJoystickYDeadZone = 0.6;    // +-0.3 out of +-1
 const float k_mVPerAmpere = 45;             // output sensitivity in mV per ampere for ACS711EX current sensor
 
 // motor torque moving average filter
-const int kTorqueFilterLength = 5;          // number of torque samples to hold in the FIFO queue
+const int kTorqueFilterLength = 3;          // number of torque samples to hold in the FIFO queue
+
+// leg velocity moving average filter
+const int kLegVelFilterLength = 3;          // number of leg velocity samples to hold in the FIFO queue
 
 // leg acceleration moving average filter
-const int kLegAccelFilterLength = 5;        // number of leg acceleration samples to hold in the FIFO queue
+const int kLegAccelFilterLength = 4;        // number of leg acceleration samples to hold in the FIFO queue
 
 // IMU parameters
 const int kIMUAvgSize = 100;                                // IMU pose estimation initial value average sample size
@@ -64,8 +67,7 @@ const std::vector<int> kBodyFrameAxisIndex = {2, -1, 3};    // IMU frame to body
 // contact detection
 const float kDqStartContact = 8;            // leg displacment in mm past which contact detection begins; this value MUST BE AT LEAST less than the leg retraction amount (see leg_swing_percent)
 const float kQdotContactLowImpulse = 3;     // joint velocity in mm/s below which contact is likely
-const float kQddotContact = -1800;          // joint acceleration in mm/s^2 above which (more negative) leg contact is likely
-const float kQdotContactHighImpulse = 70;   // joint velocity in mm/s below which contact is likely if the leg has undergone large deceleration (high impulse)
+const float kQddotContact = -1200;          // joint acceleration in mm/s^2 above which (more negative) leg contact is likely
 
 //////////////////////////////////////////////////////////////////////////////////////
 // sensor and filter structs
@@ -151,6 +153,7 @@ extern std::vector<float> q;                                // see JointID for j
 extern std::vector<float> q_prev;                           // see JointID for joint indices
 extern std::vector<float> q_dot;                            // see JointID for joint indices
 extern std::vector<float> q_dot_prev;                       // see JointID for joint indices
+extern std::vector<MovingAvgFilter> q_dot_filters;          // moving average filter for leg joint velocity
 extern std::vector<float> q_ddot;                           // see JointID for joint indices
 extern std::vector<MovingAvgFilter> q_ddot_filters;         // moving average filter for leg joint acceleration
 extern float z_body_local;                                  // height of body above local terrain
@@ -160,7 +163,7 @@ extern std::vector<float> rpy_lateral_0;                    // lateral body roll
 extern std::vector<float> rpy_lateral;                      // lateral body roll pitch yaw relative to rpy_lateral_0
 extern std::vector<float> omega_lateral;                    // lateral body angular velocity with respect to body frame axes
 
-extern std::vector<int> inContact;                          // true if the corresponding motor's legs are on the ground; see contact estimation
+extern std::vector<int> isInContact;                        // true if the corresponding motor's legs are on the ground; see contact estimation
 extern std::vector<int> isDecelerated;                      // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -181,6 +184,8 @@ void updateIMUEstimate();
 // estimates the contact state of each swing leg motors
 void updateContactState();
 
+void resetSwingLegContactState();
+
 // estimate total power consumption by motors
 void updatePowerMeasurement();
 
@@ -188,7 +193,11 @@ void updatePowerMeasurement();
 void updateMotorTorqueFilters();
 
 // call the updateFilter() function for joint acceleration filters
-// does not track loop frequency since it is automatically called with joint acceleration sampling
+// update frequency tracks sampling rate
+void updateVelFilters();
+
+// call the updateFilter() function for joint acceleration filters
+// update frequency tracks sampling rate
 void updateAccelFilters();
 
 // update robot body pose based on kinematics
