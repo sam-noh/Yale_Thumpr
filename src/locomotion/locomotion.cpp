@@ -5,10 +5,10 @@
 #include "..\state_estimation\state_estimation.h"
 
 std::vector<std::vector<float>> touchdown_torque = {
-  {0.2, 0.07},  // 0.18 last good values
-  {0.17, 0.07}, // 0.15
-  {0.2, 0.12},  // 0.18
-  {0.19, 0.12}  // 0.17
+  {0.18, 0.14}, // 0.18 and 0.12
+  {0.18, 0.14},
+  {0.18, 0.14},
+  {0.18, 0.14}
 };
 
 // gait variables
@@ -128,59 +128,59 @@ void homeLeggedRobot() {
   snprintf(sent_data, sizeof(sent_data), "Finished homing the yaw mechanism.\n\n");
   writeToSerial();
 
-  // // translation actuator homing
-  // snprintf(sent_data, sizeof(sent_data), "Homing the translation mechanism...\n");
-  // writeToSerial();
+  // translation actuator homing
+  snprintf(sent_data, sizeof(sent_data), "Homing the translation mechanism...\n");
+  writeToSerial();
 
-  // motors[MotorID::kMotorTranslate].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kVelocityControl;
-  // motors[MotorID::kMotorTranslate].states_.current_limit = kCurrentTransMaxHoming;
-  // motors[MotorID::kMotorTranslate].states_.q_dot_d = kQdotTransHoming;
+  motors[MotorID::kMotorTranslate].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kVelocityControl;
+  motors[MotorID::kMotorTranslate].states_.current_limit = kCurrentTransMaxHoming;
+  motors[MotorID::kMotorTranslate].states_.q_dot_d = kQdotTransHoming;
 
-  // bool moving2 = true;
-  // t_current = millis();
+  bool moving2 = true;
+  t_current = millis();
 
-  // while (moving2) {
-  //   handleODriveCANMsg();
-  //   updateStates();
-  //   updateMotorCommands();
-  //   if (stop_signal) {
-  //     stopActuators();
-  //     while (1) {}
-  //   }
+  while (moving2) {
+    handleODriveCANMsg();
+    updateStates();
+    updateMotorCommands();
+    if (stop_signal) {
+      stopActuators();
+      while (1) {}
+    }
     
-  //   if (millis() - t_current > 500 && fabs(motors[MotorID::kMotorTranslate].states_.q_dot) < fabs(kQdotTransHomingStop)) {
-  //     moving2 = false;
+    if (millis() - t_current > 500 && fabs(motors[MotorID::kMotorTranslate].states_.q_dot) < fabs(kQdotTransHomingStop)) {
+      moving2 = false;
 
-  //     snprintf(sent_data, sizeof(sent_data), "Reached translation joint limit.\n");
-  //     writeToSerial();
+      snprintf(sent_data, sizeof(sent_data), "Reached translation joint limit.\n");
+      writeToSerial();
 
-  //     motors[MotorID::kMotorTranslate].states_.q_dot_d = 0;
-  //     motors[MotorID::kMotorTranslate].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
-  //     motors[MotorID::kMotorTranslate].states_.current_limit = kCurrentTransMax;
-  //     motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].params_.direction*
-  //                                                    motors[MotorID::kMotorTranslate].states_.pos_abs*
-  //                                                    motors[MotorID::kMotorTranslate].params_.T + kQTransHomingOffset; // move to the zero position
-  //   }
-  // }
+      motors[MotorID::kMotorTranslate].states_.q_dot_d = 0;
+      motors[MotorID::kMotorTranslate].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
+      motors[MotorID::kMotorTranslate].states_.current_limit = kCurrentTransMax;
+      motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].params_.direction*
+                                                     motors[MotorID::kMotorTranslate].states_.pos_abs*
+                                                     motors[MotorID::kMotorTranslate].params_.T + kQTransHomingOffset; // move to the zero position
+    }
+  }
 
-  // t_current = millis();
-  // while (millis() - t_current < 500 || fabs(motors[MotorID::kMotorTranslate].states_.q_dot) > fabs(kQdotTransHomingStop)) {
-  //   handleODriveCANMsg();
-  //   updateStates();
-  //   updateMotorCommands();
-  //   if (stop_signal) {
-  //     stopActuators();
-  //     while (1) {}
-  //   }
-  // }
+  t_current = millis();
+  while (millis() - t_current < 500 || fabs(motors[MotorID::kMotorTranslate].states_.q_dot) > fabs(kQdotTransHomingStop)) {
+    handleODriveCANMsg();
+    updateStates();
+    updateMotorCommands();
+    if (stop_signal) {
+      stopActuators();
+      while (1) {}
+    }
+  }
 
-  // motors[MotorID::kMotorTranslate].states_.homed = true;
-  // motors[MotorID::kMotorTranslate].states_.pos_home = motors[MotorID::kMotorTranslate].states_.pos_abs;
-  // motors[MotorID::kMotorTranslate].states_.pos_rel = motors[MotorID::kMotorTranslate].states_.pos_abs - motors[MotorID::kMotorTranslate].states_.pos_home;
-  // motors[MotorID::kMotorTranslate].states_.q_d = 0;
+  motors[MotorID::kMotorTranslate].states_.homed = true;
+  motors[MotorID::kMotorTranslate].states_.pos_home = motors[MotorID::kMotorTranslate].states_.pos_abs;
+  motors[MotorID::kMotorTranslate].states_.pos_rel = motors[MotorID::kMotorTranslate].states_.pos_abs - motors[MotorID::kMotorTranslate].states_.pos_home;
+  motors[MotorID::kMotorTranslate].states_.q_d = 0;
 
-  // snprintf(sent_data, sizeof(sent_data), "Finished homing the translation mechanism.\n\n");
-  // writeToSerial();
+  snprintf(sent_data, sizeof(sent_data), "Finished homing the translation mechanism.\n\n");
+  writeToSerial();
 
   snprintf(sent_data, sizeof(sent_data), "Homing finished.\n---------------------------------------------\n\n");
   writeToSerial();
@@ -192,22 +192,24 @@ void standUp() {
   
   uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
 
-  motors[stance * 2].states_.q_d = z_body_nominal;
-  motors[stance * 2 + 1].states_.q_d = z_body_nominal;
-  motors[stance * 2].states_.holding = false;
-  motors[stance * 2 + 1].states_.holding = false;
-
-  motors[stance * 2].states_.trap_traj_vel_limit = kVelLegTrajStandup;
-  motors[stance * 2 + 1].states_.trap_traj_vel_limit = kVelLegTrajStandup;
-  
-  isInContact[stance * 2] = true;
-  isInContact[stance * 2 + 1] = true;
+  for (uint8_t axis_id = stance*2; axis_id < stance*2 + 2; ++axis_id) {
+    motors[axis_id].states_.q_d = z_body_nominal;
+    motors[axis_id].states_.holding = false;
+    motors[axis_id].states_.trap_traj_vel_limit = kVelLegTrajStandup;
+    isInContact[axis_id] = true;
+  }
 
   // update states while standing up
   while (!motors[stance * 2].states_.holding && !motors[stance * 2 + 1].states_.holding) {
     handleODriveCANMsg();
     updateStates();
     updateMotorCommands();
+  }
+
+  for (uint8_t axis_id = stance*2; axis_id < stance*2 + 2; ++axis_id) {
+    motors[axis_id].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;
+    motors[axis_id].states_.tau_d = 0;                          // zero out torque command
+    motors[axis_id].sendCommand(ODriveTeensyCAN::ControlMode_t::kTorqueControl, motors[axis_id].states_.tau_d);
   }
   
   snprintf(sent_data, sizeof(sent_data), "Starting\n");
@@ -427,7 +429,6 @@ void updateSwingLegTorque() {
         && (motors[gait_phase*2 + i].states_.q + dz_body_local - q_leg_swing[i]) > kDqLegRamp) {  // AND the leg stroke is past the initial displacement
 
           motors[gait_phase*2 + i].states_.tau_d = touchdown_torque[gait_phase*2 + i][1];        // apply the lower torque command
-          digitalWrite(LED, HIGH);
         }
   }
 }

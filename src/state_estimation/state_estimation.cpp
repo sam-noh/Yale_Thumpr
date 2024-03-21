@@ -82,9 +82,6 @@ std::vector<int> isInContact = {0,0,0,0};                       // true if the m
 std::vector<int> isDecelerated = {false, false, false, false,   // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
                                   false, false, false, false};
 
-std::vector<int> isSlowed = {false, false, false, false,          // true if a leg's velocity is below a threshold during touchdown; reset after each cycle
-                           false, false, false, false};
-
 bool stop_signal = false;
 
 // read the joystick XY analog voltages and the select button and normalize
@@ -524,8 +521,6 @@ void resetSwingLegContactState() {
     isInContact[gait_phase * 2 + i] = false;
     isDecelerated[gait_phase*4 + i*2] = false;
     isDecelerated[gait_phase*4 + i*2 + 1] = false;
-    isSlowed[gait_phase*4 + i*2] = false;
-    isSlowed[gait_phase*4 + i*2 + 1] = false;
   }
 }
 

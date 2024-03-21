@@ -67,7 +67,7 @@ const std::vector<int> kBodyFrameAxisIndex = {2, -1, 3};    // IMU frame to body
 // contact detection
 const float kDqStartContact = 8;            // leg displacment in mm past which contact detection begins; this value MUST BE AT LEAST less than the leg retraction amount (see leg_swing_percent)
 const float kQdotContactLowImpulse = 3;     // joint velocity in mm/s below which contact is likely
-const float kQddotContact = -1200;          // joint acceleration in mm/s^2 above which (more negative) leg contact is likely
+const float kQddotContact = -1800;          // joint acceleration in mm/s^2 above which (more negative) leg contact is likely
 
 //////////////////////////////////////////////////////////////////////////////////////
 // sensor and filter structs

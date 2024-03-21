@@ -11,7 +11,7 @@
 
 void setup() {
   z_body_nominal = 230;
-  leg_swing_percent = 0.6;
+  leg_swing_percent = 0.4;
 
   initTeensy();
   initActuators();
@@ -27,16 +27,22 @@ void setup() {
     updateFunctions();
   }
 
-  for (auto i = 0; i < 2; ++i) {
+  for (auto i = 0; i < 3; ++i) {
     // touchdown
+    SERIAL_USB.println("touchdown");
     actuation_phase = ActuationPhases::kTouchDown;
+    digitalWrite(LED, LOW);
     updateLegMotorsForTouchdown();
-    while (!isInContact[gait_phase * 2] && !isInContact[gait_phase * 2 + 1]) {
+    while (!isInContact[gait_phase * 2] || !isInContact[gait_phase * 2 + 1]) {
       updateFunctions();
+      updateSwingLegTorque();
+      updateLegMotorsForStance();
     }
 
     // swing
+    SERIAL_USB.println("swing phase");
     actuation_phase = ActuationPhases::kRetractLeg;
+    updateLegMotorsForStance();
     updateSwingLegSetpoints();
     updateLegMotorsForSwing();
     resetSwingLegContactState();

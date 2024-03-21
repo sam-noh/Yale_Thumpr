@@ -23,7 +23,7 @@ class Actuator {
     float trap_traj_decel_limit;
     float trap_traj_vel_limit;
 
-    bool homed;             // false until homed and manually to true
+    bool homed;             // false until homed and manually set to true
     bool holding;           // true if fabs(q-q_d) < Q_MAX_ERROR
 
     // "motor space" values
