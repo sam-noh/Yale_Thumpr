@@ -1,6 +1,5 @@
 #include "Arduino.h"
 #include "ODriveTeensyCAN.h"
-// #include <FlexCAN_T4.h>
 
 static const int NodeIDLength = 6;
 static const int CommandIDLength = 5;

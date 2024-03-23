@@ -1,8 +1,8 @@
 #include "locomotion.h"
-#include "..\..\include\joint_defs.h"
-#include "..\mcu_util\mcu_util.h"
-#include "..\motor_control\motor_control.h"
-#include "..\state_estimation\state_estimation.h"
+#include "../../include/joint_defs.h"
+#include "../mcu_util/mcu_util.h"
+#include "../motor_control/motor_control.h"
+#include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> touchdown_torque = {
   {0.18, 0.14}, // 0.18 and 0.12

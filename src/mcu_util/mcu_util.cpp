@@ -1,7 +1,7 @@
 #include "mcu_util.h"
-#include "..\motor_control\motor_control.h"
-#include "..\state_estimation\state_estimation.h"
-#include "..\locomotion\locomotion.h"
+#include "../motor_control/motor_control.h"
+#include "../state_estimation/state_estimation.h"
+#include "../locomotion/locomotion.h"
 
 // time variables
 uint32_t t_last_print = 0;                // timestamp at last serial print

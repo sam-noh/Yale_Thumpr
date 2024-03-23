@@ -1,7 +1,7 @@
 #include "motor_control.h"
-#include "..\..\include\joint_defs.h"
-#include "..\mcu_util\mcu_util.h"
-#include "..\state_estimation\state_estimation.h"
+#include "../../include/joint_defs.h"
+#include "../mcu_util/mcu_util.h"
+#include "../state_estimation/state_estimation.h"
 
 ODriveTeensyCAN ODrive_CAN = ODriveTeensyCAN(kODriveCANBaudRate);
 

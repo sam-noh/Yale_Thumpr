@@ -1,5 +1,5 @@
 #include "actuator.h"
-#include "..\mcu_util\mcu_util.h"
+#include "../mcu_util/mcu_util.h"
 
 // default constructor
 // Actuator::Actuator() {}

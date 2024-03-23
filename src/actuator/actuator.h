@@ -1,7 +1,7 @@
 #ifndef ACTUATOR_H
 #define ACTUATOR_H
 
-#include "..\ODriveTeensyCAN\ODriveTeensyCAN.h"
+#include "../ODriveTeensyCAN/ODriveTeensyCAN.h"
 
 // #define DEBUG_MOTOR_CONTROLLER
 

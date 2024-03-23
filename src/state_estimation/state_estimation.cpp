@@ -1,10 +1,10 @@
 #include "state_estimation.h"
 
 #include <algorithm>
-#include "..\..\include\joint_defs.h"
-#include "..\mcu_util\mcu_util.h"
-#include "..\motor_control\motor_control.h"
-#include "..\locomotion\locomotion.h"
+#include "../../include/joint_defs.h"
+#include "../mcu_util/mcu_util.h"
+#include "../motor_control/motor_control.h"
+#include "../locomotion/locomotion.h"
 
 // time variables
 elapsedMicros dt_last_pos_update = 0;             // time since last leg position sampling in microseconds

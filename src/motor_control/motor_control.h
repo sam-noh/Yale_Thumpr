@@ -2,7 +2,7 @@
 #define MOTOR_CONTROL_H
 
 #include <vector>
-#include "..\actuator\actuator.h"
+#include "../actuator/actuator.h"
 
 //////////////////////////////////////////////////////////////////////////////////////
 // constants
