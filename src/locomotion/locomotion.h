@@ -28,6 +28,10 @@ const float kDqUnevenTerrain = 50;      // leg pair stroke difference in mm grea
 const float k_zBodyMin = 100;           // minimum allowable value for z_body_local
 const float k_zBodyMax = 300;           // maximum allowable value for z_body_local
 
+// gait cycle parameter limits
+const float kLegSwingPercentMax = 0.9;
+const float kLegSwingPercentMin = 0.2;
+
 // blocking motion primitive parameters
 const float kdzMax = 60;                // maximum allowed body height deviation in mm
 const float kTiltNominal = 3;           // acceptable body tilt from zero in degrees

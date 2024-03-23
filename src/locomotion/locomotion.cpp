@@ -230,16 +230,16 @@ void updateGait() {
 // update desired motion vector, body height, trajectories, etc. based on higher-level input/planner
 void updateTrajectory() {
   // apply deadzone to left-right joystick input to prevent undesired turning
-  float input_y_filtered = max(abs(input_y) - kGUIJoystickYDeadZone/2, 0);
+  float input_y_filtered = max(abs(input_y) - kGUIJoystickYDeadZone, 0);
   int dir_y = (input_y > 0) - (input_y < 0);
-  input_y_filtered *= dir_y;
+  input_y_filtered *= dir_y/kGUIJoystickYDeadZone;
 
-  cmd_vector[0] = input_x;
-  cmd_vector[1] = 0.15*input_y_filtered;
-  cmd_vector[2] = pow(-1, gait_phase) * atan2(cmd_vector[1], cmd_vector[0]) * 180 / PI;
+  cmd_vector[0] = input_x;                                              // use raw input  for translation command 
+  cmd_vector[1] = input_y_filtered;
+  cmd_vector[2] = pow(-1, gait_phase)*RAD2DEG*kQYawMax*cmd_vector[1];   // use deadzone/scaled input for yaw command
 
-  leg_swing_percent = input_swing;
-  z_body_nominal = (k_zBodyMax - k_zBodyMin)*input_height + k_zBodyMin; // for now, nominal body height is equal to the leg actuator setpoint in stance
+  leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
+  z_body_nominal = (k_zBodyMax - k_zBodyMin)*input_height + k_zBodyMin;                 // for now, nominal body height is equal to the leg actuator setpoint in stance
   
   if (cmd_vector[2] > 90) {
     cmd_vector[2] -= 180;
