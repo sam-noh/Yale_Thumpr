@@ -63,7 +63,7 @@
 #define WIRE_IMU Wire                   // Using I2C bus 1: SCL, SDA
 #define MAX_DATA_SIZE 128               // max number of chars in sent/received data array
 
-#define ESP 1e-2                                // epsilon
+#define EPS 1e-2                                // epsilon
 #define PI 3.1415926535897932384626433832795    // pi
 #define RAD2DEG 180/PI                          // radians to degrees conversion factor
 #define DEG2RAD 1/RAD2DEG                       // degrees to radians conversion factor

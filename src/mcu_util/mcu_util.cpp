@@ -262,7 +262,7 @@ void sendTelemetry() {
 
     // actuator position
     for(uint8_t i = 0; i < 6; i++) {
-      if(fabs(motors[i].states_.q) < ESP && motors[i].states_.q < 0) {
+      if(fabs(motors[i].states_.q) < EPS && motors[i].states_.q < 0) {
         motors[i].states_.q = 0;
       }
     }
@@ -287,7 +287,7 @@ void sendTelemetry() {
 
     // motor torque
     for(uint8_t i = 0; i < 6; i++) {
-      if(fabs(motor_torque_filters[i].filtered_value) < ESP && motor_torque_filters[i].filtered_value < 0) {
+      if(fabs(motor_torque_filters[i].filtered_value) < EPS && motor_torque_filters[i].filtered_value < 0) {
         motor_torque_filters[i].filtered_value = 0;
       }
     }
@@ -390,7 +390,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // robot trajectory parameters
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t", cmd_vector[0], cmd_vector[2], z_body_nominal, leg_swing_percent);
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t", cmd_vector[0], cmd_vector[1], z_body_nominal, leg_swing_percent);
 
     #ifdef DEBUG_TRAJECTORY
     SERIAL_USB.print("trajectory: ");

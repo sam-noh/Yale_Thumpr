@@ -14,7 +14,7 @@ enum GaitPhases {
 
 enum ActuationPhases {
     kRetractLeg = 0,
-    kTranslateForward = 1,
+    kLocomote = 1,
     kTouchDown = 2
 };
 
@@ -46,7 +46,7 @@ const float kQdotStable = 15;           // leg motor velocity in mm/s below whic
 extern std::vector<std::vector<float>> touchdown_torque;
 
 // gait variables
-extern std::vector<float> cmd_vector;   // command vector: {forward-back, right-left, yaw angle}
+extern std::vector<float> cmd_vector;   // command vector: {forward-back, yaw angle}
                                         // if the vector is zero, the robot will stop at the next stance phase; to be extended to 3D
                                         // follows IMU "coordinate frame"; x-positive: forward, y-positive: left, z-positive: up
                                         // currently take values from the normalized joystick inputs after deadzone and max value compensation (0 to 1)
@@ -59,13 +59,9 @@ extern bool isCorrected;                // true if a motion primitive has been c
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
-extern float leg_swing_percent;             // swing leg stroke as a percentage of its stroke at last stance phase
-extern float q_trans;                       // nominal translation position in swing
-
-extern float swing_percent_at_translate;    // remaining swing leg retraction at which forward translation begins (tested 50)
-extern float q_trans_transition;            // translation position at which swing leg step down begins; negative value is before the midpoint regardless of gait_phase
 extern float z_body_nominal;                // nominal body height over local terrain; currently taken as avg of stance leg motors joint position
-extern float dz_body_local;                 // amount of body height change applied
+extern float leg_swing_percent;             // swing leg stroke as a percentage of its stroke at last stance phase
+extern float dz_body_local;                 // amount of body height change applied; used as an offset for the leg stroke in contact estimation
 
 extern std::vector<float> q_leg_contact;    // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;      // position setpoint of swing leg actuators during leg retraction

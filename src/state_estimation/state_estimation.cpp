@@ -99,10 +99,10 @@ void TwoAxisJoystick::normalizeJoystick() {
 
   int dir_1 = (x_raw > kJoystickXCenter) - (x_raw < kJoystickXCenter);
   int dir_2 = (y_raw > kJoystickYCenter) - (y_raw < kJoystickYCenter);
-  if (fabs(x_norm) < 0.01) {
+  if (fabs(x_norm) < EPS) {
     dir_1 = 1;
   }
-  if (fabs(y_norm) < 0.01) {
+  if (fabs(y_norm) < EPS) {
     dir_2 = 1;
   }
 
@@ -338,7 +338,7 @@ void zeroIMUReading() {
   writeToSerial();
 
   // if the IMU is still sending only zeros, stop code
-  if (fabs(rpy_lateral_0[0]) < ESP && fabs(rpy_lateral_0[1]) < ESP && fabs(rpy_lateral_0[2]) < ESP) {
+  if (fabs(rpy_lateral_0[0]) < EPS && fabs(rpy_lateral_0[1]) < EPS && fabs(rpy_lateral_0[2]) < EPS) {
     digitalWrite(LED, HIGH);
 
     snprintf(sent_data, sizeof(sent_data), "ERROR: IMU is only sending zeros.\n\n");
