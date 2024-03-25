@@ -518,18 +518,18 @@ void updateContactState() {
       // check if the leg is near standstill
       #ifdef USE_LEG_FEEDBACK
       isInContact[gait_phase * 2] = isInContact[gait_phase * 2] || (fabs(q_dot[gait_phase*4]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 1]) < kQdotContactLowImpulse    // if the leg velocities are below a threshold
-                                                                && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact);                            // AND the actuator position is past some inital displacement
+                                                                && motors[gait_phase * 2].states_.q - q_leg_swing[0] > kDqStartContact);                            // AND the actuator position is past some inital displacement
 
       isInContact[gait_phase * 2 + 1] = isInContact[gait_phase * 2 + 1] || (fabs(q_dot[gait_phase*4 + 2]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 3]) < kQdotContactLowImpulse
-                                                                        && motors[gait_phase * 2 + 1].states_.q + dz_body_local - q_leg_swing[1] > kDqStartContact);
+                                                                        && motors[gait_phase * 2 + 1].states_.q - q_leg_swing[1] > kDqStartContact);
 
       // or use motor velocity for contact estimation
       #else
       isInContact[gait_phase * 2] = fabs(motors[gait_phase * 2].states_.q_dot) < kQdotContactLowImpulse                                  // if the actuator velocity is below a threshold
-                                  && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact;    // AND the actuator position is past some inital displacement
+                                  && motors[gait_phase * 2].states_.q - q_leg_swing[0] > kDqStartContact;    // AND the actuator position is past some inital displacement
 
       isInContact[gait_phase * 2 + 1] = fabs(motors[gait_phase * 2 + 1].states_.q_dot) < kQdotContactLowImpulse
-                                      && motors[gait_phase * 2 + 1].states_.q + dz_body_local - q_leg_swing[1] > kDqStartContact;
+                                      && motors[gait_phase * 2 + 1].states_.q - q_leg_swing[1] > kDqStartContact;
       #endif
     }
   }

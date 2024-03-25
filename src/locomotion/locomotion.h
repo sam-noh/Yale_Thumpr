@@ -63,7 +63,6 @@ extern bool isCorrected;                // true if a motion primitive has been c
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 extern float z_body_nominal;                // nominal body height over local terrain; currently taken as avg of stance leg motors joint position
 extern float leg_swing_percent;             // swing leg stroke as a percentage of its stroke at last stance phase
-extern float dz_body_local;                 // amount of body height change applied; used as an offset for the leg stroke in contact estimation
 
 extern std::vector<float> q_leg_contact;    // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;      // position setpoint of swing leg actuators during leg retraction
