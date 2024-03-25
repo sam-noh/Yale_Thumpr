@@ -18,8 +18,9 @@ enum ActuationPhases {
     kTouchDown = 2
 };
 
-// touchdown torque step command parameters
-const float kDqLegRamp = 60;            // leg displacement during touchidown after which the lower torque command is applied
+// touchdown torque profile parameters
+const float kDqLegStartup = 10;         // leg touchdown displacement after which a lower torque is applied
+const float kDqLegRamp = 60;            // leg touchdown displacement after which an even lower torque is applied
 
 // kRetractLeg parameters
 const float kDqUnevenTerrain = 50;      // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
@@ -83,7 +84,7 @@ void updateSetpoints();
 
 void updateLegMotorsForTouchdown();
 
-void updateSwingLegTorque();
+void updateTouchdownTorque();
 
 // update and/or reset swing/stance setpoints based on last contact conditions
 void updateSwingLegSetpoints();

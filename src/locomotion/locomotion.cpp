@@ -5,10 +5,10 @@
 #include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> touchdown_torque = {
-  {0.18, 0.14}, // 0.18 and 0.12
-  {0.18, 0.14},
-  {0.18, 0.14},
-  {0.18, 0.14}
+  {0.25, 0.18, 0.14}, // 0.18 and 0.12
+  {0.25, 0.18, 0.14},
+  {0.25, 0.18, 0.14},
+  {0.25, 0.18, 0.14}
 };
 
 // gait variables
@@ -255,7 +255,7 @@ void regulateBodyPose() {
 
   if (!isBlocking) {    // only check body pose if currently not performing a regulation maneuver
 
-    // nominal body height regulation (blocking or non-blocking)
+    // nominal body height regulation (blocking)
     if (actuation_phase == ActuationPhases::kTouchDown                                    // if currently touching down
         && isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]                 // AND the swing legs are now also on the ground
         && fabs(z_body_local - z_body_nominal) > kDzSoftMax                               // AND the body height is not within nominal range
@@ -386,7 +386,6 @@ void updateSetpoints() {
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
       // clear these flags/variables for the next gait cycle
-      isBlocking = false;
       isCorrected = false;
       dz_body_local = 0;
 
@@ -419,7 +418,7 @@ void updateSetpoints() {
       }
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {    // if currently touching down
-      updateSwingLegTorque();
+      updateTouchdownTorque();
       updateLegMotorsForStance();
     }
   }
@@ -433,13 +432,17 @@ void updateLegMotorsForTouchdown() {
   }
 }
 
-void updateSwingLegTorque() {
+void updateTouchdownTorque() {
   for (uint8_t i = 0; i < 2; ++i) {
-    if (!isInContact[gait_phase*2 + i]                                                          // if the motor is not in contact
-        && (motors[gait_phase*2 + i].states_.q + dz_body_local - q_leg_swing[i]) > kDqLegRamp) {  // AND the leg stroke is past the initial displacement
+    if (!isInContact[gait_phase*2 + i]) {  // if the motor is not in contact
+      if ((motors[gait_phase*2 + i].states_.q + dz_body_local - q_leg_swing[i]) > kDqLegStartup) {  // if past the startup displacement
+        motors[gait_phase*2 + i].states_.tau_d = touchdown_torque[gait_phase*2 + i][1];             // lower the leg torque
+      }
 
-          motors[gait_phase*2 + i].states_.tau_d = touchdown_torque[gait_phase*2 + i][1];        // apply the lower torque command
-        }
+      if ((motors[gait_phase*2 + i].states_.q + dz_body_local - q_leg_swing[i]) > kDqLegRamp) {  // if past the ramp up displacement
+        motors[gait_phase*2 + i].states_.tau_d = touchdown_torque[gait_phase*2 + i][2];             // lower the leg torque
+      }
+    }
   }
 }
 
