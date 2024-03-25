@@ -255,10 +255,10 @@ void regulateBodyPose() {
 
   if (!isBlocking) {    // only check body pose if currently not performing a regulation maneuver
 
-    // nominal body height regulation (blocking)
+    // nominal body height regulation (blocking or non-blocking)
     if (actuation_phase == ActuationPhases::kTouchDown                                    // if currently touching down
         && isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]                 // AND the swing legs are now also on the ground
-        && fabs(z_body_local - z_body_nominal) > kdzMax                                   // AND the body height is not within nominal range
+        && fabs(z_body_local - z_body_nominal) > kDzSoftMax                               // AND the body height is not within nominal range
         && fabs(rpy_lateral[0]) < kTiltNominal && fabs(rpy_lateral[1]) < kTiltNominal) {  // AND the body tilt is within nominal range
 
       // perform the body height regulation maneuver
@@ -280,7 +280,7 @@ void regulateBodyPose() {
       isBlocking = true;
       isCorrected = true;
 
-    // nominal body tilt regulation
+    // nominal body tilt regulation (non-blocking)
     } else if (actuation_phase == ActuationPhases::kLocomote                      // if currently translating or turning
                && fabs(rpy_lateral[gait_phase]) > kTiltNominal                    // AND the body tilt is not within nominal range
                && fabs(motors[MotorID::kMotorTranslate].states_.q) < 20) {        // AND the translational joint is near the midpoint
@@ -357,10 +357,7 @@ bool isReadyForTransition(uint8_t phase) {
 
   } else if (phase == ActuationPhases::kTouchDown) {  // if currently touching down
         
-    return isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]
-           && ((fabs(z_body_local - z_body_nominal) < kdzMax)
-           ||
-           (fabs(z_body_local - z_body_nominal) > kdzMax && !(fabs(rpy_lateral[0]) < kTiltNominal && fabs(rpy_lateral[1]) < kTiltNominal)));  // true if both swing legs have made contact and body height regulation is not needed
+    return isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1];
 
   } else {
     return false;

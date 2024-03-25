@@ -33,7 +33,8 @@ const float kLegSwingPercentMax = 0.9;
 const float kLegSwingPercentMin = 0.2;
 
 // blocking motion primitive parameters
-const float kdzMax = 60;                // maximum allowed body height deviation in mm
+const float kDzSoftMax = 30;            // body height deviation in mm above which non-blocking regulation is executed
+const float kDzHardMax = 60;            // body height deviation in mm above which blocking regulation is executed
 const float kTiltNominal = 3;           // acceptable body tilt from zero in degrees
 const float kDqLegMaxTilt = 100;        // max total leg displacements per tilt correction
 const float kOmegaStable = 5;           // lateral body angular velocity value in deg/s below which the blocking of normal gait behavior ends
