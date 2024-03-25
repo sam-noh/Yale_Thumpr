@@ -345,13 +345,13 @@ bool isReadyForTransition(uint8_t phase) {
       int dir = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                              // direction of translation command
       float q_trans_transition = fabs(trans_percent_at_touchdown*kQTransMax*cmd_vector[0]);             // this value is always positive since it represents forward motion, regardless of direction
       isTranslated = dir * pow(-1, gait_phase + 1) * q[JointID::kJointTranslate] > q_trans_transition;  // the translational joint has reached the transition point
-                                                                                                        // assume that any concurrent yaw motion will be completed in time
+                                                                                                        // don't check yaw; assume that any concurrent yaw motion will be completed in time
 
     // if there is an in-place turn command
     } else if (fabs(cmd_vector[1]) > EPS) {
       int dir = (cmd_vector[1] > 0) - (cmd_vector[1] < 0);                              // direction of yaw command
       float q_yaw_transition = fabs(yaw_percent_at_touchdown*kQYawMax*cmd_vector[1]);   // this value is always positive since it represents forward motion, regardless of direction
-      isTurned = dir * pow(-1, gait_phase) * q[JointID::kJointYaw] > q_yaw_transition;  // the translational joint has reached the transition point
+      isTurned = dir * pow(-1, gait_phase) * q[JointID::kJointYaw] > q_yaw_transition;  // the yaw joint has reached the transition point
     }
 
     return isTranslated || isTurned;
@@ -409,7 +409,7 @@ void updateSetpoints() {
 
     actuation_phase = (actuation_phase + 1) % kNumOfActuationPhases;
 
-    // update setpoints that do not involve a gait phase transition here
+    // update setpoints that do not involve an actuation phase transition here
   } else if (!isBlocking) {
     if (actuation_phase == ActuationPhases::kRetractLeg) {          // if currently retracting leg
       

@@ -6,8 +6,9 @@
 #include <Encoder.h>
 #include <Adafruit_BNO08x.h>
 
-#define USE_LEG_CONTACT
-// #define USE_HIGH_IMPULSE_CONTACT
+#define USE_LEG_FEEDBACK
+// #define USE_DECELERATION_THRESHOLD
+#define USE_VELOCITY_THRESHOLD
 
 //////////////////////////////////////////////////////////////////////////////////////
 // control loop periods
@@ -66,9 +67,11 @@ const std::vector<int> kBodyFrameAxisIndex = {2, -1, 3};    // IMU frame to body
                                                             // body z-axis is positive IMU z-axis
 
 // contact detection
-const float kDqStartContact = 8;            // leg displacment in mm past which contact detection begins; this value MUST BE AT LEAST less than the leg retraction amount (see leg_swing_percent)
-const float kQdotContactLowImpulse = 3;     // joint velocity in mm/s below which contact is likely
-const float kQddotContact = -1800;          // joint acceleration in mm/s^2 above which (more negative) leg contact is likely
+const float kDqStartContact = 8;                // leg displacment in mm past which contact detection begins; this value MUST BE AT LEAST less than the leg retraction amount (see leg_swing_percent)
+const float kQdotContactLowImpulse = 3;         // leg touchdown velocity in mm/s below which contact is likely
+const float kQddotContact = -1800;              // leg acceleration in mm/s^2 above which (more negative) leg contact is likely
+const float kQdotPercentAtContact = 0.3;        // percentage of max leg touchdown velocity at which ground contact is assumed
+                                                // this method seeks to detect contact sooner than standstill by checking for velocity reduction
 
 //////////////////////////////////////////////////////////////////////////////////////
 // sensor and filter structs
@@ -150,12 +153,12 @@ extern float battery_voltage;                               // current battery v
 extern float battery_current;                               // current battery current in ampere
 extern float battery_power;                                 // current battery power in watt
 
-extern std::vector<float> q;                                // see JointID for joint indices
-extern std::vector<float> q_prev;                           // see JointID for joint indices
-extern std::vector<float> q_dot;                            // see JointID for joint indices
-extern std::vector<float> q_dot_prev;                       // see JointID for joint indices
+extern std::vector<float> q;                                // joint position from encoders
+extern std::vector<float> q_prev;                           // q at last velocity update
+extern std::vector<float> q_dot;                            // unfiltered joint velocity from numerical difference
+extern std::vector<float> q_dot_prev;                       // q_dot at last acceleration update
+extern std::vector<float> q_ddot;                           // unfiltered joint acceleration from numerical difference
 extern std::vector<MovingAvgFilter> q_dot_filters;          // moving average filter for leg joint velocity
-extern std::vector<float> q_ddot;                           // see JointID for joint indices
 extern std::vector<MovingAvgFilter> q_ddot_filters;         // moving average filter for leg joint acceleration
 extern float z_body_local;                                  // height of body above local terrain
 extern float dist_traveled;                                 // distance traveled estimated with translational joint displacement
@@ -164,8 +167,9 @@ extern std::vector<float> rpy_lateral_0;                    // lateral body roll
 extern std::vector<float> rpy_lateral;                      // lateral body roll pitch yaw relative to rpy_lateral_0
 extern std::vector<float> omega_lateral;                    // lateral body angular velocity with respect to body frame axes
 
-extern std::vector<int> isInContact;                        // true if the corresponding motor's legs are on the ground; see contact estimation
-extern std::vector<int> isDecelerated;                      // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
+extern std::vector<bool> isInContact;                       // true if the corresponding motor's legs are on the ground; see contact estimation
+extern std::vector<bool> isDecelerated;                     // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
+extern std::vector<float> q_dot_max;                        // maximum leg velocity reached during leg touchdown; used for contact detection; reset after each cycle
 
 //////////////////////////////////////////////////////////////////////////////////////
 // global functions

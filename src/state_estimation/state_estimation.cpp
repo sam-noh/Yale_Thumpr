@@ -66,21 +66,21 @@ std::vector<MovingAvgFilter> q_ddot_filters = {MovingAvgFilter(kLegAccelFilterLe
                                                MovingAvgFilter(kLegAccelFilterLength),
                                                MovingAvgFilter(kLegAccelFilterLength)};
 
-std::vector<float> q = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};          // see JointID for joint indices
-std::vector<float> q_prev = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};     // see JointID for joint indices
-std::vector<float> q_dot = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};      // see JointID for joint indices
-std::vector<float> q_dot_prev = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // see JointID for joint indices
-std::vector<float> q_ddot = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};     // see JointID for joint indices
-float z_body_local = 0;                                         // height of body above local terrain
-float dist_traveled = 0;                                        // distance traveled estimated with translational joint displacement
+std::vector<float> q(kNumOfJoints, 0);            // joint position from encoders
+std::vector<float> q_prev(kNumOfJoints, 0);       // q at last velocity update
+std::vector<float> q_dot(kNumOfJoints, 0);        // unfiltered joint velocity from numerical difference
+std::vector<float> q_dot_prev(kNumOfJoints, 0);   // q_dot at last acceleration update
+std::vector<float> q_ddot(kNumOfJoints, 0);       // unfiltered joint acceleration from numerical difference
+float z_body_local = 0;                           // height of body above local terrain
+float dist_traveled = 0;                          // distance traveled estimated with translational joint displacement
 
-std::vector<float> rpy_lateral_0 = {0, 0, 0};               // lateral body roll pitch yaw after homing
-std::vector<float> rpy_lateral = {0, 0, 0};                 // lateral body roll pitch yaw relative to rpy_lateral_0
-std::vector<float> omega_lateral = {0, 0, 0};               // lateral body angular velocity with respect to body frame axes
+std::vector<float> rpy_lateral_0 = {0, 0, 0};     // lateral body roll pitch yaw after homing
+std::vector<float> rpy_lateral = {0, 0, 0};       // lateral body roll pitch yaw relative to rpy_lateral_0
+std::vector<float> omega_lateral = {0, 0, 0};     // lateral body angular velocity with respect to body frame axes
 
-std::vector<int> isInContact = {0,0,0,0};                       // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
-std::vector<int> isDecelerated = {false, false, false, false,   // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
-                                  false, false, false, false};
+std::vector<bool> isInContact = {false, false, false, false};   // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
+std::vector<bool> isDecelerated(kNumOfLegs, false);             // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
+std::vector<float> q_dot_max(kNumOfLegs, 0);                    // maximum leg velocity reached during leg touchdown; used for contact detection; reset after each cycle
 
 bool stop_signal = false;
 
@@ -481,10 +481,29 @@ void updateContactState() {
     if (t_current - t_last_contact_update >= k_dtContactUpdate) {
       t_last_contact_update = t_current;
 
-      // high impulse contact detection
-      // watches leg acceleration to detect ground contact
+      // velocity-based contact detection
+      #ifdef USE_VELOCITY_THRESHOLD
+
+      // for each leg in touchdown
+      for (uint8_t axis_id = gait_phase*4; axis_id < gait_phase*4 + 4; ++axis_id) {
+
+        // update max leg velocity during touchdown
+        if (q_dot_filters[axis_id].filtered_value > q_dot_max[axis_id]) {
+          q_dot_max[axis_id] = q_dot_filters[axis_id].filtered_value;
+        }
+
+        // check if the leg velocity has fallen below the threshold
+        isDecelerated[axis_id] = (q_dot_filters[axis_id].filtered_value < kQdotPercentAtContact*q_dot_max[axis_id]);  // don't latch to rule out noisy estimate; condition should persist with true contact
+      }
+
+      isInContact[gait_phase * 2] = isDecelerated[gait_phase*4] && isDecelerated[gait_phase*4 + 1];
+      isInContact[gait_phase * 2 + 1] = isDecelerated[gait_phase*4 + 2] && isDecelerated[gait_phase*4 + 3];
+
+      #endif
+
+      // deceleration-based contact detection
       // if this doesn't detect contact, the low impulse contact detection will catch the event later
-      #ifdef USE_HIGH_IMPULSE_CONTACT
+      #ifdef USE_DECELERATION_THRESHOLD
       
       for (uint8_t axis_id = gait_phase*4; axis_id < gait_phase*4 + 4; ++axis_id) {
         isDecelerated[axis_id] = isDecelerated[axis_id] || (q_ddot_filters[axis_id].filtered_value < kQddotContact);
@@ -496,10 +515,10 @@ void updateContactState() {
       #endif
 
       // low impulse contact detection
-      // use leg encoder velocity for contact estimation
-      #ifdef USE_LEG_CONTACT
+      // check if the leg is near standstill
+      #ifdef USE_LEG_FEEDBACK
       isInContact[gait_phase * 2] = isInContact[gait_phase * 2] || (fabs(q_dot[gait_phase*4]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 1]) < kQdotContactLowImpulse    // if the leg velocities are below a threshold
-                                                                && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact);                        // AND the actuator position is past some inital displacement
+                                                                && motors[gait_phase * 2].states_.q + dz_body_local - q_leg_swing[0] > kDqStartContact);                            // AND the actuator position is past some inital displacement
 
       isInContact[gait_phase * 2 + 1] = isInContact[gait_phase * 2 + 1] || (fabs(q_dot[gait_phase*4 + 2]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 3]) < kQdotContactLowImpulse
                                                                         && motors[gait_phase * 2 + 1].states_.q + dz_body_local - q_leg_swing[1] > kDqStartContact);
@@ -521,6 +540,8 @@ void resetSwingLegContactState() {
     isInContact[gait_phase * 2 + i] = false;
     isDecelerated[gait_phase*4 + i*2] = false;
     isDecelerated[gait_phase*4 + i*2 + 1] = false;
+    q_dot_max[gait_phase*4 + i*2] = 0;
+    q_dot_max[gait_phase*4 + i*2 + 1] = 0;
   }
 }
 
