@@ -255,7 +255,7 @@ void regulateBodyPose() {
 
   if (!isBlocking) {    // only check body pose if currently not performing a regulation maneuver
 
-    // nominal body height control
+    // nominal body height regulation (blocking)
     if (actuation_phase == ActuationPhases::kTouchDown                                    // if currently touching down
         && isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]                 // AND the swing legs are now also on the ground
         && fabs(z_body_local - z_body_nominal) > kdzMax                                   // AND the body height is not within nominal range
@@ -280,7 +280,7 @@ void regulateBodyPose() {
       isBlocking = true;
       isCorrected = true;
 
-    // nominal body tilt control
+    // nominal body tilt regulation
     } else if (actuation_phase == ActuationPhases::kLocomote                      // if currently translating or turning
                && fabs(rpy_lateral[gait_phase]) > kTiltNominal                    // AND the body tilt is not within nominal range
                && fabs(motors[MotorID::kMotorTranslate].states_.q) < 20) {        // AND the translational joint is near the midpoint
@@ -313,7 +313,6 @@ void regulateBodyPose() {
 
 
   } else if (isBlocking                                                                                         // if the body pose regulation is currently happening
-             && fabs(omega_lateral[0]) < kOmegaStable && fabs(omega_lateral[1]) < kOmegaStable                  // AND the body angular velocities are below a threshold
              && fabs(motors[0].states_.q_dot) < kQdotStable && fabs(motors[1].states_.q_dot) < kQdotStable      // AND all leg motor velocities are below a threshold
              && fabs(motors[2].states_.q_dot) < kQdotStable && fabs(motors[3].states_.q_dot) < kQdotStable) {
 
