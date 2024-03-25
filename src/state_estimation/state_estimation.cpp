@@ -463,10 +463,10 @@ void updatePowerMeasurement() {
     battery_current = 0;
     battery_power = 0;
 
-    for(uint8_t axis_id = 0; axis_id < kNumOfActuators; ++axis_id) {
-      battery_voltage += motors[axis_id].states_.bus_voltage;
-      battery_current += motors[axis_id].states_.bus_current;
-      battery_power += motors[axis_id].states_.bus_voltage*motors[axis_id].states_.bus_current;
+    for(uint8_t idx_motor = 0; idx_motor < kNumOfActuators; ++idx_motor) {
+      battery_voltage += motors[idx_motor].states_.bus_voltage;
+      battery_current += motors[idx_motor].states_.bus_current;
+      battery_power += motors[idx_motor].states_.bus_voltage*motors[idx_motor].states_.bus_current;
     }
 
     battery_voltage /= kNumOfActuators;
@@ -485,15 +485,15 @@ void updateContactState() {
       #ifdef USE_VELOCITY_THRESHOLD
 
       // for each leg in touchdown
-      for (uint8_t axis_id = gait_phase*4; axis_id < gait_phase*4 + 4; ++axis_id) {
+      for (uint8_t idx_leg = gait_phase*4; idx_leg < gait_phase*4 + 4; ++idx_leg) {
 
         // update max leg velocity during touchdown
-        if (q_dot_filters[axis_id].filtered_value > q_dot_max[axis_id]) {
-          q_dot_max[axis_id] = q_dot_filters[axis_id].filtered_value;
+        if (q_dot_filters[idx_leg].filtered_value > q_dot_max[idx_leg]) {
+          q_dot_max[idx_leg] = q_dot_filters[idx_leg].filtered_value;
         }
 
         // check if the leg velocity has fallen below the threshold
-        isDecelerated[axis_id] = (q_dot_filters[axis_id].filtered_value < kQdotPercentAtContact*q_dot_max[axis_id]);  // don't latch to rule out noisy estimate; condition should persist with true contact
+        isDecelerated[idx_leg] = (q_dot_filters[idx_leg].filtered_value < kQdotPercentAtContact*q_dot_max[idx_leg]);  // don't latch to rule out noisy estimate; condition should persist with true contact
       }
 
       isInContact[gait_phase * 2] = isDecelerated[gait_phase*4] && isDecelerated[gait_phase*4 + 1];
@@ -505,8 +505,8 @@ void updateContactState() {
       // if this doesn't detect contact, the low impulse contact detection will catch the event later
       #ifdef USE_DECELERATION_THRESHOLD
       
-      for (uint8_t axis_id = gait_phase*4; axis_id < gait_phase*4 + 4; ++axis_id) {
-        isDecelerated[axis_id] = isDecelerated[axis_id] || (q_ddot_filters[axis_id].filtered_value < kQddotContact);
+      for (uint8_t idx_leg = gait_phase*4; idx_leg < gait_phase*4 + 4; ++idx_leg) {
+        isDecelerated[idx_leg] = isDecelerated[idx_leg] || (q_ddot_filters[idx_leg].filtered_value < kQddotContact);
       }
 
       isInContact[gait_phase * 2] = isDecelerated[gait_phase*4] && isDecelerated[gait_phase*4 + 1];

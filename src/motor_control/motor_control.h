@@ -30,6 +30,7 @@ const int kDirectionYaw = 1;                // positive direction for yaw motor
 // should be determined heuristically
 const float kQdotLegHoming = -90;               // leg motor homing velocity in mm/s
 const float kQdotLegHomingStop = -10;           // leg motor homing stop condition velocity in mm/s
+const float kDqLegLift = 40;                    // stance body lift in mm to home the locomotion mechanism
 
 const float kQdotTransHoming = 200;             // translation motor homing velocity in mm/s
 const float kQdotTransHomingStop = 25;          // translation motor homing stop condition velocity in mm/s
@@ -90,7 +91,7 @@ extern std::vector<Actuator> motors;
 uint32_t handleODriveCANMsg();
 
 // extracts and returns the axis/node ID from the ODrive's CAN message
-uint8_t getAxisID(uint32_t msg_id);
+uint8_t getNodeID(uint32_t msg_id);
 
 // extracts and returns the command ID from the ODrive's CAN message
 uint8_t getCmdID(uint32_t msg_id);
@@ -99,7 +100,7 @@ uint8_t getCmdID(uint32_t msg_id);
 // used only in the initODrive() function
 void waitForHeartbeat(uint8_t axis);
 
-void readHeartbeat(uint8_t axis_id, CAN_message_t msg);
+void readHeartbeat(uint8_t node_id, CAN_message_t msg);
 
 // enters closed-loop control
 void initActuators();

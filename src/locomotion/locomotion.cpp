@@ -433,12 +433,12 @@ void updateLegMotorsForTouchdown() {
 void updateTouchdownTorque() {
   for (uint8_t i = 0; i < 2; ++i) {
     if (!isInContact[gait_phase*2 + i]) {  // if the motor is not in contact
-      if ((motors[gait_phase*2 + i].states_.q  - q_leg_swing[i]) > kDqLegStartup) {  // if past the startup displacement
-        motors[gait_phase*2 + i].states_.tau_d = touchdown_torque[gait_phase*2 + i][1];             // lower the leg torque
+      if ((motors[gait_phase*2 + i].states_.q  - q_leg_swing[i]) > kDqLegStartup) {     // if past the startup displacement
+        motors[gait_phase*2 + i].states_.tau_d = touchdown_torque[gait_phase*2 + i][1]; // lower the leg torque
       }
 
-      if ((motors[gait_phase*2 + i].states_.q - q_leg_swing[i]) > kDqLegRamp) {  // if past the ramp up displacement
-        motors[gait_phase*2 + i].states_.tau_d = touchdown_torque[gait_phase*2 + i][2];             // lower the leg torque
+      if ((motors[gait_phase*2 + i].states_.q - q_leg_swing[i]) > kDqLegRamp) {         // if past the ramp up displacement
+        motors[gait_phase*2 + i].states_.tau_d = touchdown_torque[gait_phase*2 + i][2]; // lower the leg torque
       }
     }
   }
