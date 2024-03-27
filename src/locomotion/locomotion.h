@@ -45,7 +45,7 @@ const float kQdotStable = 15;           // leg motor velocity in mm/s below whic
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
 // the second torque command is the minimum necessary to maintain motion
-// after the motor moves "kDqStartContact" mm, the second command is sent
+// after the motor moves "kDqStartContactLowImpulse" mm, the second command is sent
 extern std::vector<std::vector<float>> touchdown_torque;
 
 // gait variables

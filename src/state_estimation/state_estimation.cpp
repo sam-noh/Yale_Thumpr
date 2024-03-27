@@ -486,9 +486,11 @@ void updateContactState() {
 
       // for each leg in touchdown
       for (uint8_t idx_leg = gait_phase*4; idx_leg < gait_phase*4 + 4; ++idx_leg) {
+        int idx_motor = (int) idx_leg / 2;
 
         // update max leg velocity during touchdown
-        if (q_dot_filters[idx_leg].filtered_value > q_dot_max[idx_leg]) {
+        if (q_dot_filters[idx_leg].filtered_value > q_dot_max[idx_leg]                            // if the current leg velocity exceeds the historical max value
+            && motors[idx_motor].states_.q - q_leg_swing[idx_motor % 2] > kDqStartContactHighImpulse) {  // AND the actuator position is past some inital displacement
           q_dot_max[idx_leg] = q_dot_filters[idx_leg].filtered_value;
         }
 
@@ -518,18 +520,18 @@ void updateContactState() {
       // check if the leg is near standstill
       #ifdef USE_LEG_FEEDBACK
       isInContact[gait_phase * 2] = isInContact[gait_phase * 2] || (fabs(q_dot[gait_phase*4]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 1]) < kQdotContactLowImpulse    // if the leg velocities are below a threshold
-                                                                && motors[gait_phase * 2].states_.q - q_leg_swing[0] > kDqStartContact);                            // AND the actuator position is past some inital displacement
+                                                                && motors[gait_phase * 2].states_.q - q_leg_swing[0] > kDqStartContactLowImpulse);                            // AND the actuator position is past some inital displacement
 
       isInContact[gait_phase * 2 + 1] = isInContact[gait_phase * 2 + 1] || (fabs(q_dot[gait_phase*4 + 2]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 3]) < kQdotContactLowImpulse
-                                                                        && motors[gait_phase * 2 + 1].states_.q - q_leg_swing[1] > kDqStartContact);
+                                                                        && motors[gait_phase * 2 + 1].states_.q - q_leg_swing[1] > kDqStartContactLowImpulse);
 
       // or use motor velocity for contact estimation
       #else
       isInContact[gait_phase * 2] = fabs(motors[gait_phase * 2].states_.q_dot) < kQdotContactLowImpulse                                  // if the actuator velocity is below a threshold
-                                  && motors[gait_phase * 2].states_.q - q_leg_swing[0] > kDqStartContact;    // AND the actuator position is past some inital displacement
+                                  && motors[gait_phase * 2].states_.q - q_leg_swing[0] > kDqStartContactLowImpulse;    // AND the actuator position is past some inital displacement
 
       isInContact[gait_phase * 2 + 1] = fabs(motors[gait_phase * 2 + 1].states_.q_dot) < kQdotContactLowImpulse
-                                      && motors[gait_phase * 2 + 1].states_.q - q_leg_swing[1] > kDqStartContact;
+                                      && motors[gait_phase * 2 + 1].states_.q - q_leg_swing[1] > kDqStartContactLowImpulse;
       #endif
     }
   }
