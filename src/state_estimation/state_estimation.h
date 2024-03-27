@@ -167,8 +167,8 @@ extern std::vector<float> rpy_lateral_0;                    // lateral body roll
 extern std::vector<float> rpy_lateral;                      // lateral body roll pitch yaw relative to rpy_lateral_0
 extern std::vector<float> omega_lateral;                    // lateral body angular velocity with respect to body frame axes
 
-extern std::vector<bool> isInContact;                       // true if the corresponding motor's legs are on the ground; see contact estimation
-extern std::vector<bool> isDecelerated;                     // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
+extern std::vector<int> isInContact;                       // true if the corresponding motor's legs are on the ground; see contact estimation
+extern std::vector<int> isDecelerated;                     // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
 extern std::vector<float> q_dot_max;                        // maximum leg velocity reached during leg touchdown; used for contact detection; reset after each cycle
 
 //////////////////////////////////////////////////////////////////////////////////////

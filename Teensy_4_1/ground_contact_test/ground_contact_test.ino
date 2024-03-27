@@ -32,19 +32,18 @@ void setup() {
     SERIAL_USB.println("touchdown");
     actuation_phase = ActuationPhases::kTouchDown;
     digitalWrite(LED, LOW);
-    updateLegMotorsForTouchdown();
+    updateMotorsTouchdown();
     while (!isInContact[gait_phase * 2] || !isInContact[gait_phase * 2 + 1]) {
       updateFunctions();
       updateTouchdownTorque();
-      updateLegMotorsForStance();
+      updateMotorsStance();
     }
 
     // swing
     SERIAL_USB.println("swing phase");
     actuation_phase = ActuationPhases::kRetractLeg;
-    updateLegMotorsForStance();
-    updateSwingLegSetpoints();
-    updateLegMotorsForSwing();
+    updateMotorsStance();
+    updateMotorsSwing();
     resetSwingLegContactState();
     while (!motors[gait_phase * 2].states_.holding && !motors[gait_phase * 2 + 1].states_.holding) {
       updateFunctions();

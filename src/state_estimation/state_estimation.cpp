@@ -78,8 +78,8 @@ std::vector<float> rpy_lateral_0 = {0, 0, 0};     // lateral body roll pitch yaw
 std::vector<float> rpy_lateral = {0, 0, 0};       // lateral body roll pitch yaw relative to rpy_lateral_0
 std::vector<float> omega_lateral = {0, 0, 0};     // lateral body angular velocity with respect to body frame axes
 
-std::vector<bool> isInContact = {false, false, false, false};   // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
-std::vector<bool> isDecelerated(kNumOfLegs, false);             // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
+std::vector<int> isInContact = {false, false, false, false};   // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
+std::vector<int> isDecelerated(kNumOfLegs, false);             // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
 std::vector<float> q_dot_max(kNumOfLegs, 0);                    // maximum leg velocity reached during leg touchdown; used for contact detection; reset after each cycle
 
 bool stop_signal = false;
