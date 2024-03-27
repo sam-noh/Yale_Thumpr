@@ -36,13 +36,12 @@ void setup() {
     while (!isInContact[gait_phase * 2] || !isInContact[gait_phase * 2 + 1]) {
       updateFunctions();
       updateTouchdownTorque();
-      updateMotorsStance();
+      updateMotorsStance(gait_phase);
     }
 
     // swing
     SERIAL_USB.println("swing phase");
     actuation_phase = ActuationPhases::kRetractLeg;
-    updateMotorsStance();
     updateMotorsSwing();
     resetSwingLegContactState();
     while (!motors[gait_phase * 2].states_.holding && !motors[gait_phase * 2 + 1].states_.holding) {
