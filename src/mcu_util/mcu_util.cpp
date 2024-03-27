@@ -25,7 +25,7 @@ char data_file_name[128] = "";
 
 // initialize Teensy 4.1 digital pins, RTC and etc.
 void initTeensy() {
-  delay(500);   // short delay after the start to ensure the first serial print is not missed over USB
+  delay(10);   // short delay after the start to ensure the first serial print is not missed over USB
   SERIAL_USB.println("Teensy started.\n");
 
   // add digital pin initialization here
@@ -105,7 +105,6 @@ void initSDCard() {
   while (!success && millis() - t_current < 1000) {
     if (SD.begin(chip_select)) {
       success = true;
-      delay(100); // immediately calling SD.open() after SD.begin() causes sporadic failures
     }
   }
 
@@ -117,22 +116,31 @@ void initSDCard() {
     SERIAL_USB.println("SD card initialized.\n");
   }
   
-  // parse through existing data files
-  String file_name = "";
+  #endif
+}
 
-  // using Teensy's internal RTC
-  file_name = String(year()) + '_' +
-              String(month()) + '_' +
-              String(day()) + '_' +
-              String(hour()) + '_' +
-              String(minute()) + '_' +
-              String(second()) + ".txt";
+// open a data file on the SD card for writing
+void openDataFile() {
+  #ifdef ENABLE_SD_CARD
 
-  // name the data file with the next number
+  String file_name = String(year()) + '_' +
+                     String(month()) + '_' +
+                     String(day()) + '_' +
+                     String(hour()) + '_' +
+                     String(minute()) + '_' +
+                     String(second()) + ".txt";
+
+  // name the data file with the timestamp
   file_name.toCharArray(data_file_name, sizeof(data_file_name));
   data_file = SD.open(data_file_name, FILE_WRITE);
-  SERIAL_USB.printf("Data being saved to: %s\n\n", data_file_name);
-  
+  if (data_file) {
+    SERIAL_USB.printf("Data being saved to: %s\n\n", data_file_name);
+  } else {
+    digitalWrite(LED, HIGH);
+    SERIAL_USB.println("Error opening the data file.\n");
+    while (1) {}
+  }
+
   #endif
 }
 
@@ -144,7 +152,7 @@ void writeToCard(char data[]) {
     data_file.print(data);
   } else {
     digitalWrite(LED, HIGH);
-    SERIAL_USB.println("Error opening the data file");
+    SERIAL_USB.println("Error opening the data file.\n");
     stop_signal = true;
   }
 

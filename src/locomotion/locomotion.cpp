@@ -28,7 +28,7 @@ float leg_swing_percent = 0.9;            // swing leg stroke as a percentage of
 // these are currently fixed and not exposed for easier teleop
 float swing_percent_at_translate = 0.5;   // percentage of swing leg retraction after which translation begins; small values can cause swing legs to collide with rough terrains
 float trans_percent_at_touchdown = 0.4;   // percentage of translatonal displacement from midpoint after which leg touchdown begins; small values can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
-float yaw_percent_at_touchdown = 0.85;     // percentage of yaw command from midpoint after which leg touchdown begins; small values can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
+float yaw_percent_at_touchdown = 0.9;     // percentage of yaw command from midpoint after which leg touchdown begins; small values can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};    // position of the swing leg actuators when they were last in contact
 std::vector<float> q_leg_swing = {kQLegMin, kQLegMin};      // position setpoint of swing leg actuators during leg retraction
@@ -206,6 +206,7 @@ void standUp() {
     handleODriveCANMsg();
     updateStates();
     updateMotorCommands();
+    sendTelemetry();
   }
 
   updateMotorsStance(stance);

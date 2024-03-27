@@ -18,6 +18,7 @@ void setup() {
   
   homeLeggedRobot();
   zeroIMUReading();
+  openDataFile();
   standUp();
 
   Serial.println("Standing test");

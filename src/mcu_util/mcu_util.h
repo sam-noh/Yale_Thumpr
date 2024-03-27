@@ -120,6 +120,9 @@ void initRTC();
 // initialize SD card and set file name
 void initSDCard();
 
+// open a data file on the SD card for writing
+void openDataFile();
+
 // write data to the onboard microSD card
 void writeToCard(char data[]);
 
