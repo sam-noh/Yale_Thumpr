@@ -8,7 +8,7 @@
 
 #define USE_LEG_FEEDBACK
 // #define USE_DECELERATION_THRESHOLD
-#define USE_VELOCITY_THRESHOLD
+// #define USE_VELOCITY_THRESHOLD
 
 //////////////////////////////////////////////////////////////////////////////////////
 // control loop periods

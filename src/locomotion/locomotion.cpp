@@ -28,7 +28,7 @@ float leg_swing_percent = 0.9;            // swing leg stroke as a percentage of
 // these are currently fixed and not exposed for easier teleop
 float swing_percent_at_translate = 0.5;   // percentage of swing leg retraction after which translation begins; small values can cause swing legs to collide with rough terrains
 float trans_percent_at_touchdown = 0.4;   // percentage of translatonal displacement from midpoint after which leg touchdown begins; small values can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
-float yaw_percent_at_touchdown = 0.6;     // percentage of yaw command from midpoint after which leg touchdown begins; small values can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
+float yaw_percent_at_touchdown = 0.85;     // percentage of yaw command from midpoint after which leg touchdown begins; small values can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};    // position of the swing leg actuators when they were last in contact
 std::vector<float> q_leg_swing = {kQLegMin, kQLegMin};      // position setpoint of swing leg actuators during leg retraction
@@ -234,12 +234,12 @@ void updateTrajectory() {
   // apply deadzone to left-right joystick input to prevent undesired turning during translation
   float input_y_filtered = max(abs(input_y) - kGUIJoystickYDeadZone, 0);
   int dir_y = (input_y > 0) - (input_y < 0);
-  input_y_filtered *= dir_y/kGUIJoystickYDeadZone;
+  input_y_filtered *= dir_y/(1-kGUIJoystickYDeadZone);
 
   // apply deadzone to front-back joystick input to prevent undesired translation during in-place turning
   float input_x_filtered = max(abs(input_x) - kGUIJoystickXDeadZone, 0);
   int dir_x = (input_x > 0) - (input_x < 0);
-  input_x_filtered *= dir_x/kGUIJoystickXDeadZone;
+  input_x_filtered *= dir_x/(1-kGUIJoystickXDeadZone);
 
   cmd_vector[0] = input_x_filtered;                                     // use deadzone/scaled input
   cmd_vector[1] = input_y_filtered;                                     // use deadzone/scaled input
@@ -356,7 +356,10 @@ bool isReadyForTransition(uint8_t phase) {
 
   } else if (phase == ActuationPhases::kTouchDown) {  // if currently touching down
         
-    return isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1];
+    return isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]
+           && ((fabs(z_body_local - z_body_nominal) < kDzSoftMax)
+           ||
+           (fabs(z_body_local - z_body_nominal) > kDzSoftMax && !(fabs(rpy_lateral[0]) < kTiltNominal && fabs(rpy_lateral[1]) < kTiltNominal)));  // true if both swing legs have made contact and body height regulation is not needed; deleting the body height condition results the motion primitive often being skipped
 
   } else {
     return false;
@@ -498,5 +501,5 @@ void moveLocomotionMechanism() {
 
 void holdLocomotionMechanism() {
   motors[MotorID::kMotorTranslate].states_.q_d = motors[MotorID::kMotorTranslate].states_.q;  // stop at current translation and yaw
-  motors[MotorID::kMotorYaw].states_.q_d = motors[MotorID::kMotorYaw].states_.q;
+  motors[MotorID::kMotorYaw].states_.q_d = 0;
 }
