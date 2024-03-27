@@ -98,6 +98,7 @@ extern char data_file_name[128];
 
 // state variable
 extern bool stop_signal;
+extern bool isSDInit;      // true if SD.open() has been attempted; safeguards against writing attempts before opening the file during setup
 
 //////////////////////////////////////////////////////////////////////////////////////
 // global functions

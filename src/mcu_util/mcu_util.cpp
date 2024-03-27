@@ -23,9 +23,12 @@ const int chip_select = BUILTIN_SDCARD;
 File data_file;  // SD card file
 char data_file_name[128] = "";
 
+bool stop_signal = false;
+bool isSDInit = false;
+
 // initialize Teensy 4.1 digital pins, RTC and etc.
 void initTeensy() {
-  delay(10);   // short delay after the start to ensure the first serial print is not missed over USB
+  delay(100);   // short delay after the start to ensure the first serial print is not missed over USB
   SERIAL_USB.println("Teensy started.\n");
 
   // add digital pin initialization here
@@ -133,11 +136,12 @@ void openDataFile() {
   // name the data file with the timestamp
   file_name.toCharArray(data_file_name, sizeof(data_file_name));
   data_file = SD.open(data_file_name, FILE_WRITE);
+  isSDInit = true;
   if (data_file) {
     SERIAL_USB.printf("Data being saved to: %s\n\n", data_file_name);
   } else {
     digitalWrite(LED, HIGH);
-    SERIAL_USB.println("Error opening the data file.\n");
+    SERIAL_USB.println("Could not open the data file for writing.\n");
     while (1) {}
   }
 
@@ -148,14 +152,16 @@ void openDataFile() {
 void writeToCard(char data[]) {
   #ifdef ENABLE_SD_CARD
 
-  if (data_file) {
-    data_file.print(data);
-  } else {
-    digitalWrite(LED, HIGH);
-    SERIAL_USB.println("Error opening the data file.\n");
-    stop_signal = true;
+  if (isSDInit) {               // don't attempt to write before openDataFile() has been called
+    if (data_file) {            // if this fails, that means the SD file opened successfully but failed afterwards
+      data_file.print(data);
+    } else {
+      digitalWrite(LED, HIGH);
+      SERIAL_USB.println("Error opening the data file.\n");
+      stop_signal = true;
+    }
   }
-
+  
   #endif
 }
 
