@@ -82,8 +82,6 @@ std::vector<int> isInContact = {false, false, false, false};   // true if the mo
 std::vector<int> isDecelerated(kNumOfLegs, false);             // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
 std::vector<float> q_dot_max(kNumOfLegs, 0);                    // maximum leg velocity reached during leg touchdown; used for contact detection; reset after each cycle
 
-bool stop_signal = false;
-
 // read the joystick XY analog voltages and the select button and normalize
 void TwoAxisJoystick::readJoystick() {
   x_raw = analogRead(XOUT);
@@ -488,10 +486,15 @@ void updateContactState() {
       for (uint8_t idx_leg = gait_phase*4; idx_leg < gait_phase*4 + 4; ++idx_leg) {
         int idx_motor = (int) idx_leg / 2;
 
+        // snprintf(sent_data, sizeof(sent_data), "idx_motor: %d\tidx_leg: %d\tmotor dq: %.2f\tleg vel: %.2f\tleg vel max: %.2f\n", idx_motor, idx_leg, motors[idx_motor].states_.q - q_leg_swing[idx_motor % 2], q_dot_filters[idx_leg].filtered_value, q_dot_max[idx_leg]);
+        // writeToSerial();
+
         // update max leg velocity during touchdown
-        if (q_dot_filters[idx_leg].filtered_value > q_dot_max[idx_leg]                            // if the current leg velocity exceeds the historical max value
-            && motors[idx_motor].states_.q - q_leg_swing[idx_motor % 2] > kDqStartContactHighImpulse) {  // AND the actuator position is past some inital displacement
+        if (q_dot_filters[idx_leg].filtered_value > q_dot_max[idx_leg]                                    // if the current leg velocity exceeds the historical max value
+            && motors[idx_motor].states_.q - q_leg_swing[idx_motor % 2] > kDqStartContactHighImpulse) {   // AND the actuator position is past some inital displacement
           q_dot_max[idx_leg] = q_dot_filters[idx_leg].filtered_value;
+          // snprintf(sent_data, sizeof(sent_data), "q_dot_max updated to %.2f\n", q_dot_max[idx_leg]);
+          // writeToSerial();
         }
 
         // check if the leg velocity has fallen below the threshold

@@ -7,15 +7,15 @@
 #include <Adafruit_BNO08x.h>
 
 #define USE_LEG_FEEDBACK
-// #define USE_DECELERATION_THRESHOLD
-#define USE_VELOCITY_THRESHOLD
+#define USE_DECELERATION_THRESHOLD
+// #define USE_VELOCITY_THRESHOLD
 
 //////////////////////////////////////////////////////////////////////////////////////
 // control loop periods
 const uint16_t k_dtPosUpdate = 250;                 // position sampling period in microseconds; encoders use hardware interrupt, but the pulse counts need to be transformed to joint space at an interval
 const uint16_t k_dtVelUpdate = 2000;                // velocity sampling period in microseconds; numerical difference on position and filtering frequency
 const uint16_t k_dtAccelUpdate = 10000;             // acceleration sampling period in microseconds; numerical difference on velocity and filtering frequency
-const uint8_t k_dtContactUpdate = 1;                // leg ground contact update period in ms
+const uint8_t k_dtContactUpdate = 5;                // leg ground contact update period in ms
 const uint8_t k_dtKinematicsUpdate = 1;             // robot kinematics update period in ms
 
 const uint8_t k_dtIMUUpdate = 5;                    // IMU sampling period in ms
