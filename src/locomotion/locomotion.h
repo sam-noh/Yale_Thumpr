@@ -24,13 +24,14 @@ const float kDqLegRamp = 60;            // leg touchdown displacement after whic
 
 // kRetractLeg parameters
 const float kDqUnevenTerrain = 50;      // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
+const float kDqLegSwingMin = 30;        // minimum required leg retraction during swing
 
 // body height regulation parameters
 const float k_zBodyMin = 100;           // minimum allowable value for z_body_local
 const float k_zBodyMax = 300;           // maximum allowable value for z_body_local
 
 // gait cycle parameter limits
-const float kLegSwingPercentMax = 0.9;
+const float kLegSwingPercentMax = 0.95;
 const float kLegSwingPercentMin = 0.2;
 
 // blocking motion primitive parameters

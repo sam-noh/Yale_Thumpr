@@ -464,6 +464,7 @@ void updateMotorsSwing() {
 
     q_leg_contact[i] = motors[idx_motor].states_.q;             // remember the leg motor position at ground contact
     float q_leg_retract = q_leg_contact[i]*leg_swing_percent;   // nominal swing leg setpoint; NOT necessarily equal to the actual setpoint
+    if (q_leg_contact[i]*(1 - leg_swing_percent) < kDqLegSwingMin) q_leg_retract = q_leg_contact[i] - kDqLegSwingMin; // enforce minimum required swing retraction
 
     // TODO: change this logic to account for robot kinematics (body tilt)
     if (fabs(q[gait_phase * 4 + i * 2] - q[gait_phase * 4 + i * 2 + 1]) > kDqUnevenTerrain) { // if the previous stance legs are standing on uneven ground
