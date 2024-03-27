@@ -50,10 +50,8 @@ uint32_t handleODriveCANMsg() {
       if (motors[node_id].states_.axis_error) {
         snprintf(sent_data, sizeof(sent_data), "ERROR: Axis %d %s.\n\n", node_id + 1, ODrive_CAN.error_to_string(motors[node_id].states_.axis_error).c_str());
         writeToSerial();
-        #ifdef ENABLE_SD_CARD
-        writeToCard(sent_data);
-        #endif
         if (motors[node_id].states_.axis_error != ODriveTeensyCAN::ODriveError::ODRIVE_ERROR_INITIALIZING) {
+          writeToCard(sent_data);
           stop_signal = true;
         }
       }
@@ -146,12 +144,17 @@ void readHeartbeat(uint8_t node_id, CAN_message_t msg) {
 
 // looks for the ODrive CAN heartbeat msg and enters closed-loop control
 void initActuators() {
-  snprintf(sent_data, sizeof(sent_data), "Waiting for ODrives to power on...\n");
-  writeToSerial();
+  elapsedMillis t_wait;
 
   // wait for the first CAN message to come in
   while (!handleODriveCANMsg()) {
+    if (t_wait > 5000) {
+      snprintf(sent_data, sizeof(sent_data), "Waiting for ODrives to power on...\n");
+      writeToSerial();
+      t_wait = 0;
+    }
   }
+  
   uint32_t t_start = millis();
   while(millis() - t_start < 1000) {
     handleODriveCANMsg();
