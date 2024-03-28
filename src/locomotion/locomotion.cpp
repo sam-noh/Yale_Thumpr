@@ -5,10 +5,10 @@
 #include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> touchdown_torque = {
-  {0.25, 0.18, 0.14}, // 0.18 and 0.12
-  {0.25, 0.18, 0.14},
-  {0.25, 0.18, 0.14},
-  {0.25, 0.18, 0.14}
+  {0.25, 0.18, 0.12}, // 0.18 and 0.12
+  {0.25, 0.18, 0.12},
+  {0.25, 0.18, 0.12},
+  {0.25, 0.18, 0.12}
 };
 
 // gait variables
@@ -27,7 +27,7 @@ float leg_swing_percent = 0.9;            // swing leg stroke as a percentage of
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
 float swing_percent_at_translate = 0.5;   // percentage of swing leg retraction after which translation begins; small values can cause swing legs to collide with rough terrains
-float trans_percent_at_touchdown = 0.4;   // percentage of translatonal displacement from midpoint after which leg touchdown begins; small values can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
+float trans_percent_at_touchdown = 0.3;   // percentage of translatonal displacement from midpoint after which leg touchdown begins; small values can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
 float yaw_percent_at_touchdown = 0.9;     // percentage of yaw command from midpoint after which leg touchdown begins; small values can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};    // position of the swing leg actuators when they were last in contact
@@ -94,6 +94,10 @@ void homeLeggedRobot() {
   uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
   motors[stance*2].states_.q_d = 40;
   motors[stance*2 + 1].states_.q_d = 40;
+  isInContact[stance*2] = true;
+  isInContact[stance*2 + 1] = true;
+  motors[gait_phase*2].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;
+  motors[gait_phase*2 + 1].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;
 
   t_current = millis();
   while (millis() - t_current < 500 || (fabs(motors[stance*2].states_.q_dot) > fabs(kQdotLegHomingStop)
@@ -201,7 +205,6 @@ void standUp() {
     motors[axis_id].states_.q_d = z_body_nominal;
     motors[axis_id].states_.holding = false;
     motors[axis_id].states_.trap_traj_vel_limit = kVelLegTrajStandup;
-    isInContact[axis_id] = true;
   }
 
   // update states while standing up
