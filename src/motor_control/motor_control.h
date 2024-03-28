@@ -8,7 +8,7 @@
 // constants
 
 // battery parameters
-const float kMinBatteryVoltage = 22.5;              // min battery voltage
+const float kMinBatteryVoltage = 22.3;              // min battery voltage
 
 // ODrive Pro CAN parameters
 const int kODriveCANBaudRate = 1000000;             // baud rate for ODrive CAN2.0

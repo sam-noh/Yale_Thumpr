@@ -39,7 +39,7 @@ const float kLegSwingPercentMin = 0.2;
 
 // blocking motion primitive parameters
 const float kDqSwingLegClearance = 10;  // swing leg vertical clearance margin when performing body height or tilt regulation; assumes flat terrain; adjust accordingly
-const float kQTransCentered = 20;       // distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
+const float kQTransCentered = 40;       // distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
 const float k_zErrorSoftMax = 30;       // body height deviation in mm above which non-blocking regulation is executed
 const float k_zErrorHardMax = 60;       // body height deviation in mm above which blocking regulation is executed
 const float kTiltNominal = 2;           // acceptable body tilt from zero in degrees
@@ -62,7 +62,7 @@ extern uint8_t gait_phase;              // current gait phase; (0 medial swing/l
 extern uint8_t actuation_phase;         // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 extern uint32_t gait_cycles;            // number of completed gait cycles
 extern bool isBlocking;                 // true if any motion primitive outside of the standard gait cycle is in progress
-extern bool isCorrected;                // true if a motion primitive has been completed during the gait cycle
+extern bool isCorrecting;                // true if a motion primitive has been completed during the gait cycle
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
@@ -98,6 +98,8 @@ void updateMotorsStance(uint8_t stance);
 
 // determine swing leg setpoints based on contact conditions and update the motor control mode and limits for swing phase
 void updateMotorsSwing();
+
+void updateMotorsClimb(uint8_t stance, float dz);
 
 void moveLocomotionMechanism();
 
