@@ -1,7 +1,7 @@
 {
     "configuration": "usb=serial,speed=600,opt=o2std,keys=en-us",
     "board": "teensy:avr:teensy41",
-    "sketch": "robot_control.ino",
+    "sketch": "Yale_Thumpr.ino",
     "port": "COM21",
     "output": "../build"
 }
