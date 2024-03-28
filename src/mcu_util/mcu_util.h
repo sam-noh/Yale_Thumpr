@@ -70,10 +70,11 @@
 #define TIME_HEADER  "T"                        // Header tag for serial time sync message
 
 // control loop periods
-const uint8_t k_dtPrint = 10;              // data print period in ms
-const uint8_t k_dtSetpointUpdate = 2;      // joint setpoint update period in ms
-const uint8_t k_dtMotorLimitsUpdate = 50;  // motor controller limits update period in ms
-const uint8_t k_dtMotorCmdUpdate = 20;     // motor command update period in ms; 50
+const uint8_t k_dtPrint = 10;               // data print period in ms
+const uint8_t k_dtSetpointUpdate = 2;       // joint setpoint update period in ms
+const uint8_t k_dtMotorLimitsUpdate = 50;   // motor controller limits update period in ms
+const uint8_t k_dtMotorCmdUpdate = 20;      // motor command update period in ms;
+const uint8_t k_dtTrajectoryUpdate = 10;    // robot trajectory update period in ms;
 
 //////////////////////////////////////////////////////////////////////////////////////
 // global variables
@@ -84,6 +85,7 @@ extern uint32_t t_last_setpoint_update;     // timestamp at last setpoint update
 extern uint32_t t_last_motor_limits_update; // timestamp at last motor controller limits update
 extern uint32_t t_last_motor_cmd_update;    // timestamp at last motor command update
 extern uint32_t t_last_CAN_msg;             // timestamp at last CAN msg
+extern uint32_t t_last_Jetson;              // timestamp at last Jetson read
 
 // communication variables
 extern String received_data;

@@ -9,6 +9,7 @@ uint32_t t_last_setpoint_update = 0;      // timestamp at last setpoint update
 uint32_t t_last_motor_limits_update = 0;  // timestamp at last motor controller limits update
 uint32_t t_last_motor_cmd_update = 0;     // timestamp at last motor command update
 uint32_t t_last_CAN_msg = 0;              // timestamp at last CAN msg
+uint32_t t_last_Jetson = 0;               // timestamp at last Jetson read
 
 String received_data;
 float input_x = 0;
@@ -215,6 +216,8 @@ void parseJetsonSerial() {
     #ifdef DEBUG_TIMER
     elapsedMicros timer;
     #endif
+
+    t_last_Jetson = millis();
     
     received_data = SERIAL_JETSON.readStringUntil(' ');
     received_data = getLast(received_data);

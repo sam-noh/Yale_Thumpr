@@ -33,6 +33,9 @@ float yaw_percent_at_touchdown = 0.9;     // percentage of yaw command from midp
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};    // position of the swing leg actuators when they were last in contact
 std::vector<float> q_leg_swing = {kQLegMin, kQLegMin};      // position setpoint of swing leg actuators during leg retraction
 
+uint8_t x_no_cmd_latch_counter = 0;               // number of times a zero command was received
+uint8_t y_no_cmd_latch_counter = 0;               // number of times a zero command was received
+
 void homeLeggedRobot() {
   snprintf(sent_data, sizeof(sent_data), "Homing all legs...\n\n");
   writeToSerial();
@@ -238,8 +241,25 @@ void updateTrajectory() {
   int dir_x = (input_x > 0) - (input_x < 0);
   input_x_filtered *= dir_x/(1-kGUIJoystickXDeadZone);
 
-  cmd_vector[0] = input_x_filtered;                                     // use deadzone/scaled input
-  cmd_vector[1] = input_y_filtered;                                     // use deadzone/scaled input
+  if (millis() - t_last_Jetson > k_dtTrajectoryUpdate) {
+    fabs(input_x_filtered) < EPS ? ++x_no_cmd_latch_counter : x_no_cmd_latch_counter = 0;
+    fabs(input_y_filtered) < EPS ? ++y_no_cmd_latch_counter : y_no_cmd_latch_counter = 0;
+
+    if(x_no_cmd_latch_counter > kNoCmdMinCounts) x_no_cmd_latch_counter = kNoCmdMinCounts + 1;
+    if(y_no_cmd_latch_counter > kNoCmdMinCounts) y_no_cmd_latch_counter = kNoCmdMinCounts + 1;
+  }
+  
+  if (fabs(input_x_filtered) > 0) {
+    cmd_vector[0] = input_x_filtered; // translation command
+  } else if (fabs(input_x_filtered) < EPS && x_no_cmd_latch_counter > kNoCmdMinCounts) {
+    cmd_vector[0] = 0;
+  }
+
+  if (fabs(input_y_filtered) > 0) {
+    cmd_vector[1] = input_y_filtered; // yaw command
+  } else if (fabs(input_y_filtered) < EPS && y_no_cmd_latch_counter > kNoCmdMinCounts) {
+    cmd_vector[1] = 0;
+  }
 
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
   z_body_nominal = (k_zBodyMax - k_zBodyMin)*input_height + k_zBodyMin;                 // for now, nominal body height is equal to the leg actuator setpoint in stance

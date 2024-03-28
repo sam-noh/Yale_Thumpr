@@ -44,7 +44,7 @@ const float kVelLegMaxContact = 25;             // leg motor controller velocity
 const float kVelTransMax = 22;                  // translation motor controller velocity limit in turns/s
 const float kVelYawMax = 5.8;                   // yaw motor controller velocity limit in turns/s
 
-const float kVelLegTrajSwing = 35;              // leg motor trapezoidal trajectory velocity in swing phase in turns/s
+const float kVelLegTrajSwing = 45;              // leg motor trapezoidal trajectory velocity in swing phase in turns/s; 35
 const float kVelLegTrajStandup = 20;            // leg motor trapezoidal trajectory velocity when standing up in turns/s
 const float kVelLegTrajTilt = 10;               // leg motor trapezoidal trajectory velocity when tilt correcting in turns/s (tested 10)
 const float kVelTransTraj = 12;                 // translation motor trapezoidal trajectory velocity

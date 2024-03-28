@@ -18,6 +18,9 @@ enum ActuationPhases {
     kTouchDown = 2
 };
 
+// higher-level command related parameters
+const uint8_t kNoCmdMinCounts = 10;     // minimum number of zero commands before the robot actually stops; used to filter out occasional 0's from failed data transfer
+
 // touchdown torque profile parameters
 const float kDqLegStartup = 10;         // leg touchdown displacement after which a lower torque is applied
 const float kDqLegRamp = 60;            // leg touchdown displacement after which an even lower torque is applied
@@ -68,6 +71,9 @@ extern float leg_swing_percent;             // swing leg stroke as a percentage 
 
 extern std::vector<float> q_leg_contact;    // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;      // position setpoint of swing leg actuators during leg retraction
+
+extern uint8_t x_no_cmd_latch_counter;               // number of times a zero command was received
+extern uint8_t y_no_cmd_latch_counter;               // number of times a zero command was received
 
 void homeLeggedRobot();
 
