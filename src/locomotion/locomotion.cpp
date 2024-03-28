@@ -358,14 +358,14 @@ bool isReadyForTransition(uint8_t phase) {
     // if there is a translation command
     if (fabs(cmd_vector[0]) > EPS) {
       int dir = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                              // direction of translation command
-      float q_trans_transition = fabs(trans_percent_at_touchdown*kQTransMax*cmd_vector[0]);             // this value is always positive since it represents forward motion, regardless of direction
+      float q_trans_transition = fabs(trans_percent_at_touchdown*motors[MotorID::kMotorTranslate].states_.q_d);             // this value is always positive since it represents forward motion, regardless of direction
       isTranslated = dir * pow(-1, gait_phase + 1) * q[JointID::kJointTranslate] > q_trans_transition;  // the translational joint has reached the transition point
                                                                                                         // don't check yaw; assume that any concurrent yaw motion will be completed in time
 
     // if there is an in-place turn command
     } else if (fabs(cmd_vector[1]) > EPS) {
       int dir = (cmd_vector[1] > 0) - (cmd_vector[1] < 0);                              // direction of yaw command
-      float q_yaw_transition = fabs(yaw_percent_at_touchdown*kQYawMax*cmd_vector[1]);   // this value is always positive since it represents forward motion, regardless of direction
+      float q_yaw_transition = fabs(yaw_percent_at_touchdown*motors[MotorID::kMotorYaw].states_.q_d);   // this value is always positive since it represents forward motion, regardless of direction
       isTurned = dir * pow(-1, gait_phase) * q[JointID::kJointYaw] > q_yaw_transition;  // the yaw joint has reached the transition point
     }
 
@@ -513,6 +513,7 @@ void updateMotorsSwing() {
 void moveLocomotionMechanism() {
   float q_trans = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];
   float q_yaw = pow(-1, gait_phase)*kQYawMax*cmd_vector[1];
+  if (fabs(kQTransMax - fabs(q_trans)) < kDqTransEndYawLimit) q_yaw = pow(-1, gait_phase)*(kQYawMax - kDqYawLimit)*cmd_vector[1];
   motors[MotorID::kMotorTranslate].states_.q_d = q_trans;
   motors[MotorID::kMotorYaw].states_.q_d = q_yaw;
 }
