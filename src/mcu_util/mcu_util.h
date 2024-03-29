@@ -21,7 +21,7 @@
 // #define DEBUG_LEG_POSITION
 // #define DEBUG_LEG_VELOCITY
 // #define DEBUG_LEG_ACCELERATION
-#define DEBUG_CONTACT
+// #define DEBUG_CONTACT
 #define DEBUG_POWER
 #define DEBUG_RPY
 // #define DEBUG_OMEGA

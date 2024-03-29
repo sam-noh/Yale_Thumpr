@@ -7,6 +7,23 @@
 //////////////////////////////////////////////////////////////////////////////////////
 // constants
 
+enum MotorID {
+    kMotorMedialFront = 0,
+    kMotorMedialRear = 1,
+    kMotorLateralRight = 2,
+    kMotorLateralLeft = 3,
+    kMotorTranslate = 4,
+    kMotorYaw = 5
+};
+
+enum MotorGroupID {
+    kMotorGroupMedial = 0,
+    kMotorGroupLateral = 1,
+    kMotorGroupLegs = 2,
+    kMotorGroupTranslate = 3,
+    kMotorGroupYaw = 4
+};
+
 // battery parameters
 const float kMinBatteryVoltage = 22.3;              // min battery voltage
 

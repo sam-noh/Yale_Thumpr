@@ -3,6 +3,10 @@
 
 #include "Arduino.h"
 #include <vector>
+#include <tuple>
+#include <functional>
+
+typedef std::tuple<uint8_t, uint8_t, std::function<void(uint8_t)>> MotionPrimitive;
 
 const int kNumOfGaitPhases = 2;             // number of gait phases in a gait cycle
 const int kNumOfActuationPhases = 3;        // number of actuation phases in swing
@@ -16,6 +20,14 @@ enum ActuationPhases {
     kRetractLeg = 0,
     kLocomote = 1,
     kTouchDown = 2
+};
+
+enum ReactiveBehaviors {
+    kNone = 0,
+    kStancePosition = 1,
+    kStanceTorque = 2,
+    kSwingPosition = 3,
+    kSwingTorque = 4
 };
 
 // higher-level command related parameters
@@ -72,8 +84,10 @@ extern float leg_swing_percent;             // swing leg stroke as a percentage 
 extern std::vector<float> q_leg_contact;    // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;      // position setpoint of swing leg actuators during leg retraction
 
-extern uint8_t x_no_cmd_latch_counter;               // number of times a zero command was received
-extern uint8_t y_no_cmd_latch_counter;               // number of times a zero command was received
+extern uint8_t x_no_cmd_latch_counter;      // number of times a zero command was received
+extern uint8_t y_no_cmd_latch_counter;      // number of times a zero command was received
+
+extern MotionPrimitive mp;                  // current motion primitive; (MotorGroupID, ReactiveBehaviors, callback)
 
 void homeLeggedRobot();
 

@@ -20,15 +20,6 @@ enum JointID {
     kJointYaw = 9
 };
 
-enum MotorID {
-    kMotorMedialFront = 0,
-    kMotorMedialRear = 1,
-    kMotorLateralFront = 2,
-    kMotorLateralRear = 3,
-    kMotorTranslate = 4,
-    kMotorYaw = 5
-};
-
 // transmission parameters
 const float kNumOfTeethDiffInput = 60.0;        // number of teeth of differential input gear
 const float kNumOfTeethDiffOutput = 30.0;       // number of teeth of differential output gear

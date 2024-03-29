@@ -389,8 +389,8 @@ void sendTelemetry() {
               motors[3].states_.bus_voltage*motors[3].states_.bus_current, motors[4].states_.bus_voltage*motors[4].states_.bus_current, motors[5].states_.bus_voltage*motors[5].states_.bus_current);
 
     #ifdef DEBUG_POWER
-    SERIAL_USB.print("motor P: ");
-    writeToSerial();
+    // SERIAL_USB.print("motor P: ");
+    // writeToSerial();
     #endif
     writeToCard(sent_data);
 
