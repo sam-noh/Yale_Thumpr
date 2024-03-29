@@ -154,7 +154,7 @@ void writeToCard(char data[]) {
   #ifdef ENABLE_SD_CARD
 
   if (isSDInit) {               // don't attempt to write before openDataFile() has been called
-    if (data_file) {            // if this fails, that means the SD file opened successfully but failed afterwards
+    if (data_file) {            // if false, that means the SD file opened successfully but failed afterwards
       data_file.print(data);
     } else {
       digitalWrite(LED, HIGH);
@@ -170,8 +170,14 @@ void writeToCard(char data[]) {
 void closeDataFile() {
   #ifdef ENABLE_SD_CARD
 
-  data_file.close();
-  SERIAL_USB.println("Saved the data file");
+  if (isSDInit) {           // if false, openDataFile() was not called yet
+    if (data_file) {        // if false, the SD file opened successfully but failed afterwards
+      data_file.close();
+      SERIAL_USB.println("Saved the data file");
+    } else {
+      SERIAL_USB.println("Failed to save the data file");
+    }
+  }
 
   #endif
 }

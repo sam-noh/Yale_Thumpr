@@ -334,6 +334,7 @@ void regulateBodyPose() {
              && fabs(motors[2].states_.q_dot) < kQdotStable && fabs(motors[3].states_.q_dot) < kQdotStable) {
 
     isBlocking = false;
+    isCorrecting = false;
     
     for(uint8_t axis_id = 0; axis_id < kNumOfLegs/2; ++axis_id) {
       motors[axis_id].states_.trap_traj_vel_limit = kVelLegTrajSwing;
