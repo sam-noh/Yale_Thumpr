@@ -26,9 +26,9 @@ float leg_swing_percent = 0.9;            // swing leg stroke as a percentage of
 
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
-float swing_percent_at_translate = 0.5;   // percentage of swing leg retraction after which translation begins; small values can cause swing legs to collide with rough terrains
-float trans_percent_at_touchdown = 0.3;   // percentage of translatonal displacement from midpoint after which leg touchdown begins; small values can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
-float yaw_percent_at_touchdown = 0.9;     // percentage of yaw command from midpoint after which leg touchdown begins; small values can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
+float swing_percent_at_translate = 0.9;   // 0.5; percentage of swing leg retraction after which translation begins; values closer to 1 can cause swing legs to collide with rough terrains
+float trans_percent_at_touchdown = 0.4;   // 0.3; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
+float yaw_percent_at_touchdown = 0.9;     // percentage of yaw command from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};    // position of the swing leg actuators when they were last in contact
 std::vector<float> q_leg_swing = {kQLegMin, kQLegMin};      // position setpoint of swing leg actuators during leg retraction
@@ -295,13 +295,17 @@ void regulateBodyPose() {
       dq[1] -= dq_tilt / 2;
     }
     
-    if (actuation_phase == ActuationPhases::kLocomote                                     // if leg retraction is complete
-        && fabs(z_error) < k_zErrorHardMax) {                                             // AND height error is small
+    if (actuation_phase == ActuationPhases::kLocomote     // if leg retraction is complete
+        && fabs(z_error) < k_zErrorHardMax) {             // AND height error is small
 
       for (uint8_t i = 0; i < 2; ++i) {
+        // ensure swing leg clearance
+        float dist_to_min_swing_leg_clearance = (q_leg_contact[i] - q_leg_swing[i]) + dq[i] - kMinSwingLegClearance;
+        if (dist_to_min_swing_leg_clearance < 0) dq[i] -= dist_to_min_swing_leg_clearance;
+
         motors[stance * 2 + i].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
         motors[stance * 2 + i].states_.trap_traj_vel_limit = kVelLegTrajTilt;
-        motors[stance * 2 + i].states_.trap_traj_accel_limit = kAccelLegTrajTilt;
+        motors[stance * 2 + i].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
         motors[stance * 2 + i].states_.trap_traj_decel_limit = kDecelLegTrajTilt;
         motors[stance * 2 + i].states_.q_d = motors[stance * 2 + i].states_.q + dq[i];
       }
