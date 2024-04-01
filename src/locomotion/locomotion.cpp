@@ -308,6 +308,7 @@ void regulateBodyPose() {
         motors[stance * 2 + i].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
         motors[stance * 2 + i].states_.trap_traj_decel_limit = kDecelLegTrajTilt;
         motors[stance * 2 + i].states_.q_d = motors[stance * 2 + i].states_.q + dq[i];
+        motors[stance * 2 + i].states_.holding = false;
       }
 
       mp = std::make_tuple(stance, ReactiveBehaviors::kStancePosition, updateMotorsStance);
