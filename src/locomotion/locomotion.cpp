@@ -26,7 +26,7 @@ float leg_swing_percent = 0.9;            // swing leg stroke as a percentage of
 
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
-float swing_percent_at_translate = 0.9;   // 0.5; percentage of swing leg retraction after which translation begins; values closer to 1 can cause swing legs to collide with rough terrains
+float swing_percent_at_translate = leg_swing_percent;   // 0.5; percentage of swing leg retraction after which translation begins; values closer to 1 can cause swing legs to collide with rough terrains
 float trans_percent_at_touchdown = 0.4;   // 0.3; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
 float yaw_percent_at_touchdown = 0.9;     // percentage of yaw command from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
@@ -267,6 +267,8 @@ void updateTrajectory() {
   }
 
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
+  swing_percent_at_translate = leg_swing_percent;                                       // set translation transition percentage equal to swing retraction percentage
+                                                                                        // the idea is: if large retraction is needed, then translation should also occur later
   z_body_nominal = (k_zBodyMax - k_zBodyMin)*input_height + k_zBodyMin;                 // for now, nominal body height is equal to the leg actuator setpoint in stance
   
 }
