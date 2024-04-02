@@ -304,9 +304,9 @@ void regulateBodyPose() {
         if (dist_to_min_swing_leg_clearance < 0) dq[i] -= dist_to_min_swing_leg_clearance;
 
         motors[stance * 2 + i].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
-        motors[stance * 2 + i].states_.trap_traj_vel_limit = kVelLegTrajTilt;
+        motors[stance * 2 + i].states_.trap_traj_vel_limit = kVelLegTrajStandup;
         motors[stance * 2 + i].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
-        motors[stance * 2 + i].states_.trap_traj_decel_limit = kDecelLegTrajTilt;
+        motors[stance * 2 + i].states_.trap_traj_decel_limit = kDecelLegTrajStandup;
         motors[stance * 2 + i].states_.q_d = motors[stance * 2 + i].states_.q + dq[i];
         motors[stance * 2 + i].states_.holding = false;
       }
