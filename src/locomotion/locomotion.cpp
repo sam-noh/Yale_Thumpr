@@ -296,15 +296,20 @@ void regulateBodyPose() {
       dq[0] += dq_tilt / 2;
       dq[1] -= dq_tilt / 2;
     }
+
+    // ensure swing leg clearance
+    float dist_to_min_clearance_1 = (q_leg_contact[0] - q_leg_swing[0]) + dq[0] - kMinSwingLegClearance;
+    float dist_to_min_clearance_2 = (q_leg_contact[1] - q_leg_swing[1]) + dq[1] - kMinSwingLegClearance;
+    float min_dist = min(dist_to_min_clearance_1, dist_to_min_clearance_2);
+    if (min_dist < 0) {
+      dq[0] -= min_dist;
+      dq[1] -= min_dist;
+    }
     
     if (actuation_phase == ActuationPhases::kLocomote     // if leg retraction is complete
         && fabs(z_error) < k_zErrorHardMax) {             // AND height error is small
 
       for (uint8_t i = 0; i < 2; ++i) {
-        // ensure swing leg clearance
-        float dist_to_min_swing_leg_clearance = (q_leg_contact[i] - q_leg_swing[i]) + dq[i] - kMinSwingLegClearance;
-        if (dist_to_min_swing_leg_clearance < 0) dq[i] -= dist_to_min_swing_leg_clearance;
-
         motors[stance * 2 + i].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
         motors[stance * 2 + i].states_.trap_traj_vel_limit = kVelLegTrajStandup;
         motors[stance * 2 + i].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
