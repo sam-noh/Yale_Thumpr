@@ -20,11 +20,11 @@ void setup() {
 }
 
 void loop() {
-  while (!stop_signal) {
+  while (!stop_signal && gait_cycles < 10) {
     handleODriveCANMsg();
-    parseJetsonSerial();
+    // parseJetsonSerial();
     parseTeensySerial();
-    updateTrajectory();
+    // updateTrajectory();
     updateStates();
     updateGait();
     updateMotorCommands();
