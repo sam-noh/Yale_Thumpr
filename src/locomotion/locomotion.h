@@ -54,7 +54,7 @@ const float kMinSwingLegClearance = 20; // swing leg vertical clearance margin w
 const float kQTransCentered = 40;       // distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
 const float k_zErrorSoftMax = 30;       // body height deviation in mm above which non-blocking regulation is executed
 const float k_zErrorHardMax = 60;       // body height deviation in mm above which blocking regulation is executed
-const float kTiltNominal = 2;           // acceptable body tilt from zero in degrees
+const float kTiltNominal = 0.5;         // acceptable body tilt from zero in degrees
 const float kDqLegMaxTilt = 100;        // max total leg displacements per tilt correction
 
 // motor torque setpoints during leg touchdown; determined heuristically

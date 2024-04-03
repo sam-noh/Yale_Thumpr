@@ -12,7 +12,7 @@ std::vector<std::vector<float>> touchdown_torque = {
 };
 
 // gait variables
-std::vector<float> cmd_vector = {0, 0};                 // command vector: {forward-back, yaw angle}
+std::vector<float> cmd_vector = {1, 0};                 // command vector: {forward-back, yaw angle}
 uint8_t gait_phase = GaitPhases::kLateralSwing;         // current gait phase/swing body; (0 medial swing/lateral stance) -> (1 medial stance/lateral swing); double support is omitted
 uint8_t actuation_phase = ActuationPhases::kRetractLeg; // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 uint32_t gait_cycles = 0;                               // number of completed gait cycles
