@@ -6,9 +6,9 @@
 #include <Encoder.h>
 #include <Adafruit_BNO08x.h>
 
-#define USE_LEG_FEEDBACK
+#define USE_VELOCITY_THRESHOLD
 #define USE_DECELERATION_THRESHOLD
-// #define USE_VELOCITY_THRESHOLD
+// #define USE_SCALED_VELOCITY_THRESHOLD
 
 //////////////////////////////////////////////////////////////////////////////////////
 // control loop periods
@@ -67,12 +67,11 @@ const std::vector<int> kBodyFrameAxisIndex = {2, -1, 3};    // IMU frame to body
                                                             // body z-axis is positive IMU z-axis
 
 // contact detection
-const float kDqStartContactLowImpulse = 8;      // leg displacment in mm past which contact detection begins; this value MUST BE less than the leg retraction amount (see leg_swing_percent)
-const float kQdotContactLowImpulse = 3;         // leg touchdown velocity in mm/s below which contact is likely
-const float kQddotContact = -1500;              // 1600; leg acceleration in mm/s^2 above which (more negative) leg contact is likely
-const float kDqStartContactHighImpulse = 15;    // leg displacment in mm past which contact detection begins; this value MUST BE less than the leg retraction amount (see leg_swing_percent)
-const float kQdotPercentAtContact = 0.3;        // percentage of max leg touchdown velocity at which ground contact is assumed
-                                                // this method seeks to detect contact sooner than standstill by checking for velocity reduction
+const float kDqLegMotorStartContact = kQLegUnstuck;     // leg displacment in mm past which contact detection begins; this value MUST BE less than the leg retraction amount (see leg_swing_percent)
+const float kQdotLegContact = 3;                        // leg touchdown velocity in mm/s below which contact is likely
+const float kQddotLegContact = -1500;                   // leg acceleration in mm/s^2 above which (more negative) leg contact is likely
+const float kQdotLegPercentContact = 0.3;               // percentage of max leg touchdown velocity at which ground contact is assumed
+                                                        // this method seeks to detect contact sooner than standstill by checking for velocity reduction
 
 //////////////////////////////////////////////////////////////////////////////////////
 // sensor and filter structs
@@ -208,5 +207,8 @@ void updateAccelFilters();
 
 // update robot body pose based on kinematics
 void updateKinematics();
+
+// returns true if the two legs for the corresponding motor are away from the minimum joint limit by a margin
+bool isNotStuck(uint8_t idx_motor);
 
 #endif

@@ -63,7 +63,7 @@ const float kDqLegMaxTilt = 100;        // max total leg displacements per tilt 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
 // the second torque command is the minimum necessary to maintain motion
-// after the motor moves "kDqStartContactLowImpulse" mm, the second command is sent
+// after the motor moves "kDqLegMotorStartContact" mm, the second command is sent
 extern std::vector<std::vector<float>> touchdown_torque;
 
 // gait variables

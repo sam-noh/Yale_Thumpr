@@ -479,14 +479,14 @@ void updateTouchdownTorque() {
     if (!isInContact[idx_motor]) {
 
       // first torque step-down
-      if ((motors[idx_motor].states_.q  - q_leg_swing[i]) > kDqLegMotorStartup                            // if past the startup displacement
-          && q[gait_phase * 4 + i * 2] > kQLegUnstuck && q[gait_phase * 4 + i * 2 + 1] > kQLegUnstuck) {  // AND the legs have moved away from the joint limit
-        motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][1];     // lower the leg torque
+      if ((motors[idx_motor].states_.q  - q_leg_swing[i]) > kDqLegMotorStartup  // if past the startup displacement
+          && isNotStuck(idx_motor)) {                                           // AND the legs have moved away from the joint limit
+        motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][1];       // lower the leg torque
       }
 
       // second torque step-down
-      if ((motors[idx_motor].states_.q - q_leg_swing[i]) > kDqLegMotorRamp                                // if past the ramp up displacement
-          && q[gait_phase * 4 + i * 2] > kQLegUnstuck && q[gait_phase * 4 + i * 2 + 1] > kQLegUnstuck) {  // AND the legs have moved away from the joint limit
+      if ((motors[idx_motor].states_.q - q_leg_swing[i]) > kDqLegMotorRamp    // if past the ramp up displacement
+          && isNotStuck(idx_motor)) {                                         // AND the legs have moved away from the joint limit
         motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][2];     // lower the leg torque
       }
     }

@@ -479,63 +479,47 @@ void updateContactState() {
     if (t_current - t_last_contact_update >= k_dtContactUpdate) {
       t_last_contact_update = t_current;
 
-      // velocity-based contact detection
-      #ifdef USE_VELOCITY_THRESHOLD
-
       // for each leg in touchdown
       for (uint8_t idx_leg = gait_phase*4; idx_leg < gait_phase*4 + 4; ++idx_leg) {
         int idx_motor = (int) idx_leg / 2;
 
-        // snprintf(sent_data, sizeof(sent_data), "idx_motor: %d\tidx_leg: %d\tmotor dq: %.2f\tleg vel: %.2f\tleg vel max: %.2f\n", idx_motor, idx_leg, motors[idx_motor].states_.q - q_leg_swing[idx_motor % 2], q_dot_filters[idx_leg].filtered_value, q_dot_max[idx_leg]);
-        // writeToSerial();
+        if (motors[idx_motor].states_.q - q_leg_swing[idx_motor % 2] > kDqLegMotorStartContact  // if the actuator has moved some amount
+            && isNotStuck(idx_motor)) {                                                         // AND the legs are not stuck
 
-        // update max leg velocity during touchdown
-        if (q_dot_filters[idx_leg].filtered_value > q_dot_max[idx_leg]                                    // if the current leg velocity exceeds the historical max value
-            && motors[idx_motor].states_.q - q_leg_swing[idx_motor % 2] > kDqStartContactHighImpulse) {   // AND the actuator position is past some inital displacement
-          q_dot_max[idx_leg] = q_dot_filters[idx_leg].filtered_value;
-          // snprintf(sent_data, sizeof(sent_data), "q_dot_max updated to %.2f\n", q_dot_max[idx_leg]);
-          // writeToSerial();
+          // contact detection using velocity reduction percentage
+          #ifdef USE_SCALED_VELOCITY_THRESHOLD
+
+          // update max leg velocity during touchdown
+          if (q_dot_filters[idx_leg].filtered_value > q_dot_max[idx_leg]) {           // if the current leg velocity exceeds the historical max value
+            q_dot_max[idx_leg] = q_dot_filters[idx_leg].filtered_value;
+          }
+
+          // check if the leg velocity has fallen below the threshold
+          isDecelerated[idx_leg] = (q_dot_filters[idx_leg].filtered_value < kQdotLegPercentContact*q_dot_max[idx_leg]);  // don't latch to rule out noisy estimate; condition should persist with true contact
+
+          #endif
+          
+          // contact detection checking for max deceleration
+          #ifdef USE_DECELERATION_THRESHOLD
+
+          isDecelerated[idx_leg] = isDecelerated[idx_leg] || (q_ddot_filters[idx_leg].filtered_value < kQddotLegContact);
+
+          #endif
+
+          // contact detection checking for stopped legs
+          // this should always be on
+          #ifdef USE_VELOCITY_THRESHOLD
+
+          isDecelerated[idx_leg] = q_dot[idx_leg] < kQdotLegContact;
+
+          #endif
         }
-
-        // check if the leg velocity has fallen below the threshold
-        isDecelerated[idx_leg] = (q_dot_filters[idx_leg].filtered_value < kQdotPercentAtContact*q_dot_max[idx_leg]);  // don't latch to rule out noisy estimate; condition should persist with true contact
       }
 
+      // combine leg contact states to determine motor contact state
       isInContact[gait_phase * 2] = isDecelerated[gait_phase*4] && isDecelerated[gait_phase*4 + 1];
       isInContact[gait_phase * 2 + 1] = isDecelerated[gait_phase*4 + 2] && isDecelerated[gait_phase*4 + 3];
 
-      #endif
-
-      // deceleration-based contact detection
-      // if this doesn't detect contact, the low impulse contact detection will catch the event later
-      #ifdef USE_DECELERATION_THRESHOLD
-      
-      for (uint8_t idx_leg = gait_phase*4; idx_leg < gait_phase*4 + 4; ++idx_leg) {
-        isDecelerated[idx_leg] = isDecelerated[idx_leg] || (q_ddot_filters[idx_leg].filtered_value < kQddotContact);
-      }
-
-      isInContact[gait_phase * 2] = isDecelerated[gait_phase*4] && isDecelerated[gait_phase*4 + 1];
-      isInContact[gait_phase * 2 + 1] = isDecelerated[gait_phase*4 + 2] && isDecelerated[gait_phase*4 + 3];
-
-      #endif
-
-      // low impulse contact detection
-      // check if the leg is near standstill
-      #ifdef USE_LEG_FEEDBACK
-      isInContact[gait_phase * 2] = isInContact[gait_phase * 2] || (fabs(q_dot[gait_phase*4]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 1]) < kQdotContactLowImpulse    // if the leg velocities are below a threshold
-                                                                && motors[gait_phase * 2].states_.q - q_leg_swing[0] > kDqStartContactLowImpulse);                            // AND the actuator position is past some inital displacement
-
-      isInContact[gait_phase * 2 + 1] = isInContact[gait_phase * 2 + 1] || (fabs(q_dot[gait_phase*4 + 2]) < kQdotContactLowImpulse && fabs(q_dot[gait_phase*4 + 3]) < kQdotContactLowImpulse
-                                                                        && motors[gait_phase * 2 + 1].states_.q - q_leg_swing[1] > kDqStartContactLowImpulse);
-
-      // or use motor velocity for contact estimation
-      #else
-      isInContact[gait_phase * 2] = fabs(motors[gait_phase * 2].states_.q_dot) < kQdotContactLowImpulse                                  // if the actuator velocity is below a threshold
-                                  && motors[gait_phase * 2].states_.q - q_leg_swing[0] > kDqStartContactLowImpulse;    // AND the actuator position is past some inital displacement
-
-      isInContact[gait_phase * 2 + 1] = fabs(motors[gait_phase * 2 + 1].states_.q_dot) < kQdotContactLowImpulse
-                                      && motors[gait_phase * 2 + 1].states_.q - q_leg_swing[1] > kDqStartContactLowImpulse;
-      #endif
     }
   }
 }
@@ -589,4 +573,10 @@ void updateKinematics() {
     z_body_local = (motors[stance * 2].states_.q + motors[stance * 2 + 1].states_.q) / 2 - gait_phase * kBodyZOffset;
     
   }
+}
+
+// returns true if the two legs for the corresponding motor are away from the minimum joint limit by a margin
+// returning false does NOT necessarily mean the legs are stuck; they may still be moving away from the joint limit
+bool isNotStuck(uint8_t idx_motor) {
+  return (q[idx_motor*2] > kQLegUnstuck) && (q[idx_motor*2 + 1] > kQLegUnstuck);
 }
