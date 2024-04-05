@@ -65,13 +65,15 @@ const float kVelLegTrajSwing = 80;              // 45; leg motor trapezoidal tra
 const float kVelLegTrajStandup = 20;            // leg motor trapezoidal trajectory velocity when standing up in turns/s
 const float kVelLegTrajTilt = 10;               // leg motor trapezoidal trajectory velocity when tilt correcting in turns/s (tested 10)
 const float kVelTransTraj = 16;                 // translation motor trapezoidal trajectory velocity
+const float kVelTransTrajTall = 10;             // translation motor trapezoidal trajectory velocity when the body height is high
+const float kVelTransTrajSlope = 6;             // translation motor trapezoidal trajectory velocity when moving over slopes
 const float kVelYawTraj = 0.4;                  // yaw motor trapezoidal trajectory velocity
 
 // motor trapezoidal trajectory accel/deceleratioin parameters
 const float kAccelLegTrajSwing = 300;           // 180; leg motor trapezoidal trajectory acceleration when retracting legs in turns/s^2
 const float kAccelLegTrajStandup = 80;          // leg motor trapezoidal trajectory acceleration when changing height in turns/s^2
 const float kAccelLegTrajTilt = 80;             // leg motor trapezoidal trajectory acceleration when tilt correcting in turns/s^2
-const float kAccelTransTraj = 50;               // translation motor trapezoidal trajectory acceleration;
+const float kAccelTransTraj = 25;               // translation motor trapezoidal trajectory acceleration;
 const float kAccelYawTraj = 10;                 // yaw motor trapezoidal trajectory acceleration
 
 const float kDecelLegTrajSwing = 250;           // 100; leg motor trapezoidal trajectory deceleration when retracting legs in turns/s^2

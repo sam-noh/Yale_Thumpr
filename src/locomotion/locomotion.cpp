@@ -269,7 +269,14 @@ void updateTrajectory() {
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
   swing_percent_at_translate = leg_swing_percent;                                       // set translation transition percentage equal to swing retraction percentage
                                                                                         // the idea is: if large retraction is needed, then translation should also occur later
-  z_body_nominal = (k_zBodyMax - k_zBodyMin)*input_height + k_zBodyMin;                 // for now, nominal body height is equal to the leg actuator setpoint in stance
+  z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;                 // for now, nominal body height is equal to the leg actuator setpoint in stance
+
+  // update translation motor velocity based on body height
+  if (z_body_nominal > kZBodyTall) {
+    motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTrajTall;
+  } else {
+    motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTraj;
+  }
   
 }
 
@@ -470,11 +477,13 @@ void updateTouchdownTorque() {
 
     // if the motor is not in contact
     if (!isInContact[idx_motor]) {
-      if ((motors[idx_motor].states_.q  - q_leg_swing[i]) > kDqLegStartup) {  // if past the startup displacement
+      if ((motors[idx_motor].states_.q  - q_leg_swing[i]) > kDqLegStartup                                   // if past the startup displacement
+          && q[gait_phase * 4 + i * 2] > kDqLegStartup && q[gait_phase * 4 + i * 2 + 1] > kDqLegStartup) {  // AND the legs have moved away from the joint limit
         motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][1];     // lower the leg torque
       }
 
-      if ((motors[idx_motor].states_.q - q_leg_swing[i]) > kDqLegRamp) {      // if past the ramp up displacement
+      if ((motors[idx_motor].states_.q - q_leg_swing[i]) > kDqLegRamp                                       // if past the ramp up displacement
+          && q[gait_phase * 4 + i * 2] > kDqLegStartup && q[gait_phase * 4 + i * 2 + 1] > kDqLegStartup) {  // AND the legs have moved away from the joint limit
         motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][2];     // lower the leg torque
       }
     }

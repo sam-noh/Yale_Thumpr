@@ -42,8 +42,11 @@ const float kDqUnevenTerrain = 50;      // leg pair stroke difference in mm grea
 const float kDqLegSwingMin = 30;        // minimum required leg retraction during swing
 
 // body height regulation parameters
-const float k_zBodyMin = 100;           // minimum allowable value for z_body_local
-const float k_zBodyMax = 300;           // maximum allowable value for z_body_local
+const float kZBodyMin = 100;            // minimum allowable value for z_body_local
+const float kZBodyMax = 450;            // maximum allowable value for z_body_local
+
+// translational inertia related parameters
+const float kZBodyTall = 300;           // body height above which translational velocity is reduced
 
 // gait cycle parameter limits
 const float kLegSwingPercentMax = 0.9;
