@@ -31,14 +31,14 @@ enum ReactiveBehaviors {
 };
 
 // higher-level command related parameters
-const uint8_t kNoCmdMinCounts = 10;     // minimum number of zero commands before the robot actually stops; used to filter out occasional 0's from failed data transfer
+const uint8_t kNoCmdMinCounts = 20;     // minimum number of zero commands before the robot actually stops; used to filter out occasional 0's from failed data transfer
 
 // touchdown torque profile parameters
-const float kDqLegStartup = 10;         // leg touchdown displacement after which a lower torque is applied
-const float kDqLegRamp = 60;            // leg touchdown displacement after which an even lower torque is applied
+const float kDqLegMotorStartup = 30;         // leg touchdown displacement after which a lower torque is applied
+const float kDqLegMotorRamp = 60;            // leg touchdown displacement after which an even lower torque is applied
 
 // kRetractLeg parameters
-const float kDqUnevenTerrain = 50;      // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
+const float kDqLegUnevenTerrain = 50;      // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
 const float kDqLegSwingMin = 30;        // minimum required leg retraction during swing
 
 // body height regulation parameters
@@ -55,8 +55,8 @@ const float kLegSwingPercentMin = 0.2;
 // blocking motion primitive parameters
 const float kMinSwingLegClearance = 20; // swing leg vertical clearance margin when performing body height or tilt regulation; assumes flat terrain; adjust accordingly
 const float kQTransCentered = 40;       // distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
-const float k_zErrorSoftMax = 30;       // body height deviation in mm above which non-blocking regulation is executed
-const float k_zErrorHardMax = 60;       // body height deviation in mm above which blocking regulation is executed
+const float kZErrorSoftMax = 30;        // body height deviation in mm above which non-blocking regulation is executed
+const float kZErrorHardMax = 60;        // body height deviation in mm above which blocking regulation is executed
 const float kTiltNominal = 0.5;         // acceptable body tilt from zero in degrees
 const float kDqLegMaxTilt = 100;        // max total leg displacements per tilt correction
 

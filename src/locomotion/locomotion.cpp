@@ -287,7 +287,7 @@ void regulateBodyPose() {
   float z_error = z_body_local - z_body_nominal;
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
-  if (!std::get<1>(mp) && (fabs(z_error) > k_zErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kTiltNominal)) {    // only check body pose if currently not performing a regulation maneuver
+  if (!std::get<1>(mp) && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kTiltNominal)) {    // only check body pose if currently not performing a regulation maneuver
 
     if (dq_tilt > kDqLegMaxTilt) dq_tilt = kDqLegMaxTilt;
     if (dq_tilt < -kDqLegMaxTilt) dq_tilt = -kDqLegMaxTilt;
@@ -295,7 +295,7 @@ void regulateBodyPose() {
     std::vector<float> dq{0, 0};
 
     // regulate body height
-    if (fabs(z_error) > k_zErrorSoftMax) {
+    if (fabs(z_error) > kZErrorSoftMax) {
       dq[0] -= z_error;
       dq[1] -= z_error;
     }
@@ -316,7 +316,7 @@ void regulateBodyPose() {
     }
     
     if (actuation_phase == ActuationPhases::kLocomote                             // if leg retraction is complete
-        && fabs(z_error) < k_zErrorHardMax                                        // AND height error is small
+        && fabs(z_error) < kZErrorHardMax                                        // AND height error is small
         && fabs(motors[MotorID::kMotorTranslate].states_.q) < kQTransCentered) {  // AND the swing body is close to the stance body center (approximate support boundary condition)
 
       for (uint8_t i = 0; i < 2; ++i) {
@@ -331,7 +331,7 @@ void regulateBodyPose() {
       mp = std::make_tuple(stance, ReactiveBehaviors::kStancePosition, updateMotorsStance);
 
     } else if (actuation_phase == ActuationPhases::kTouchDown                                   // if currently touching down
-               && fabs(z_error) > k_zErrorHardMax                                               // AND height error is large
+               && fabs(z_error) > kZErrorHardMax                                               // AND height error is large
                && isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]) {             // AND the swing legs are now also on the ground
 
       updateMotorsClimb(GaitPhases::kLateralSwing, -z_error);
@@ -396,9 +396,9 @@ bool isReadyForTransition(uint8_t phase) {
     float z_error = z_body_local - z_body_nominal;
         
     return isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]
-           && ((fabs(z_error) < k_zErrorHardMax)
+           && ((fabs(z_error) < kZErrorHardMax)
            ||
-           (fabs(z_error) > k_zErrorHardMax && !(fabs(rpy_lateral[0]) < kTiltNominal && fabs(rpy_lateral[1]) < kTiltNominal)));  // true if both swing legs have made contact and body height regulation is not needed; deleting the body height condition results the motion primitive often being skipped
+           (fabs(z_error) > kZErrorHardMax && !(fabs(rpy_lateral[0]) < kTiltNominal && fabs(rpy_lateral[1]) < kTiltNominal)));  // true if both swing legs have made contact and body height regulation is not needed; deleting the body height condition results the motion primitive often being skipped
 
   } else {
     return false;
@@ -477,13 +477,16 @@ void updateTouchdownTorque() {
 
     // if the motor is not in contact
     if (!isInContact[idx_motor]) {
-      if ((motors[idx_motor].states_.q  - q_leg_swing[i]) > kDqLegStartup                                   // if past the startup displacement
-          && q[gait_phase * 4 + i * 2] > kDqLegStartup && q[gait_phase * 4 + i * 2 + 1] > kDqLegStartup) {  // AND the legs have moved away from the joint limit
+
+      // first torque step-down
+      if ((motors[idx_motor].states_.q  - q_leg_swing[i]) > kDqLegMotorStartup                            // if past the startup displacement
+          && q[gait_phase * 4 + i * 2] > kQLegUnstuck && q[gait_phase * 4 + i * 2 + 1] > kQLegUnstuck) {  // AND the legs have moved away from the joint limit
         motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][1];     // lower the leg torque
       }
 
-      if ((motors[idx_motor].states_.q - q_leg_swing[i]) > kDqLegRamp                                       // if past the ramp up displacement
-          && q[gait_phase * 4 + i * 2] > kDqLegStartup && q[gait_phase * 4 + i * 2 + 1] > kDqLegStartup) {  // AND the legs have moved away from the joint limit
+      // second torque step-down
+      if ((motors[idx_motor].states_.q - q_leg_swing[i]) > kDqLegMotorRamp                                // if past the ramp up displacement
+          && q[gait_phase * 4 + i * 2] > kQLegUnstuck && q[gait_phase * 4 + i * 2 + 1] > kQLegUnstuck) {  // AND the legs have moved away from the joint limit
         motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][2];     // lower the leg torque
       }
     }
@@ -511,7 +514,7 @@ void updateMotorsSwing() {
     if (q_leg_contact[i]*(1 - leg_swing_percent) < kDqLegSwingMin) q_leg_retract = q_leg_contact[i] - kDqLegSwingMin; // enforce minimum required swing retraction
 
     // TODO: change this logic to account for robot kinematics (body tilt)
-    if (fabs(q[gait_phase * 4 + i * 2] - q[gait_phase * 4 + i * 2 + 1]) > kDqUnevenTerrain) { // if the previous stance legs are standing on uneven ground
+    if (fabs(q[gait_phase * 4 + i * 2] - q[gait_phase * 4 + i * 2 + 1]) > kDqLegUnevenTerrain) { // if the previous stance legs are standing on uneven ground
       float q_max = max(q[gait_phase * 4 + i * 2], q[gait_phase * 4 + i * 2 + 1]);            // calculate the additional leg stroke due to uneven terrain
       float dq = q_max - motors[idx_motor].states_.q;
       

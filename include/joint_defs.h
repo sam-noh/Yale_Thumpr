@@ -48,6 +48,7 @@ const float stance_width[2] = {kW_1, kL_1};  // perpendiculuar distance between 
 // mechanical joint limits and offsets
 const float kQLegMin = 0;               // min leg joint position in mm
 const float kQLegMax = 450;             // max leg joint position in mm
+const float kQLegUnstuck = 15;          // leg joint position in mm used for checking stuck legs
 const float kLegOffset = 0;             // vertical distance between medial and lateral body in mm; used to adjust leg setpoints
 const float kQTransMax = 95;            // max/min translation position from zero position in mm
 const float kQYawMax = 12;              // max/min yaw position from zero position in degrees
