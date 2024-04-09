@@ -34,11 +34,10 @@ enum ReactiveBehaviors {
 const uint8_t kNoCmdMinCounts = 20;     // minimum number of zero commands before the robot actually stops; used to filter out occasional 0's from failed data transfer
 
 // touchdown torque profile parameters
-const float kDqLegMotorStartup = 30;         // leg touchdown displacement after which a lower torque is applied
-const float kDqLegMotorRamp = 60;            // leg touchdown displacement after which an even lower torque is applied
+const float kDqLegMotorStartup = 20;         // leg touchdown displacement after which a lower torque is applied
 
 // kRetractLeg parameters
-const float kDqLegUnevenTerrain = 50;      // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
+const float kDqLegUnevenTerrain = 50;   // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
 const float kDqLegSwingMin = 30;        // minimum required leg retraction during swing
 
 // body height regulation parameters

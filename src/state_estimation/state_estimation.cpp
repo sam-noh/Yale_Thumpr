@@ -495,7 +495,7 @@ void updateContactState() {
           }
 
           // check if the leg velocity has fallen below the threshold
-          isDecelerated[idx_leg] = (q_dot_filters[idx_leg].filtered_value < kQdotLegPercentContact*q_dot_max[idx_leg]);  // don't latch to rule out noisy estimate; condition should persist with true contact
+          isDecelerated[idx_leg] = (q_dot_filters[idx_leg].filtered_value < kQdotLegPercentContact*q_dot_max[idx_leg]);  // don't latch; condition should persist with true contact
 
           #endif
           

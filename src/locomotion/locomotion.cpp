@@ -5,10 +5,10 @@
 #include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> touchdown_torque = {
-  {0.25, 0.18, 0.12}, // 0.18 and 0.12
-  {0.25, 0.18, 0.12},
-  {0.25, 0.18, 0.12},
-  {0.25, 0.18, 0.12}
+  {0.55, 0.18, 0.12}, // 0.18 and 0.12
+  {0.55, 0.18, 0.12},
+  {0.55, 0.18, 0.10},
+  {0.55, 0.18, 0.12}
 };
 
 // gait variables
@@ -17,7 +17,7 @@ uint8_t gait_phase = GaitPhases::kLateralSwing;         // current gait phase/sw
 uint8_t actuation_phase = ActuationPhases::kRetractLeg; // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 uint32_t gait_cycles = 0;                               // number of completed gait cycles
 bool isBlocking = false;                                // true if any motion primitive outside of the standard gait cycle is in progress
-bool isCorrecting = false;                               // true if a motion primitive has been completed during the gait cycle
+bool isCorrecting = false;                              // true if a motion primitive has been completed during the gait cycle
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
@@ -295,7 +295,8 @@ void regulateBodyPose() {
     std::vector<float> dq{0, 0};
 
     // regulate body height
-    if (fabs(z_error) > kZErrorSoftMax) {
+    if (fabs(z_error) > kZErrorSoftMax
+       && gait_phase == GaitPhases::kLateralSwing) {
       dq[0] -= z_error;
       dq[1] -= z_error;
     }
@@ -316,7 +317,7 @@ void regulateBodyPose() {
     }
     
     if (actuation_phase == ActuationPhases::kLocomote                             // if leg retraction is complete
-        && fabs(z_error) < kZErrorHardMax                                        // AND height error is small
+        && fabs(z_error) < kZErrorHardMax                                         // AND height error is small
         && fabs(motors[MotorID::kMotorTranslate].states_.q) < kQTransCentered) {  // AND the swing body is close to the stance body center (approximate support boundary condition)
 
       for (uint8_t i = 0; i < 2; ++i) {
@@ -467,7 +468,10 @@ void updateMotorsTouchdown() {
   for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
     motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl; // change to torque control for leg touchdown
     motors[idx_motor].states_.velocity_limit = kVelLegMaxContact;                         // limit velocity in torque control during touchdown
-    motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][0];                     // set torque command for leg touchdown
+    motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][1];                     // set torque command for leg touchdown
+    if (!isNotStuck(idx_motor)) {
+      motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][0];
+    }
   }
 }
 
@@ -477,17 +481,9 @@ void updateTouchdownTorque() {
 
     // if the motor is not in contact
     if (!isInContact[idx_motor]) {
-
-      // first torque step-down
       if ((motors[idx_motor].states_.q  - q_leg_swing[i]) > kDqLegMotorStartup  // if past the startup displacement
           && isNotStuck(idx_motor)) {                                           // AND the legs have moved away from the joint limit
-        motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][1];       // lower the leg torque
-      }
-
-      // second torque step-down
-      if ((motors[idx_motor].states_.q - q_leg_swing[i]) > kDqLegMotorRamp    // if past the ramp up displacement
-          && isNotStuck(idx_motor)) {                                         // AND the legs have moved away from the joint limit
-        motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][2];     // lower the leg torque
+        motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][2];       // lower the leg torque
       }
     }
   }
