@@ -17,7 +17,6 @@ void setup() {
   initActuators();
   
   homeLeggedRobot();
-  zeroIMUReading();
   openDataFile();
   standUp();
 
