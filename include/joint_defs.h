@@ -1,7 +1,7 @@
 #ifndef JOINT_DEFS_H
 #define JOINT_DEFS_H
 
-#include "..\src\mcu_util\mcu_util.h"
+#include "../src/mcu_util/mcu_util.h"
 
 const int kNumOfActuators =  6;             // number of actuators
 const int kNumOfLegs = 8;                   // number of prismatic legs
