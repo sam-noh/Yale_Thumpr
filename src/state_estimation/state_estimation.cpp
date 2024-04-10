@@ -74,7 +74,7 @@ std::vector<float> q_ddot(kNumOfJoints, 0);       // unfiltered joint accelerati
 float z_body_local = 0;                           // height of body above local terrain
 float dist_traveled = 0;                          // distance traveled estimated with translational joint displacement
 
-std::vector<float> rpy_lateral_0 = {0, 0, 0};     // lateral body roll pitch yaw after homing
+std::vector<float> rpy_lateral_0 = {-4.5, 0.75, 0};     // lateral body roll pitch yaw after homing
 std::vector<float> rpy_lateral = {0, 0, 0};       // lateral body roll pitch yaw relative to rpy_lateral_0
 std::vector<float> omega_lateral = {0, 0, 0};     // lateral body angular velocity with respect to body frame axes
 
