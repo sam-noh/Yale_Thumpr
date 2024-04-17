@@ -40,8 +40,8 @@ const uint8_t kNoCmdMinCounts = 20;     // minimum number of zero commands befor
 const float kDqLegMotorStartup = 20;         // leg touchdown displacement after which a lower torque is applied
 
 // kRetractLeg parameters
-const float kDqLegUnevenTerrain = 50;   // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
-const float kDqLegSwingMin = 30;        // minimum required leg retraction during swing
+const float kDqLegUnevenTerrain = 100;  // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
+const float kDqLegSwingMin = 50;        // minimum required leg retraction during swing
 
 // body height regulation parameters
 const float kZBodyMin = 100;            // minimum allowable value for z_body_local
@@ -55,11 +55,11 @@ const float kLegSwingPercentMax = 0.9;
 const float kLegSwingPercentMin = 0.2;
 
 // blocking motion primitive parameters
-const float kMinSwingLegClearance = 20; // swing leg vertical clearance margin when performing body height or tilt regulation; assumes flat terrain; adjust accordingly
-const float kQTransCentered = 40;       // distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
-const float kZErrorSoftMax = 30;        // body height deviation in mm above which non-blocking regulation is executed
+const float kMinSwingLegClearance = 10; // swing leg vertical clearance margin when performing body height or tilt regulation; assumes flat terrain; adjust accordingly
+const float kQTransCentered = 50;       // distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
+const float kZErrorSoftMax = 15;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 60;        // body height deviation in mm above which blocking regulation is executed
-const float kTiltNominal = 1.5;         // acceptable body tilt from zero in degrees
+const float kTiltNominal = 0.5;         // acceptable body tilt from zero in degrees
 const float kDqLegMaxTilt = 100;        // max total leg displacements per tilt correction
 
 // motor torque setpoints during leg touchdown; determined heuristically
