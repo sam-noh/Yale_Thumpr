@@ -496,6 +496,7 @@ void updateMotorsStance(uint8_t stance) {
       motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl; // torque control
       motors[idx_motor].states_.tau_d = 0;                                                  // zero torque command
       motors[idx_motor].states_.q_d = motors[idx_motor].states_.q;                          // set desired position for telemetry purposes and possible control changes
+      q_leg_contact[idx_motor - stance*2] = motors[idx_motor].states_.q;                    // remember the leg motor position at ground contact
     }
   }
 }
