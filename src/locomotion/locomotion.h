@@ -56,9 +56,9 @@ const float kLegSwingPercentMin = 0.2;
 
 // blocking motion primitive parameters
 const float kMinSwingLegClearance = 10; // swing leg vertical clearance margin when performing body height or tilt regulation; assumes flat terrain; adjust accordingly
-const float kQTransCentered = 50;       // distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
-const float kZErrorSoftMax = 15;        // body height deviation in mm above which non-blocking regulation is executed
-const float kZErrorHardMax = 60;        // body height deviation in mm above which blocking regulation is executed
+const float kQTransCentered = 85;       // distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
+const float kZErrorSoftMax = 10;        // body height deviation in mm above which non-blocking regulation is executed
+const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
 const float kTiltNominal = 0.5;         // acceptable body tilt from zero in degrees
 
 // motor torque setpoints during leg touchdown; determined heuristically
