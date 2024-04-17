@@ -294,28 +294,33 @@ void regulateBodyPose() {
     // regulate body height
     if (fabs(z_error) > kZErrorSoftMax
        && gait_phase == GaitPhases::kLateralSwing) {
+      SERIAL_USB.println("added height correct");
       dq[0] -= z_error;
       dq[1] -= z_error;
     }
 
     // regulate body tilt
     if (fabs(rpy_lateral[gait_phase]) > kTiltNominal) {
+      SERIAL_USB.println("added tilt correct");
       dq[0] += dq_tilt / 2;
       dq[1] -= dq_tilt / 2;
     }
 
     // ensure swing leg clearance by reducing downward body motion as needed
-    float dist_to_min_clearance_1 = (q_leg_contact[0] - q_leg_swing[0]) + dq[0] - kMinSwingLegClearance;
-    float dist_to_min_clearance_2 = (q_leg_contact[1] - q_leg_swing[1]) + dq[1] - kMinSwingLegClearance;
-    float min_dist = min(dist_to_min_clearance_1, dist_to_min_clearance_2);
-    if (min_dist < 0) {
-      dq[0] -= min_dist;
-      dq[1] -= min_dist;
-    }
+    // float dist_to_min_clearance_1 = (q_leg_contact[0] - q_leg_swing[0]) + dq[0] - kMinSwingLegClearance;
+    // float dist_to_min_clearance_2 = (q_leg_contact[1] - q_leg_swing[1]) + dq[1] - kMinSwingLegClearance;
+    // float min_dist = min(dist_to_min_clearance_1, dist_to_min_clearance_2);
+    // if (min_dist < 0) {
+    //   SERIAL_USB.println("reduced for leg clearance");
+    //   dq[0] -= min_dist;
+    //   dq[1] -= min_dist;
+    // }
     
-    if (actuation_phase == ActuationPhases::kLocomote                             // if leg retraction is complete
-        && fabs(z_error) < kZErrorHardMax                                         // AND height error is small
+    if ((actuation_phase == ActuationPhases::kLocomote || actuation_phase == ActuationPhases::kTouchDown) // if leg retraction is complete
+        // && fabs(z_error) < kZErrorHardMax                                         // AND height error is small
         && fabs(motors[MotorID::kMotorTranslate].states_.q) < kQTransCentered) {  // AND the swing body is close to the stance body center (approximate support boundary condition)
+
+      SERIAL_USB.println("motion primitive started");
 
       for (uint8_t i = 0; i < 2; ++i) {
         motors[stance * 2 + i].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
@@ -325,6 +330,10 @@ void regulateBodyPose() {
         motors[stance * 2 + i].states_.q_d = motors[stance * 2 + i].states_.q + dq[i];
         motors[stance * 2 + i].states_.holding = false;
       }
+
+      // update swing leg position setpoint to account for height change
+      // motors[gait_phase * 2].states_.q_d = motors[gait_phase * 2].states_.q_d - z_error;
+      // motors[gait_phase * 2 + 1].states_.q_d = motors[gait_phase * 2 + 1].states_.q_d - z_error;
 
       mp = std::make_tuple(stance, ReactiveBehaviors::kStancePosition, updateMotorsStance);
 
@@ -357,6 +366,7 @@ void regulateBodyPose() {
       } else {                                                    
         done = motors[stance*2].states_.holding && motors[stance*2 + 1].states_.holding;
         if (done) {
+          SERIAL_USB.println("motion primitive done");
           mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
           updateMotorsStance(stance);
         }
