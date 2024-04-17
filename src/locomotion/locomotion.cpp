@@ -342,7 +342,9 @@ void regulateBodyPose() {
     bool done = false;
 
     if (std::get<1>(mp) == ReactiveBehaviors::kStancePosition) {  // if the motion primitive involves stance legs in position control
-      if (std::get<0>(mp) == MotorGroupID::kMotorGroupLegs) {     // if double stance
+
+      // if double stance
+      if (std::get<0>(mp) == MotorGroupID::kMotorGroupLegs) {
         done = motors[MotorID::kMotorMedialFront].states_.holding && motors[MotorID::kMotorMedialRear].states_.holding &&
                motors[MotorID::kMotorLateralRight].states_.holding && motors[MotorID::kMotorLateralLeft].states_.holding;
         if (done) {
@@ -350,7 +352,9 @@ void regulateBodyPose() {
           isBlocking = false;
           updateMotorsStance(gait_phase);
         }
-      } else {                                                    // if single stance
+
+      // if single stance
+      } else {                                                    
         done = motors[stance*2].states_.holding && motors[stance*2 + 1].states_.holding;
         if (done) {
           mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
