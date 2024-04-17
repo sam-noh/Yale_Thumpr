@@ -60,7 +60,6 @@ const float kQTransCentered = 50;       // distance from translational joint mid
 const float kZErrorSoftMax = 15;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 60;        // body height deviation in mm above which blocking regulation is executed
 const float kTiltNominal = 0.5;         // acceptable body tilt from zero in degrees
-const float kDqLegMaxTilt = 100;        // max total leg displacements per tilt correction
 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion

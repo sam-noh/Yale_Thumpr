@@ -289,9 +289,6 @@ void regulateBodyPose() {
 
   if (!std::get<1>(mp) && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kTiltNominal)) {    // only check body pose if currently not performing a regulation maneuver
 
-    if (dq_tilt > kDqLegMaxTilt) dq_tilt = kDqLegMaxTilt;
-    if (dq_tilt < -kDqLegMaxTilt) dq_tilt = -kDqLegMaxTilt;
-
     std::vector<float> dq{0, 0};
 
     // regulate body height
