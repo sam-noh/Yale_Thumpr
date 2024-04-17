@@ -94,8 +94,8 @@ void homeLeggedRobot() {
   writeToSerial();
 
   uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
-  motors[stance*2].states_.q_d = 40;
-  motors[stance*2 + 1].states_.q_d = 40;
+  motors[stance*2].states_.q_d = kQLegMotorLift;
+  motors[stance*2 + 1].states_.q_d = kQLegMotorLift;
   isInContact[stance*2] = true;
   isInContact[stance*2 + 1] = true;
   motors[gait_phase*2].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;

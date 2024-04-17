@@ -30,6 +30,9 @@ enum ReactiveBehaviors {
     kSwingTorque = 4
 };
 
+// homing sequence parameters
+const float kQLegMotorLift = 60;        // leg motor position setpoint for homing the translation joint
+
 // higher-level command related parameters
 const uint8_t kNoCmdMinCounts = 20;     // minimum number of zero commands before the robot actually stops; used to filter out occasional 0's from failed data transfer
 
