@@ -307,7 +307,7 @@ void regulateBodyPose() {
     }
     
     if ((actuation_phase == ActuationPhases::kLocomote || actuation_phase == ActuationPhases::kTouchDown) // if leg retraction is complete
-        // && fabs(z_error) < kZErrorHardMax                                         // AND height error is small
+        // && fabs(z_error) < kZErrorHardMax                                         // AND height error is small; depending on terrain roughness, this can be beneficial or end up blocking the motion primitive
         && fabs(motors[MotorID::kMotorTranslate].states_.q) < kQTransCentered) {  // AND the swing body is close to the stance body center (approximate support boundary condition)
 
       SERIAL_USB.println("motion primitive started");
@@ -323,7 +323,7 @@ void regulateBodyPose() {
 
       // update swing leg position setpoint to ensure ground clearance
       float dq_leg_max_clearance = min(dq[0], dq[1]);   // greater of the two leg retractions or lesser of the two leg extensions
-      if (fabs(dq_leg_max_clearance) > 20) {
+      if (fabs(dq_leg_max_clearance) > 10) {            // enforce minimum displacement to prevent frequent swing leg movements/jitters
         motors[gait_phase * 2].states_.q_d = motors[gait_phase * 2].states_.q_d + dq_leg_max_clearance;
         motors[gait_phase * 2 + 1].states_.q_d = motors[gait_phase * 2 + 1].states_.q_d + dq_leg_max_clearance;
       }
@@ -390,8 +390,9 @@ bool isReadyForTransition(uint8_t phase) {
     // if there is an in-place turn command
     } else if (fabs(cmd_vector[1]) > EPS) {
       int dir = (cmd_vector[1] > 0) - (cmd_vector[1] < 0);                              // direction of yaw command
-      float q_yaw_transition = fabs(yaw_percent_at_touchdown*motors[MotorID::kMotorYaw].states_.q_d);   // this value is always positive since it represents forward motion, regardless of direction
-      isTurned = dir * pow(-1, gait_phase) * q[JointID::kJointYaw] > q_yaw_transition;  // the yaw joint has reached the transition point
+      // float q_yaw_transition = fabs(yaw_percent_at_touchdown*motors[MotorID::kMotorYaw].states_.q_d);   // this value is always positive since it represents forward motion, regardless of direction
+      // isTurned = dir * pow(-1, gait_phase) * q[JointID::kJointYaw] > q_yaw_transition;  // the yaw joint has reached the transition point
+      isTurned = fabs(motors[MotorID::kMotorYaw].states_.q - motors[MotorID::kMotorYaw].states_.q_d) < 3;
     }
 
     return isTranslated || isTurned;

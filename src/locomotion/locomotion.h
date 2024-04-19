@@ -41,7 +41,7 @@ const float kDqLegMotorStartup = 20;         // leg touchdown displacement after
 
 // kRetractLeg parameters
 const float kDqLegUnevenTerrain = 100;  // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
-const float kDqLegSwingMin = 50;        // minimum required leg retraction during swing
+const float kDqLegSwingMin = 60;        // minimum required leg retraction during swing
 
 // body height regulation parameters
 const float kZBodyMin = 100;            // minimum allowable value for z_body_local
@@ -55,8 +55,7 @@ const float kLegSwingPercentMax = 0.9;
 const float kLegSwingPercentMin = 0.2;
 
 // blocking motion primitive parameters
-const float kMinSwingLegClearance = 10; // swing leg vertical clearance margin when performing body height or tilt regulation; assumes flat terrain; adjust accordingly
-const float kQTransCentered = 85;       // distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
+const float kQTransCentered = 100;       // 85; distance from translational joint midpoint within which non-blocking motion primitives are allowed; used to ensure stable support boundary
 const float kZErrorSoftMax = 10;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
 const float kTiltNominal = 0.5;         // acceptable body tilt from zero in degrees
