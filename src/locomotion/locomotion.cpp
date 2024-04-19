@@ -305,16 +305,6 @@ void regulateBodyPose() {
       dq[0] += dq_tilt / 2;
       dq[1] -= dq_tilt / 2;
     }
-
-    // ensure swing leg clearance by reducing downward body motion as needed
-    // float dist_to_min_clearance_1 = (q_leg_contact[0] - q_leg_swing[0]) + dq[0] - kMinSwingLegClearance;
-    // float dist_to_min_clearance_2 = (q_leg_contact[1] - q_leg_swing[1]) + dq[1] - kMinSwingLegClearance;
-    // float min_dist = min(dist_to_min_clearance_1, dist_to_min_clearance_2);
-    // if (min_dist < 0) {
-    //   SERIAL_USB.println("reduced for leg clearance");
-    //   dq[0] -= min_dist;
-    //   dq[1] -= min_dist;
-    // }
     
     if ((actuation_phase == ActuationPhases::kLocomote || actuation_phase == ActuationPhases::kTouchDown) // if leg retraction is complete
         // && fabs(z_error) < kZErrorHardMax                                         // AND height error is small
@@ -331,9 +321,12 @@ void regulateBodyPose() {
         motors[stance * 2 + i].states_.holding = false;
       }
 
-      // update swing leg position setpoint to account for height change
-      // motors[gait_phase * 2].states_.q_d = motors[gait_phase * 2].states_.q_d - z_error;
-      // motors[gait_phase * 2 + 1].states_.q_d = motors[gait_phase * 2 + 1].states_.q_d - z_error;
+      // update swing leg position setpoint to ensure ground clearance
+      float dq_leg_max_clearance = min(dq[0], dq[1]);   // greater of the two leg retractions or lesser of the two leg extensions
+      if (fabs(dq_leg_max_clearance) > 20) {
+        motors[gait_phase * 2].states_.q_d = motors[gait_phase * 2].states_.q_d + dq_leg_max_clearance;
+        motors[gait_phase * 2 + 1].states_.q_d = motors[gait_phase * 2 + 1].states_.q_d + dq_leg_max_clearance;
+      }
 
       mp = std::make_tuple(stance, ReactiveBehaviors::kStancePosition, updateMotorsStance);
 
