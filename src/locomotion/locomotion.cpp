@@ -294,23 +294,18 @@ void regulateBodyPose() {
     // regulate body height
     if (fabs(z_error) > kZErrorSoftMax
        && gait_phase == GaitPhases::kLateralSwing) {
-      SERIAL_USB.println("added height correct");
       dq[0] -= z_error;
       dq[1] -= z_error;
     }
 
     // regulate body tilt
     if (fabs(rpy_lateral[gait_phase]) > kTiltNominal) {
-      SERIAL_USB.println("added tilt correct");
       dq[0] += dq_tilt / 2;
       dq[1] -= dq_tilt / 2;
     }
     
-    if ((actuation_phase == ActuationPhases::kLocomote || actuation_phase == ActuationPhases::kTouchDown) // if leg retraction is complete
-        // && fabs(z_error) < kZErrorHardMax                                         // AND height error is small; depending on terrain roughness, this can be beneficial or end up blocking the motion primitive
-        && fabs(motors[MotorID::kMotorTranslate].states_.q) < kQTransCentered) {  // AND the swing body is close to the stance body center (approximate support boundary condition)
-
-      SERIAL_USB.println("motion primitive started");
+    if ((actuation_phase == ActuationPhases::kLocomote || actuation_phase == ActuationPhases::kTouchDown)){ // if leg retraction is complete
+        // && fabs(z_error) < kZErrorHardMax) {                                                             // AND height error is small; depending on terrain roughness, this can be beneficial or end up blocking the motion primitive
 
       for (uint8_t i = 0; i < 2; ++i) {
         motors[stance * 2 + i].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
