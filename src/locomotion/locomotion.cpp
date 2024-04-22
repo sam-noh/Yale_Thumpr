@@ -26,15 +26,18 @@ float leg_swing_percent = 0.9;            // swing leg stroke as a percentage of
 
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
-float swing_percent_at_translate = leg_swing_percent;   // 0.5; percentage of swing leg retraction after which translation begins; values closer to 1 can cause swing legs to collide with rough terrains
-float trans_percent_at_touchdown = 0.4;   // 0.3; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
-float yaw_percent_at_touchdown = 0.9;     // percentage of yaw command from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
+float swing_percent_at_translate = leg_swing_percent;     // 0.5; percentage of swing leg retraction after which translation begins; values closer to 1 can cause swing legs to collide with rough terrains
+float trans_percent_at_touchdown = 0.4;                   // 0.3; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
+float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw command from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
-std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};    // position of the swing leg actuators when they were last in contact
-std::vector<float> q_leg_swing = {kQLegMin, kQLegMin};      // position setpoint of swing leg actuators during leg retraction
+std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
+std::vector<float> q_leg_swing = {kQLegMin, kQLegMin};    // position setpoint of swing leg actuators during leg retraction
 
-uint8_t x_no_cmd_latch_counter = 0;               // number of times a zero command was received
-uint8_t y_no_cmd_latch_counter = 0;               // number of times a zero command was received
+uint8_t counts_steady_x = 0;                              // number of times a steay x command was received
+uint8_t counts_steady_y = 0;                              // number of times a steay y command was received
+
+float input_x_prev = 0;                                   // previous input_x_filtered
+float input_y_prev = 0;                                   // previous input_y_filtered
 
 MotionPrimitive mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);    // current motion primitive; (MotorGroupID, ReactiveBehaviors, callback)
 
@@ -236,44 +239,47 @@ void updateGait() {
 
 // update desired motion vector, body height, trajectories, etc. based on higher-level input/planner
 void updateTrajectory() {
-  // apply deadzone to left-right joystick input to prevent undesired turning during translation
-  float input_y_filtered = max(abs(input_y) - kGUIJoystickYDeadZone, 0);
-  int dir_y = (input_y > 0) - (input_y < 0);
-  input_y_filtered *= dir_y/(1-kGUIJoystickYDeadZone);
-
   // apply deadzone to front-back joystick input to prevent undesired translation during in-place turning
   float input_x_filtered = max(abs(input_x) - kGUIJoystickXDeadZone, 0);
   int dir_x = (input_x > 0) - (input_x < 0);
   input_x_filtered *= dir_x/(1-kGUIJoystickXDeadZone);
 
-  if (millis() - t_last_Jetson > k_dtTrajectoryUpdate) {
-    fabs(input_x_filtered) < EPS ? ++x_no_cmd_latch_counter : x_no_cmd_latch_counter = 0;
-    fabs(input_y_filtered) < EPS ? ++y_no_cmd_latch_counter : y_no_cmd_latch_counter = 0;
+  // apply deadzone to left-right joystick input to prevent undesired turning during translation
+  float input_y_filtered = max(abs(input_y) - kGUIJoystickYDeadZone, 0);
+  int dir_y = (input_y > 0) - (input_y < 0);
+  input_y_filtered *= dir_y/(1-kGUIJoystickYDeadZone);
 
-    if(x_no_cmd_latch_counter > kNoCmdMinCounts) x_no_cmd_latch_counter = kNoCmdMinCounts + 1;
-    if(y_no_cmd_latch_counter > kNoCmdMinCounts) y_no_cmd_latch_counter = kNoCmdMinCounts + 1;
+  if (millis() - t_last_Jetson > k_dtTrajectoryUpdate) {
+    // use a counter to check that the commands have settled to a steady value
+    if (fabs(input_x_filtered - input_x_prev) < EPS) {
+      ++counts_steady_x;
+    } else {
+      input_x_prev = input_x_filtered;
+      counts_steady_x = 0;
+    }
+
+    if (fabs(input_y_filtered - input_y_prev) < EPS) {
+      ++counts_steady_y;
+    } else {
+      input_y_prev = input_y_filtered;
+      counts_steady_y = 0;
+    }
+
+    if (counts_steady_x > kMinCountsSteadyCmd) counts_steady_x = kMinCountsSteadyCmd + 1;
+    if (counts_steady_y > kMinCountsSteadyCmd) counts_steady_y = kMinCountsSteadyCmd + 1;
   }
   
-  if (fabs(input_x_filtered) > 0) {
-    cmd_vector[0] = input_x_filtered; // translation command
-  } else if (fabs(input_x_filtered) < EPS && x_no_cmd_latch_counter > kNoCmdMinCounts) {
-    cmd_vector[0] = 0;
-  }
-
-  if (fabs(input_y_filtered) > 0) {
-    cmd_vector[1] = input_y_filtered; // yaw command
-  } else if (fabs(input_y_filtered) < EPS && y_no_cmd_latch_counter > kNoCmdMinCounts) {
-    cmd_vector[1] = 0;
-  }
+  if (counts_steady_x > kMinCountsSteadyCmd) cmd_vector[0] = input_x_filtered;
+  if (counts_steady_y > kMinCountsSteadyCmd) cmd_vector[1] = input_y_filtered;
 
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
   swing_percent_at_translate = leg_swing_percent;                                       // set translation transition percentage equal to swing retraction percentage
                                                                                         // the idea is: if large retraction is needed, then translation should also occur later
   z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;                 // for now, nominal body height is equal to the leg actuator setpoint in stance
 
-  // update translation motor velocity based on body height
-  if (z_body_nominal > kZBodyTall) {
-    motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTrajTall;
+  // update translation motor velocity based on step length and body height
+  if (fabs(cmd_vector[0]) < kStepShort || z_body_nominal > kZBodyTall) {
+    motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTrajSlow;
   } else {
     motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTraj;
   }
@@ -384,7 +390,7 @@ bool isReadyForTransition(uint8_t phase) {
 
     // if there is an in-place turn command
     } else if (fabs(cmd_vector[1]) > EPS) {
-      int dir = (cmd_vector[1] > 0) - (cmd_vector[1] < 0);                              // direction of yaw command
+      // int dir = (cmd_vector[1] > 0) - (cmd_vector[1] < 0);                              // direction of yaw command
       // float q_yaw_transition = fabs(yaw_percent_at_touchdown*motors[MotorID::kMotorYaw].states_.q_d);   // this value is always positive since it represents forward motion, regardless of direction
       // isTurned = dir * pow(-1, gait_phase) * q[JointID::kJointYaw] > q_yaw_transition;  // the yaw joint has reached the transition point
       isTurned = fabs(motors[MotorID::kMotorYaw].states_.q - motors[MotorID::kMotorYaw].states_.q_d) < 3;

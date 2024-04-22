@@ -44,8 +44,8 @@ const float kJoystickXMax = max(1023 - kJoystickXCenter - kJoystickXDeadZone/2, 
 const float kJoystickYMax = max(1023 - kJoystickYCenter - kJoystickYDeadZone/2, kJoystickYCenter - kJoystickYDeadZone/2);
 
 // web GUI joystick
-const float kGUIJoystickXDeadZone = 0.2;    // x-direction (front-back) deadzone in each direction; [0, 1]
-const float kGUIJoystickYDeadZone = 0.45;   // y-direction (left-right) deadzone in each direction; [0, 1]
+const float kGUIJoystickXDeadZone = 0.3;    // x-direction (front-back) deadzone in each direction; [0, 1]
+const float kGUIJoystickYDeadZone = 0.3;    // y-direction (left-right) deadzone in each direction; [0, 1]
 
 // ACS711EX currrent sensor
 const float k_mVPerAmpere = 45;             // output sensitivity in mV per ampere for ACS711EX current sensor

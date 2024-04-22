@@ -34,7 +34,7 @@ enum ReactiveBehaviors {
 const float kQLegMotorLift = 60;        // leg motor position setpoint for homing the translation joint
 
 // higher-level command related parameters
-const uint8_t kNoCmdMinCounts = 20;     // minimum number of zero commands before the robot actually stops; used to filter out occasional 0's from failed data transfer
+const uint8_t kMinCountsSteadyCmd = 10;     // minimum number of steady input values before the command changes; used to filter out input values changing or dropping out
 
 // touchdown torque profile parameters
 const float kDqLegMotorStartup = 20;         // leg touchdown displacement after which a lower torque is applied
@@ -48,7 +48,8 @@ const float kZBodyMin = 100;            // minimum allowable value for z_body_lo
 const float kZBodyMax = 450;            // maximum allowable value for z_body_local
 
 // translational inertia related parameters
-const float kZBodyTall = 300;           // body height above which translational velocity is reduced
+const float kZBodyTall = 300;           // body height in mm above which translational velocity is reduced
+const float kStepShort = 0.4;           // cmd_vector[1] below which translational velocity is reduced; to be updated to joint space value
 
 // gait cycle parameter limits
 const float kLegSwingPercentMax = 0.9;
@@ -85,8 +86,11 @@ extern float leg_swing_percent;             // swing leg stroke as a percentage 
 extern std::vector<float> q_leg_contact;    // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;      // position setpoint of swing leg actuators during leg retraction
 
-extern uint8_t x_no_cmd_latch_counter;      // number of times a zero command was received
-extern uint8_t y_no_cmd_latch_counter;      // number of times a zero command was received
+extern uint8_t counts_steady_x;             // number of times a steay x command was received
+extern uint8_t counts_steady_y;             // number of times a steay y command was received
+
+extern float input_x_prev;                  // previous input_x_filtered
+extern float input_y_prev;                  // previous input_y_filtered
 
 extern MotionPrimitive mp;                  // current motion primitive; (MotorGroupID, ReactiveBehaviors, callback)
 
