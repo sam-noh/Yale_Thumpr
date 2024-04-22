@@ -470,6 +470,12 @@ void updateSetpoints() {
   }
 }
 
+void checkStopCondition() {
+  if (fabs(rpy_lateral[0]) > kTiltHardMax || fabs(rpy_lateral[1]) > kTiltHardMax) {
+    stop_signal = true;
+  }
+}
+
 void updateMotorsTouchdown() {
   for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
     motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl; // change to torque control for leg touchdown

@@ -59,6 +59,7 @@ const float kLegSwingPercentMin = 0.2;
 const float kZErrorSoftMax = 10;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
 const float kTiltNominal = 1;           // acceptable body tilt from zero in degrees
+const float kTiltHardMax = 70;          // body angle over which robot is stopped
 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
@@ -107,6 +108,8 @@ void regulateBodyPose();
 bool isReadyForTransition(uint8_t phase);
 
 void updateSetpoints();
+
+void checkStopCondition();
 
 void updateMotorsTouchdown();
 
