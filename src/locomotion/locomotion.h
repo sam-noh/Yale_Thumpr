@@ -58,7 +58,7 @@ const float kLegSwingPercentMin = 0.2;
 // blocking motion primitive parameters
 const float kZErrorSoftMax = 10;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
-const float kTiltNominal = 0.5;         // acceptable body tilt from zero in degrees
+const float kTiltNominal = 1;           // acceptable body tilt from zero in degrees
 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
