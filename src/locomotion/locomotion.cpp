@@ -234,6 +234,7 @@ void updateGait() {
     // calculate stability metrics here
     regulateBodyPose(); // if this function executes motions, updateSetpoint() is bypassed during the process
     updateSetpoints();  // update setpoints for the motors in the swing phase
+    checkStopCondition();
   }
 }
 
