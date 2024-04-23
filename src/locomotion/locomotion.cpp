@@ -35,9 +35,11 @@ std::vector<float> q_leg_swing = {kQLegMin, kQLegMin};    // position setpoint o
 
 uint8_t counts_steady_x = 0;                              // number of times a steay x command was received
 uint8_t counts_steady_y = 0;                              // number of times a steay y command was received
+uint8_t counts_steady_height = 0;                         // number of times a steady height command was received
 
 float input_x_prev = 0;                                   // previous input_x_filtered
 float input_y_prev = 0;                                   // previous input_y_filtered
+float input_height_prev = 0.4;                            // previous input_height
 
 MotionPrimitive mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);    // current motion primitive; (MotorGroupID, ReactiveBehaviors, callback)
 
@@ -266,17 +268,25 @@ void updateTrajectory() {
       counts_steady_y = 0;
     }
 
+    if (fabs(input_height - input_height_prev) < EPS) {
+      ++counts_steady_height;
+    } else {
+      input_height_prev = input_height;
+      counts_steady_height = 0;
+    }
+
     if (counts_steady_x > kMinCountsSteadyCmd) counts_steady_x = kMinCountsSteadyCmd + 1;
     if (counts_steady_y > kMinCountsSteadyCmd) counts_steady_y = kMinCountsSteadyCmd + 1;
+    if (counts_steady_height > kMinCountsSteadyCmd) counts_steady_height = kMinCountsSteadyCmd + 1;
   }
   
   if (counts_steady_x > kMinCountsSteadyCmd) cmd_vector[0] = input_x_filtered;
   if (counts_steady_y > kMinCountsSteadyCmd) cmd_vector[1] = input_y_filtered;
+  if (counts_steady_height > kMinCountsSteadyCmd) z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;  // for now, nominal body height is equal to the leg actuator setpoint in stance
 
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
   swing_percent_at_translate = leg_swing_percent;                                       // set translation transition percentage equal to swing retraction percentage
                                                                                         // the idea is: if large retraction is needed, then translation should also occur later
-  z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;                 // for now, nominal body height is equal to the leg actuator setpoint in stance
 
   // update translation motor velocity based on step length and body height
   if (fabs(cmd_vector[0]) < kStepShort || z_body_nominal > kZBodyTall) {
@@ -311,8 +321,8 @@ void regulateBodyPose() {
       dq[1] -= dq_tilt / 2;
     }
     
-    if ((actuation_phase == ActuationPhases::kLocomote || actuation_phase == ActuationPhases::kTouchDown)){ // if leg retraction is complete
-        // && fabs(z_error) < kZErrorHardMax) {                                                             // AND height error is small; depending on terrain roughness, this can be beneficial or end up blocking the motion primitive
+    if ((actuation_phase == ActuationPhases::kLocomote || actuation_phase == ActuationPhases::kTouchDown)   // if leg retraction is complete
+        && (fabs(dq[0]) > kQErrorMax || fabs(dq[1]) > kQErrorMax)){                                                           
 
       for (uint8_t i = 0; i < 2; ++i) {
         motors[stance * 2 + i].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
@@ -361,7 +371,6 @@ void regulateBodyPose() {
       } else {                                                    
         done = motors[stance*2].states_.holding && motors[stance*2 + 1].states_.holding;
         if (done) {
-          SERIAL_USB.println("motion primitive done");
           mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
           updateMotorsStance(stance);
         }

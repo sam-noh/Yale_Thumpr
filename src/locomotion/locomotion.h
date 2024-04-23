@@ -89,9 +89,11 @@ extern std::vector<float> q_leg_swing;      // position setpoint of swing leg ac
 
 extern uint8_t counts_steady_x;             // number of times a steay x command was received
 extern uint8_t counts_steady_y;             // number of times a steay y command was received
+extern uint8_t counts_steady_height;        // number of times a steady height command was received
 
 extern float input_x_prev;                  // previous input_x_filtered
 extern float input_y_prev;                  // previous input_y_filtered
+extern float input_height_prev;             // previous input_height
 
 extern MotionPrimitive mp;                  // current motion primitive; (MotorGroupID, ReactiveBehaviors, callback)
 
