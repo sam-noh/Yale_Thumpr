@@ -320,7 +320,7 @@ void regulateBodyPose() {
       dq[0] += dq_tilt / 2;
       dq[1] -= dq_tilt / 2;
     }
-    
+
     if ((actuation_phase == ActuationPhases::kLocomote || actuation_phase == ActuationPhases::kTouchDown)   // if leg retraction is complete
         && (fabs(dq[0]) > kQErrorMax || fabs(dq[1]) > kQErrorMax)){                                                           
 
@@ -336,8 +336,12 @@ void regulateBodyPose() {
       // update swing leg position setpoint to ensure ground clearance
       float dq_leg_max_clearance = min(dq[0], dq[1]);   // greater of the two leg retractions or lesser of the two leg extensions
       if (fabs(dq_leg_max_clearance) > 10) {            // enforce minimum displacement to prevent frequent swing leg movements/jitters
-        motors[gait_phase * 2].states_.q_d = motors[gait_phase * 2].states_.q_d + dq_leg_max_clearance;
-        motors[gait_phase * 2 + 1].states_.q_d = motors[gait_phase * 2 + 1].states_.q_d + dq_leg_max_clearance;
+        for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
+          motors[idx_motor].states_.q_d = motors[idx_motor].states_.q_d + dq_leg_max_clearance;
+          motors[idx_motor].states_.trap_traj_vel_limit = kVelLegTrajStandup;
+          motors[idx_motor].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
+          motors[idx_motor].states_.trap_traj_decel_limit = kDecelLegTrajStandup;
+        }
       }
 
       mp = std::make_tuple(stance, ReactiveBehaviors::kStancePosition, updateMotorsStance);

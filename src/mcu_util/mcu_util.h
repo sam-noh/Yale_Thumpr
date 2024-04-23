@@ -66,7 +66,7 @@
 #define EPS 1e-2                                // epsilon
 #define PI 3.1415926535897932384626433832795    // pi
 #define RAD2DEG 180/PI                          // radians to degrees conversion factor
-#define DEG2RAD 1/RAD2DEG                       // degrees to radians conversion factor
+#define DEG2RAD PI/180                          // degrees to radians conversion factor
 #define TIME_HEADER  "T"                        // Header tag for serial time sync message
 
 // control loop periods
