@@ -58,8 +58,9 @@ const float kLegSwingPercentMin = 0.2;
 // blocking motion primitive parameters
 const float kZErrorSoftMax = 10;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
-const float kTiltNominal = 1;           // acceptable body tilt from zero in degrees
-const float kTiltHardMax = 70;          // body angle over which robot is stopped
+const float kThetaSoftMax = 1;          // body Euler angle above which non-blocking regulation is executed
+const float kThetaHardMax = 60;         // body Euler angle above which robot is stopped
+const float kDthetaMax = 4;             // body Euler angle increase since stance switch above which blocking regulation is executed
 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
@@ -77,15 +78,15 @@ extern uint8_t gait_phase;              // current gait phase; (0 medial swing/l
 extern uint8_t actuation_phase;         // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 extern uint32_t gait_cycles;            // number of completed gait cycles
 extern bool isBlocking;                 // true if any motion primitive outside of the standard gait cycle is in progress
-extern bool isCorrecting;                // true if a motion primitive has been completed during the gait cycle
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 extern float z_body_nominal;                // nominal body height over local terrain; currently taken as avg of stance leg motors joint position
 extern float leg_swing_percent;             // swing leg stroke as a percentage of its stroke at last stance phase
 
-extern std::vector<float> q_leg_contact;    // position of the swing leg actuators when they were last in contact
-extern std::vector<float> q_leg_swing;      // position setpoint of swing leg actuators during leg retraction
+extern std::vector<float> q_leg_contact;            // position of the swing leg actuators when they were last in contact
+extern std::vector<float> q_leg_swing;              // position setpoint of swing leg actuators during leg retraction
+extern std::vector<float> rpy_lateral_contact;      // lateral body roll pitch yaw upon contact
 
 extern uint8_t counts_steady_x;             // number of times a steay x command was received
 extern uint8_t counts_steady_y;             // number of times a steay y command was received

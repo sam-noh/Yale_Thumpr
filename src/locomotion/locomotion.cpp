@@ -17,7 +17,6 @@ uint8_t gait_phase = GaitPhases::kLateralSwing;         // current gait phase/sw
 uint8_t actuation_phase = ActuationPhases::kRetractLeg; // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 uint32_t gait_cycles = 0;                               // number of completed gait cycles
 bool isBlocking = false;                                // true if any motion primitive outside of the standard gait cycle is in progress
-bool isCorrecting = false;                              // true if a motion primitive has been completed during the gait cycle
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
@@ -32,6 +31,7 @@ float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw c
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
 std::vector<float> q_leg_swing = {kQLegMin, kQLegMin};    // position setpoint of swing leg actuators during leg retraction
+std::vector<float> rpy_lateral_contact = {0, 0, 0};       // lateral body roll pitch yaw upon contact
 
 uint8_t counts_steady_x = 0;                              // number of times a steay x command was received
 uint8_t counts_steady_y = 0;                              // number of times a steay y command was received
@@ -304,7 +304,7 @@ void regulateBodyPose() {
   float z_error = z_body_local - z_body_nominal;
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
-  if (!std::get<1>(mp) && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kTiltNominal)) {    // only check body pose if currently not performing a regulation maneuver
+  if (!std::get<1>(mp) && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kThetaSoftMax)) {    // only check body pose if currently not performing a regulation maneuver
 
     std::vector<float> dq{0, 0};
 
@@ -316,7 +316,7 @@ void regulateBodyPose() {
     }
 
     // regulate body tilt
-    if (fabs(rpy_lateral[gait_phase]) > kTiltNominal) {
+    if (fabs(rpy_lateral[gait_phase]) > kThetaSoftMax) {
       dq[0] += dq_tilt / 2;
       dq[1] -= dq_tilt / 2;
     }
@@ -419,7 +419,7 @@ bool isReadyForTransition(uint8_t phase) {
     return isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]
            && ((fabs(z_error) < kZErrorHardMax)
            ||
-           (fabs(z_error) > kZErrorHardMax && !(fabs(rpy_lateral[0]) < kTiltNominal && fabs(rpy_lateral[1]) < kTiltNominal)));  // true if both swing legs have made contact and body height regulation is not needed; deleting the body height condition results the motion primitive often being skipped
+           (fabs(z_error) > kZErrorHardMax && !(fabs(rpy_lateral[0]) < kThetaSoftMax && fabs(rpy_lateral[1]) < kThetaSoftMax)));  // true if both swing legs have made contact and body height regulation is not needed; deleting the body height condition results the motion primitive often being skipped
 
   } else {
     return false;
@@ -447,10 +447,8 @@ void updateSetpoints() {
       moveLocomotionMechanism();      // reapply locomotion mechanism setpoints in the case of resuming locomotion from standstill
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
-      // clear these flags/variables for the next gait cycle
-      isCorrecting = false;
-
       updateMotorsStance(gait_phase);
+      rpy_lateral_contact = rpy_lateral;    // remember the body orientation upon stance switch
 
       // advance the gait phase
       gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
@@ -485,7 +483,7 @@ void updateSetpoints() {
 }
 
 void checkStopCondition() {
-  if (fabs(rpy_lateral[0]) > kTiltHardMax || fabs(rpy_lateral[1]) > kTiltHardMax) {
+  if (fabs(rpy_lateral[0]) > kThetaHardMax || fabs(rpy_lateral[1]) > kThetaHardMax) {
     stop_signal = true;
   }
 }
