@@ -304,6 +304,23 @@ void regulateBodyPose() {
   float z_error = z_body_local - z_body_nominal;
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
+  // if ground contact has changed
+  if (rpy_lateral[0] - rpy_lateral_contact[0] > kDthetaMax || rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax) {
+    isBlocking = true;
+    actuation_phase = ActuationPhases::kTouchDown;
+
+    // stop the locomotion mechanism
+    holdLocomotionMechanism();
+
+    // command all legs to touch down at max speed
+    updateMotorsTouchdown(GaitPhases::kLateralSwing, kVelLegMax);
+    updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegMax);
+
+    // clear all contact states
+    resetSwingLegContactState();
+
+  }
+
   if (!std::get<1>(mp) && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kThetaSoftMax)) {    // only check body pose if currently not performing a regulation maneuver
 
     std::vector<float> dq{0, 0};
@@ -443,7 +460,7 @@ void updateSetpoints() {
       }
 
     } else if (actuation_phase == ActuationPhases::kLocomote) { // if currently translating or turning
-      updateMotorsTouchdown();
+      updateMotorsTouchdown(gait_phase, kVelLegMaxContact);
       moveLocomotionMechanism();      // reapply locomotion mechanism setpoints in the case of resuming locomotion from standstill
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
@@ -488,10 +505,10 @@ void checkStopCondition() {
   }
 }
 
-void updateMotorsTouchdown() {
-  for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
+void updateMotorsTouchdown(uint8_t idx_body, float vel_limit) {
+  for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
     motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl; // change to torque control for leg touchdown
-    motors[idx_motor].states_.velocity_limit = kVelLegMaxContact;                         // limit velocity in torque control during touchdown
+    motors[idx_motor].states_.velocity_limit = vel_limit;                                 // limit velocity in torque control during touchdown
     motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][1];                     // set torque command for leg touchdown
     if (!isNotStuck(idx_motor)) {
       motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][0];
@@ -514,13 +531,13 @@ void updateTouchdownTorque() {
 }
 
 // updates the specified stance body's leg motors for zero torque stance, leveraging the non-backdrivable legs
-void updateMotorsStance(uint8_t stance) {
-  for (uint8_t idx_motor = stance*2; idx_motor < stance*2 + 2; ++idx_motor) {
+void updateMotorsStance(uint8_t idx_body) {
+  for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
     if(isInContact[idx_motor]) {                                                            // safety check; cannot be in stance without being in contact
       motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl; // torque control
       motors[idx_motor].states_.tau_d = 0;                                                  // zero torque command
       motors[idx_motor].states_.q_d = motors[idx_motor].states_.q;                          // set desired position for telemetry purposes and possible control changes
-      q_leg_contact[idx_motor - stance*2] = motors[idx_motor].states_.q;                    // remember the leg motor position at ground contact
+      q_leg_contact[idx_motor - idx_body*2] = motors[idx_motor].states_.q;                    // remember the leg motor position at ground contact
     }
   }
 }
@@ -558,8 +575,8 @@ void updateMotorsSwing() {
   }
 }
 
-void updateMotorsClimb(uint8_t stance, float dz) {
-  for (uint8_t idx_motor = stance*2; idx_motor < stance*2 + 2; ++idx_motor) {
+void updateMotorsClimb(uint8_t idx_body, float dz) {
+  for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
     motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
     motors[idx_motor].states_.holding = false;
     motors[idx_motor].states_.trap_traj_vel_limit = kVelLegTrajStandup;

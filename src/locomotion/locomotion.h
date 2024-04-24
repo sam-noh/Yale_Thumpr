@@ -114,17 +114,17 @@ void updateSetpoints();
 
 void checkStopCondition();
 
-void updateMotorsTouchdown();
+void updateMotorsTouchdown(uint8_t idx_body, float vel_limit);
 
 void updateTouchdownTorque();
 
 // updates the specified stance body's leg motors for zero torque stance, leveraging the non-backdrivable legs
-void updateMotorsStance(uint8_t stance);
+void updateMotorsStance(uint8_t idx_body);
 
 // determine swing leg setpoints based on contact conditions and update the motor control mode and limits for swing phase
 void updateMotorsSwing();
 
-void updateMotorsClimb(uint8_t stance, float dz);
+void updateMotorsClimb(uint8_t idx_body, float dz);
 
 void moveLocomotionMechanism();
 
