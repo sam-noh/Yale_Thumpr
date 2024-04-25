@@ -305,22 +305,22 @@ void regulateBodyPose() {
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
   // if ground contact has changed
-  if (rpy_lateral[0] - rpy_lateral_contact[0] > kDthetaMax || rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax) {
-    SERIAL_USB.println("executing slip recovery");
-    isBlocking = true;
-    actuation_phase = ActuationPhases::kTouchDown;
+  // if (rpy_lateral[0] - rpy_lateral_contact[0] > kDthetaMax || rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax) {
+  //   SERIAL_USB.println("executing slip recovery");
+  //   isBlocking = true;
+  //   actuation_phase = ActuationPhases::kTouchDown;
 
-    // stop the locomotion mechanism
-    holdLocomotionMechanism();
+  //   // stop the locomotion mechanism
+  //   holdLocomotionMechanism();
 
-    // command all legs to touch down at max speed
-    updateMotorsTouchdown(GaitPhases::kLateralSwing, kVelLegMax);
-    updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegMax);
+  //   // command all legs to touch down at max speed
+  //   updateMotorsTouchdown(GaitPhases::kLateralSwing, kVelLegMax);
+  //   updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegMax);
 
-    // clear all contact states
-    resetSwingLegContactState();
+  //   // clear all contact states
+  //   resetSwingLegContactState();
 
-  }
+  // }
   
   // single-stance pose regulation
   if (!std::get<1>(mp)                                                                        // if there's no ongoing motion primitive
@@ -346,9 +346,11 @@ void regulateBodyPose() {
 
     // adjust swing legs for ground clearance
     float dq_leg_max_clearance = min(dq_stance[0], dq_stance[1]);   // greater of the two leg retractions or lesser of the two leg extensions
-    if (fabs(dq_leg_max_clearance) > 10) {                          // enforce minimum displacement to prevent frequent swing leg movements/jitters
+    if (fabs(dq_leg_max_clearance) > 20) {                          // enforce minimum displacement to prevent frequent swing leg movements/jitters
       std::vector<float> dq_swing{dq_leg_max_clearance, dq_leg_max_clearance};
       updateBodyMotorsPosition(gait_phase, dq_swing);
+      q_leg_swing[0] = motors[gait_phase*2].states_.q_d;
+      q_leg_swing[1] = motors[gait_phase*2 + 1].states_.q_d;
     }
 
     mp = std::make_tuple(stance, ReactiveBehaviors::kStancePosition, updateMotorsStance);
@@ -374,9 +376,22 @@ void regulateBodyPose() {
     // if stance legs are in position control
     if (std::get<1>(mp) == ReactiveBehaviors::kStancePosition) {
 
-      done = motors[stance*2].states_.holding && motors[stance*2 + 1].states_.holding;
-      if (std::get<0>(mp) == MotorGroupID::kMotorGroupLegs) { // if double stance, also check the other pairs of legs
-        done = done && motors[gait_phase*2].states_.holding && motors[gait_phase*2 + 1].states_.holding;
+      // if double stance
+      if (std::get<0>(mp) == MotorGroupID::kMotorGroupLegs) {
+        done = motors[MotorID::kMotorMedialFront].states_.holding && motors[MotorID::kMotorMedialRear].states_.holding &&
+               motors[MotorID::kMotorLateralRight].states_.holding && motors[MotorID::kMotorLateralLeft].states_.holding;
+        if (done) {
+          mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
+          isBlocking = false;
+        }
+
+      // if single stance
+      } else {                                                    
+        done = motors[stance*2].states_.holding && motors[stance*2 + 1].states_.holding;
+        if (done) {
+          mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
+          updateMotorsStance(stance);
+        }
       }
 
     // if swing legs are in torque control (slip recovery using all legs)
@@ -384,18 +399,13 @@ void regulateBodyPose() {
       
       done = std::all_of(isInContact.begin(), isInContact.end(), [](bool v) {return v;}); // if all legs are in contact
       if (done) {
+        mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
+        isBlocking = false;
         // select the next swing body based on the required tilt regulation
         fabs(rpy_lateral[GaitPhases::kLateralSwing]) > fabs(rpy_lateral[GaitPhases::kMedialSwing]) ? \
           gait_phase = GaitPhases::kLateralSwing : gait_phase = GaitPhases::kMedialSwing;
       }
     }
-
-    if (done) {
-      mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
-      isBlocking = false;             // only relevant for blocking motion primitives
-      updateMotorsStance(gait_phase);
-    }
-    
   }
 }
 

@@ -57,7 +57,7 @@ const float kLegSwingPercentMax = 0.9;
 const float kLegSwingPercentMin = 0.2;
 
 // blocking motion primitive parameters
-const float kZErrorSoftMax = 10;        // body height deviation in mm above which non-blocking regulation is executed
+const float kZErrorSoftMax = 20;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
 const float kThetaSoftMax = 1;          // body Euler angle above which non-blocking regulation is executed
 const float kThetaHardMax = 60;         // body Euler angle above which robot is stopped
