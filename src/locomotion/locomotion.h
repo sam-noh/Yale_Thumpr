@@ -5,6 +5,7 @@
 #include <vector>
 #include <tuple>
 #include <functional>
+#include <algorithm>
 
 typedef std::tuple<uint8_t, uint8_t, std::function<void(uint8_t)>> MotionPrimitive;
 
@@ -124,7 +125,7 @@ void updateMotorsStance(uint8_t idx_body);
 // determine swing leg setpoints based on contact conditions and update the motor control mode and limits for swing phase
 void updateMotorsSwing();
 
-void updateMotorsClimb(uint8_t idx_body, float dz);
+void updateBodyMotorsPosition(uint8_t idx_body, std::vector<float> dq);
 
 void moveLocomotionMechanism();
 
