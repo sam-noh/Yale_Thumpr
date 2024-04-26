@@ -354,7 +354,7 @@ void zeroIMUReading() {
 void updateStates() {
   updateJointEstimates();
   updateIMUEstimate();
-  updateContactState();
+  updateContactState(gait_phase);
   updatePowerMeasurement();
   updateMotorTorqueFilters();
   updateKinematics();
@@ -472,7 +472,7 @@ void updatePowerMeasurement() {
 }
 
 // estimates the contact state of each swing leg motors
-void updateContactState() {
+void updateContactState(uint8_t idx_body) {
   if (actuation_phase == ActuationPhases::kTouchDown) {   // only check contact state of the swing leg motors during touchdown phase
 
     uint32_t t_current = millis();
@@ -480,7 +480,7 @@ void updateContactState() {
       t_last_contact_update = t_current;
 
       // for each leg in touchdown
-      for (uint8_t idx_leg = gait_phase*4; idx_leg < gait_phase*4 + 4; ++idx_leg) {
+      for (uint8_t idx_leg = idx_body*4; idx_leg < idx_body*4 + 4; ++idx_leg) {
         int idx_motor = (int) idx_leg / 2;
 
         if (motors[idx_motor].states_.q - q_leg_swing[idx_motor] > kDqLegMotorStartContact  // if the actuator has moved some amount
@@ -517,8 +517,8 @@ void updateContactState() {
       }
 
       // combine leg contact states to determine motor contact state
-      isInContact[gait_phase * 2] = isDecelerated[gait_phase*4] && isDecelerated[gait_phase*4 + 1];
-      isInContact[gait_phase * 2 + 1] = isDecelerated[gait_phase*4 + 2] && isDecelerated[gait_phase*4 + 3];
+      isInContact[idx_body * 2] = isDecelerated[idx_body*4] && isDecelerated[idx_body*4 + 1];
+      isInContact[idx_body * 2 + 1] = isDecelerated[idx_body*4 + 2] && isDecelerated[idx_body*4 + 3];
 
     }
   }

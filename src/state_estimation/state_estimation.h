@@ -188,7 +188,7 @@ void updateJointEstimates();
 void updateIMUEstimate();
 
 // estimates the contact state of each swing leg motors
-void updateContactState();
+void updateContactState(uint8_t idx_body);
 
 void resetLegContactState(uint8_t idx_body);
 
