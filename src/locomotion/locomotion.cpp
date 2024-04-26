@@ -29,8 +29,8 @@ float swing_percent_at_translate = leg_swing_percent;     // 0.5; percentage of 
 float trans_percent_at_touchdown = 0.4;                   // 0.3; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
 float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw command from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
-std::vector<float> q_leg_contact = {kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
-std::vector<float> q_leg_swing = {kQLegMin, kQLegMin};    // position setpoint of swing leg actuators during leg retraction
+std::vector<float> q_leg_contact = {kQLegMax, kQLegMax, kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
+std::vector<float> q_leg_swing = {kQLegMin, kQLegMin, kQLegMin, kQLegMin};    // position setpoint of swing leg actuators during leg retraction
 std::vector<float> rpy_lateral_contact = {0, 0, 0};       // lateral body roll pitch yaw upon contact
 
 uint8_t counts_steady_x = 0;                              // number of times a steay x command was received
@@ -318,7 +318,7 @@ void regulateBodyPose() {
   //   updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegMax);
 
   //   // clear all contact states
-  //   resetSwingLegContactState();
+  //   resetLegContactState();
 
   // }
   
@@ -349,8 +349,8 @@ void regulateBodyPose() {
     if (fabs(dq_leg_max_clearance) > 20) {                          // enforce minimum displacement to prevent frequent swing leg movements/jitters
       std::vector<float> dq_swing{dq_leg_max_clearance, dq_leg_max_clearance};
       updateBodyMotorsPosition(gait_phase, dq_swing);
-      q_leg_swing[0] = motors[gait_phase*2].states_.q_d;
-      q_leg_swing[1] = motors[gait_phase*2 + 1].states_.q_d;
+      q_leg_swing[gait_phase*2] = motors[gait_phase*2].states_.q_d;
+      q_leg_swing[gait_phase*2 + 1] = motors[gait_phase*2 + 1].states_.q_d;
     }
 
     mp = std::make_tuple(stance, ReactiveBehaviors::kStancePosition, updateMotorsStance);
@@ -413,8 +413,8 @@ void regulateBodyPose() {
 bool isReadyForTransition(uint8_t phase) {
   
   if (phase == ActuationPhases::kRetractLeg) {  // if currently retracting leg
-    float q_leg_transition_1 = q_leg_swing[0] + swing_percent_at_translate*(q_leg_contact[0] - q_leg_swing[0]);
-    float q_leg_transition_2 = q_leg_swing[1] + swing_percent_at_translate*(q_leg_contact[1] - q_leg_swing[1]);
+    float q_leg_transition_1 = q_leg_swing[gait_phase*2] + swing_percent_at_translate*(q_leg_contact[gait_phase*2] - q_leg_swing[gait_phase*2]);
+    float q_leg_transition_2 = q_leg_swing[gait_phase*2 + 1] + swing_percent_at_translate*(q_leg_contact[gait_phase*2 + 1] - q_leg_swing[gait_phase*2 + 1]);
 
     return motors[gait_phase*2].states_.q < q_leg_transition_1 && motors[gait_phase*2 + 1].states_.q < q_leg_transition_2;
 
@@ -483,7 +483,7 @@ void updateSetpoints() {
       }
 
       updateMotorsSwing();
-      resetSwingLegContactState();
+      resetLegContactState(gait_phase);
     }
 
     actuation_phase = (actuation_phase + 1) % kNumOfActuationPhases;
@@ -526,12 +526,11 @@ void updateMotorsTouchdown(uint8_t idx_body, float vel_limit) {
 }
 
 void updateTouchdownTorque() {
-  for (uint8_t i = 0; i < 2; ++i) {
-    uint8_t idx_motor = gait_phase*2 + i;
+  for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
 
     // if the motor is not in contact
     if (!isInContact[idx_motor]) {
-      if ((motors[idx_motor].states_.q  - q_leg_swing[i]) > kDqLegMotorStartup  // if past the startup displacement
+      if ((motors[idx_motor].states_.q  - q_leg_swing[idx_motor]) > kDqLegMotorStartup  // if past the startup displacement
           && isNotStuck(idx_motor)) {                                           // AND the legs have moved away from the joint limit
         motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][2];       // lower the leg torque
       }
@@ -546,23 +545,22 @@ void updateMotorsStance(uint8_t idx_body) {
       motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl; // torque control
       motors[idx_motor].states_.tau_d = 0;                                                  // zero torque command
       motors[idx_motor].states_.q_d = motors[idx_motor].states_.q;                          // set desired position for telemetry purposes and possible control changes
-      q_leg_contact[idx_motor - idx_body*2] = motors[idx_motor].states_.q;                    // remember the leg motor position at ground contact
+      q_leg_contact[idx_motor] = motors[idx_motor].states_.q;                    // remember the leg motor position at ground contact
     }
   }
 }
 
 // determine swing leg setpoints based on contact conditions and update the motor control mode and limits for swing phase
 void updateMotorsSwing() {
-  for (uint8_t i = 0; i < 2; ++i) {
-    uint8_t idx_motor = gait_phase*2 + i;
+  for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
 
-    q_leg_contact[i] = motors[idx_motor].states_.q;             // remember the leg motor position at ground contact
-    float q_leg_retract = q_leg_contact[i]*leg_swing_percent;   // nominal swing leg setpoint; NOT necessarily equal to the actual setpoint
-    if (q_leg_contact[i]*(1 - leg_swing_percent) < kDqLegSwingMin) q_leg_retract = q_leg_contact[i] - kDqLegSwingMin; // enforce minimum required swing retraction
+    q_leg_contact[idx_motor] = motors[idx_motor].states_.q;             // remember the leg motor position at ground contact
+    float q_leg_retract = q_leg_contact[idx_motor]*leg_swing_percent;   // nominal swing leg setpoint; NOT necessarily equal to the actual setpoint
+    if (q_leg_contact[idx_motor]*(1 - leg_swing_percent) < kDqLegSwingMin) q_leg_retract = q_leg_contact[idx_motor] - kDqLegSwingMin; // enforce minimum required swing retraction
 
     // TODO: change this logic to account for robot kinematics (body tilt)
-    if (fabs(q[gait_phase * 4 + i * 2] - q[gait_phase * 4 + i * 2 + 1]) > kDqLegUnevenTerrain) { // if the previous stance legs are standing on uneven ground
-      float q_max = max(q[gait_phase * 4 + i * 2], q[gait_phase * 4 + i * 2 + 1]);            // calculate the additional leg stroke due to uneven terrain
+    if (fabs(q[idx_motor*2] - q[idx_motor*2 + 1]) > kDqLegUnevenTerrain) { // if the previous stance legs are standing on uneven ground
+      float q_max = max(q[idx_motor*2], q[idx_motor*2 + 1]);            // calculate the additional leg stroke due to uneven terrain
       float dq = q_max - motors[idx_motor].states_.q;
       
       motors[idx_motor].states_.q_d = max(kQLegMin + 5, q_leg_retract - dq); // retract more by dq to ensure proper ground clearance
@@ -572,7 +570,7 @@ void updateMotorsSwing() {
     }
 
     // remember the swing leg position setpoint
-    q_leg_swing[i] = motors[idx_motor].states_.q_d;
+    q_leg_swing[idx_motor] = motors[idx_motor].states_.q_d;
 
     // update the motor control mode and limits for swing phase
     motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;

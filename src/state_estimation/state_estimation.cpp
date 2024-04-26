@@ -483,7 +483,7 @@ void updateContactState() {
       for (uint8_t idx_leg = gait_phase*4; idx_leg < gait_phase*4 + 4; ++idx_leg) {
         int idx_motor = (int) idx_leg / 2;
 
-        if (motors[idx_motor].states_.q - q_leg_swing[idx_motor % 2] > kDqLegMotorStartContact  // if the actuator has moved some amount
+        if (motors[idx_motor].states_.q - q_leg_swing[idx_motor] > kDqLegMotorStartContact  // if the actuator has moved some amount
             && isNotStuck(idx_motor)) {                                                         // AND the legs are not stuck
 
           // contact detection using velocity reduction percentage
