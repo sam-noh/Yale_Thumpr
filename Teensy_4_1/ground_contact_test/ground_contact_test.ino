@@ -43,7 +43,7 @@ void setup() {
     SERIAL_USB.println("swing phase");
     actuation_phase = ActuationPhases::kRetractLeg;
     updateMotorsSwing();
-    resetSwingLegContactState();
+    resetLegContactState(gait_phase);
     while (!motors[gait_phase * 2].states_.holding && !motors[gait_phase * 2 + 1].states_.holding) {
       updateFunctions();
     }

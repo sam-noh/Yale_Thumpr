@@ -69,7 +69,7 @@ const float kVelYawTraj = 0.4;                  // yaw motor trapezoidal traject
 
 // motor trapezoidal trajectory accel/deceleratioin parameters
 const float kAccelLegTrajSwing = 300;           // 300; leg motor trapezoidal trajectory acceleration when retracting legs in turns/s^2
-const float kAccelLegTrajStandup = 100;          // 80; leg motor trapezoidal trajectory acceleration when changing height in turns/s^2
+const float kAccelLegTrajStandup = 100;         // 80; leg motor trapezoidal trajectory acceleration when changing height in turns/s^2
 const float kAccelTransTraj = 15;               // 25; translation motor trapezoidal trajectory acceleration;
 const float kAccelYawTraj = 10;                 // yaw motor trapezoidal trajectory acceleration
 

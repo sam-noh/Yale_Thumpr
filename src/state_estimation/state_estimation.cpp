@@ -524,13 +524,13 @@ void updateContactState() {
   }
 }
 
-void resetSwingLegContactState() {
+void resetLegContactState(uint8_t idx_body) {
   for (uint8_t i = 0; i < 2; i++) {
-    isInContact[gait_phase * 2 + i] = false;
-    isDecelerated[gait_phase*4 + i*2] = false;
-    isDecelerated[gait_phase*4 + i*2 + 1] = false;
-    q_dot_max[gait_phase*4 + i*2] = 0;
-    q_dot_max[gait_phase*4 + i*2 + 1] = 0;
+    isInContact[idx_body * 2 + i] = false;
+    isDecelerated[idx_body*4 + i*2] = false;
+    isDecelerated[idx_body*4 + i*2 + 1] = false;
+    q_dot_max[idx_body*4 + i*2] = 0;
+    q_dot_max[idx_body*4 + i*2 + 1] = 0;
   }
 }
 

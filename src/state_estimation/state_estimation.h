@@ -190,7 +190,7 @@ void updateIMUEstimate();
 // estimates the contact state of each swing leg motors
 void updateContactState();
 
-void resetSwingLegContactState();
+void resetLegContactState(uint8_t idx_body);
 
 // estimate total power consumption by motors
 void updatePowerMeasurement();
