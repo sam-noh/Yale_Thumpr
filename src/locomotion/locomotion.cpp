@@ -222,7 +222,9 @@ void standUp() {
     sendTelemetry();
   }
 
+  // run necessary function calls and gait initialization here
   updateMotorsStance(stance);
+  rpy_lateral_contact = rpy_lateral;
   
   snprintf(sent_data, sizeof(sent_data), "Starting\n");
   writeToSerial();
@@ -304,23 +306,32 @@ void regulateBodyPose() {
   float z_error = z_body_local - z_body_nominal;
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
-  // if ground contact has changed
-  // if (rpy_lateral[0] - rpy_lateral_contact[0] > kDthetaMax || rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax) {
-  //   SERIAL_USB.println("executing slip recovery");
-  //   isBlocking = true;
-  //   actuation_phase = ActuationPhases::kTouchDown;
+  // slip recovery (if the body tilts without actuation, then the ground contacts have changed)
+  if (std::get<1>(mp) != ReactiveBehaviors::kSwingTorque
+      && rpy_lateral[0] - rpy_lateral_contact[0] > kDthetaMax || rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax) {
+    SERIAL_USB.println("executing slip recovery");
+    isBlocking = true;
+    actuation_phase = ActuationPhases::kTouchDown;
 
-  //   // stop the locomotion mechanism
-  //   holdLocomotionMechanism();
+    // stop the locomotion mechanism
+    holdLocomotionMechanism();
 
-  //   // command all legs to touch down at max speed
-  //   updateMotorsTouchdown(GaitPhases::kLateralSwing, kVelLegMax);
-  //   updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegMax);
+    // command all legs to touch down at max speed
+    updateMotorsTouchdown(GaitPhases::kLateralSwing, kVelLegMaxContact);
+    updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegMaxContact);
 
-  //   // clear all contact states
-  //   resetLegContactState();
+    // clear all contact states
+    resetLegContactState(GaitPhases::kLateralSwing);
+    resetLegContactState(GaitPhases::kMedialSwing);
 
-  // }
+    // update q_leg_swing, which is used in updateContactState()
+    for (uint8_t idx_motor = 0; idx_motor < kNumOfLegs/2; ++idx_motor) {
+      q_leg_swing[idx_motor] = motors[idx_motor].states_.q;
+    }
+
+    mp = std::make_tuple(stance, ReactiveBehaviors::kSwingTorque, updateMotorsStance);
+
+  }
   
   // single-stance pose regulation
   if (!std::get<1>(mp)                                                                        // if there's no ongoing motion primitive
@@ -396,9 +407,19 @@ void regulateBodyPose() {
 
     // if swing legs are in torque control (slip recovery using all legs)
     } else if (std::get<1>(mp) == ReactiveBehaviors::kSwingTorque) {
+
+      SERIAL_USB.println("checking slip recovery ...");
+
+      // check the contact state of all legs for this maneuver
+      updateContactState(GaitPhases::kLateralSwing);
+      updateContactState(GaitPhases::kMedialSwing);
+
+      updateMotorsStance(GaitPhases::kLateralSwing);
+      updateMotorsStance(GaitPhases::kMedialSwing);
       
       done = std::all_of(isInContact.begin(), isInContact.end(), [](bool v) {return v;}); // if all legs are in contact
       if (done) {
+        SERIAL_USB.println("slip recovery complete");
         mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
         isBlocking = false;
         // select the next swing body based on the required tilt regulation
