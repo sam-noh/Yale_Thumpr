@@ -514,6 +514,12 @@ void updateContactState(uint8_t idx_body) {
 
           #endif
         }
+
+        // time-based contact detection
+        if (t_current - t_start_contact > kDtTouchdown*1000
+            && isNotStuck(idx_motor)) {
+          isDecelerated[idx_leg] = q_dot[idx_leg] < kQdotLegContact;
+        }
       }
 
       // combine leg contact states to determine motor contact state

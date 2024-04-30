@@ -31,7 +31,8 @@ float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw c
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax, kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
 std::vector<float> q_leg_swing = {kQLegMin, kQLegMin, kQLegMin, kQLegMin};    // position setpoint of swing leg actuators during leg retraction
-std::vector<float> rpy_lateral_contact = {0, 0, 0};       // lateral body roll pitch yaw upon contact
+std::vector<float> rpy_lateral_contact = {0, 0, 0};                           // lateral body roll pitch yaw upon contact
+float t_start_contact = 0;                                                    // time at which leg contact begins
 
 uint8_t counts_steady_x = 0;                              // number of times a steay x command was received
 uint8_t counts_steady_y = 0;                              // number of times a steay y command was received
@@ -41,7 +42,7 @@ float input_x_prev = 0;                                   // previous input_x_fi
 float input_y_prev = 0;                                   // previous input_y_filtered
 float input_height_prev = 0.4;                            // previous input_height
 
-MotionPrimitive mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);    // current motion primitive; (MotorGroupID, ReactiveBehaviors, callback)
+MotionPrimitive mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);    // current motion primitive; (MotorGroupID, ReactiveBehaviors, callback)
 
 void homeLeggedRobot() {
   snprintf(sent_data, sizeof(sent_data), "Homing all legs...\n\n");
@@ -212,6 +213,8 @@ void standUp() {
     motors[axis_id].states_.q_d = z_body_nominal;
     motors[axis_id].states_.holding = false;
     motors[axis_id].states_.trap_traj_vel_limit = kVelLegTrajStandup;
+    motors[axis_id].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
+    motors[axis_id].states_.trap_traj_decel_limit = kDecelLegTrajStandup;
   }
 
   // update states while standing up
@@ -308,7 +311,7 @@ void regulateBodyPose() {
 
   // slip recovery (if the body tilts without actuation, then the ground contacts have changed)
   if (std::get<1>(mp) != ReactiveBehaviors::kSwingTorque
-      && rpy_lateral[0] - rpy_lateral_contact[0] > kDthetaMax || rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax) {
+      && (rpy_lateral[0] - rpy_lateral_contact[0] > kDthetaMax || rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax)) {
     SERIAL_USB.println("executing slip recovery");
     isBlocking = true;
     actuation_phase = ActuationPhases::kTouchDown;
@@ -392,7 +395,7 @@ void regulateBodyPose() {
         done = motors[MotorID::kMotorMedialFront].states_.holding && motors[MotorID::kMotorMedialRear].states_.holding &&
                motors[MotorID::kMotorLateralRight].states_.holding && motors[MotorID::kMotorLateralLeft].states_.holding;
         if (done) {
-          mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
+          mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
           isBlocking = false;
         }
 
@@ -400,15 +403,14 @@ void regulateBodyPose() {
       } else {                                                    
         done = motors[stance*2].states_.holding && motors[stance*2 + 1].states_.holding;
         if (done) {
-          mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
+          mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
           updateMotorsStance(stance);
+          rpy_lateral_contact = rpy_lateral;
         }
       }
 
     // if swing legs are in torque control (slip recovery using all legs)
     } else if (std::get<1>(mp) == ReactiveBehaviors::kSwingTorque) {
-
-      SERIAL_USB.println("checking slip recovery ...");
 
       // check the contact state of all legs for this maneuver
       updateContactState(GaitPhases::kLateralSwing);
@@ -420,7 +422,7 @@ void regulateBodyPose() {
       done = std::all_of(isInContact.begin(), isInContact.end(), [](bool v) {return v;}); // if all legs are in contact
       if (done) {
         SERIAL_USB.println("slip recovery complete");
-        mp = std::make_tuple(-1, ReactiveBehaviors::kNone, nullptr);
+        mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
         isBlocking = false;
         // select the next swing body based on the required tilt regulation
         fabs(rpy_lateral[GaitPhases::kLateralSwing]) > fabs(rpy_lateral[GaitPhases::kMedialSwing]) ? \
@@ -544,6 +546,7 @@ void updateMotorsTouchdown(uint8_t idx_body, float vel_limit) {
       motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][0];
     }
   }
+  t_start_contact = millis();
 }
 
 void updateTouchdownTorque() {

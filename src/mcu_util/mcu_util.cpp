@@ -431,6 +431,14 @@ void sendTelemetry() {
     #endif
     writeToCard(sent_data);
 
+    snprintf(sent_data, sizeof(sent_data), "%i\t%d\t", std::get<0>(mp), std::get<1>(mp));
+    SERIAL_USB.print("MotorGroup, behavior: ");
+    writeToSerial();
+
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t", rpy_lateral_contact[0], rpy_lateral_contact[1]);
+    SERIAL_USB.print("rpy_contact: ");
+    writeToSerial();
+
     snprintf(sent_data, sizeof(sent_data), "\n");
     writeToSerial();
     writeToCard(sent_data);
