@@ -310,8 +310,11 @@ void regulateBodyPose() {
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
   // slip recovery (if the body tilts without actuation, then the ground contacts have changed)
-  if (std::get<1>(mp) != ReactiveBehaviors::kSwingTorque
-      && (fabs(rpy_lateral[0] - rpy_lateral_contact[0]) > kDthetaMax || fabs(rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax))) {
+  if (std::get<1>(mp) != ReactiveBehaviors::kSwingTorque                                                                                  // if currently not peforming a slip recovery (swing leg torque cmd)
+      && (fabs(rpy_lateral[0] - rpy_lateral_contact[0]) > kDthetaMax || fabs(rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax))) {    // AND the body has tilted beyond a threshold since leg touchdown
+                                                                                                                                          // the absolute value of angle change is taken 
+                                                                                                                                          // because any large tilt without actuation, even towards a level posture, is considered undesirable
+                                                                                                                                          
     SERIAL_USB.println("executing slip recovery");
     isBlocking = true;
     actuation_phase = ActuationPhases::kTouchDown;
@@ -320,8 +323,8 @@ void regulateBodyPose() {
     holdLocomotionMechanism();
 
     // command all legs to touch down at max speed
-    updateMotorsTouchdown(GaitPhases::kLateralSwing, kVelLegMaxContact);
-    updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegMaxContact);
+    updateMotorsTouchdown(GaitPhases::kLateralSwing, kVelLegFootSlip);
+    updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegFootSlip);
 
     // clear all contact states
     resetLegContactState(GaitPhases::kLateralSwing);
@@ -339,7 +342,9 @@ void regulateBodyPose() {
   // single-stance pose regulation
   if (!std::get<1>(mp)                                                                        // if there's no ongoing motion primitive
       && actuation_phase == ActuationPhases::kLocomote                                        // AND the swing legs have retracted (single-stance)
-      && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kThetaSoftMax)) { // AND body pose error is large
+      && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kThetaSoftMax)    // AND body pose error is large
+      && (fabs(omega_lateral[0]) < 2 || fabs(omega_lateral[1]) < 2)                           // AND the body angular velocity is near zero; required to prevent activation during ongoing foot slip; omega needs filtering
+     ){
 
     std::vector<float> dq_stance{0, 0};
 
