@@ -17,6 +17,7 @@ uint8_t gait_phase = GaitPhases::kLateralSwing;         // current gait phase/sw
 uint8_t actuation_phase = ActuationPhases::kRetractLeg; // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 uint32_t gait_cycles = 0;                               // number of completed gait cycles
 bool isBlocking = false;                                // true if any motion primitive outside of the standard gait cycle is in progress
+bool isScheduled = false;                               // true if a motion primitive is scheduled for execution
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
@@ -309,13 +310,23 @@ void regulateBodyPose() {
   float z_error = z_body_local - z_body_nominal;
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
+  int dir[2] = {0, 0};
+  for(auto i = 0; i < 2; ++i) {
+    dir[i] = (rpy_lateral[i] > 0) - (rpy_lateral[i] < 0);
+  }
+
+  // check if the body is tipping over; two velocity ranges
+  bool roll_tipover = ((dir[0]*omega_filters[0].filtered_value) > 15 && fabs(rpy_lateral[0]) > kThetaSoftMax_1)
+                      || ((dir[0]*omega_filters[0].filtered_value) > 25 && fabs(rpy_lateral[0]) > kThetaSoftMax_2);
+
+  bool pitch_tipover = ((dir[1]*omega_filters[1].filtered_value) > 15 && fabs(rpy_lateral[1]) > kThetaSoftMax_1)
+                       || ((dir[1]*omega_filters[1].filtered_value) > 25 && fabs(rpy_lateral[1]) > kThetaSoftMax_2);
+
   // slip recovery (if the body tilts without actuation, then the ground contacts have changed)
-  if (std::get<1>(mp) != ReactiveBehaviors::kSwingTorque                                                                                  // if currently not peforming a slip recovery (swing leg torque cmd)
-      && (fabs(omega_lateral[0]) > 20 || fabs(omega_lateral[1]) > 20) && std::get<1>(mp) != ReactiveBehaviors::kStancePosition  // AND the body is tilting without actuation
+  if (!isBlocking                           // if currently not peforming a double stance motion primitive
+      && !isScheduled                       // AND no motion primitive is scheduled
+      && (roll_tipover || pitch_tipover)    // AND the body is tilting without actuation
      ) {
-      // && (fabs(rpy_lateral[0] - rpy_lateral_contact[0]) > kDthetaMax || fabs(rpy_lateral[1] - rpy_lateral_contact[1]) > kDthetaMax)) {    // AND the body has tilted beyond a threshold since leg touchdown
-      //                                                                                                                                     // the absolute value of angle change is taken 
-      //                                                                                                                                     // because any large tilt without actuation, even towards a level posture, is considered undesirable
                                                                                                                                           
     isBlocking = true;
     actuation_phase = ActuationPhases::kTouchDown;
@@ -343,14 +354,14 @@ void regulateBodyPose() {
   // single-stance pose regulation
   if (!std::get<1>(mp)                                                                        // if there's no ongoing motion primitive
       && actuation_phase == ActuationPhases::kLocomote                                        // AND the swing legs have retracted (single-stance)
-      && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kThetaSoftMax)    // AND body pose error is large
-      && (fabs(omega_lateral[0]) < 2 || fabs(omega_lateral[1]) < 2)                           // AND the body angular velocity is near zero; required to prevent activation during ongoing foot slip; omega needs filtering
+      && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kThetaNominal)    // AND body pose error is large
+      && (fabs(omega_filters[0].filtered_value) < 2 || fabs(omega_filters[1].filtered_value) < 2)                           // AND the body angular velocity is near zero; required to prevent activation during ongoing foot slip; omega needs filtering
      ){
 
     std::vector<float> dq_stance{0, 0};
 
     // regulate body tilt
-    if (fabs(rpy_lateral[gait_phase]) > kThetaSoftMax) {
+    if (fabs(rpy_lateral[gait_phase]) > kThetaNominal) {
       dq_stance[0] += dq_tilt / 2;
       dq_stance[1] -= dq_tilt / 2;
     }
@@ -433,9 +444,14 @@ void regulateBodyPose() {
       if (done) {
         mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
         isBlocking = false;
-        // select the next swing body based on the required tilt regulation
-        fabs(rpy_lateral[GaitPhases::kLateralSwing]) > fabs(rpy_lateral[GaitPhases::kMedialSwing]) ? \
-          gait_phase = GaitPhases::kLateralSwing : gait_phase = GaitPhases::kMedialSwing;
+        isScheduled = true;   // schedule a tilt correction to follow
+        // set the swing body such that the next stance body will be based on the required tilt regulation
+        // gait_phase is incremented immediately after this when the regular gait cycle resumes
+        if (fabs(rpy_lateral[GaitPhases::kLateralSwing]) > fabs(rpy_lateral[GaitPhases::kMedialSwing])) {
+          gait_phase = GaitPhases::kMedialSwing;
+        } else {
+          gait_phase = GaitPhases::kLateralSwing;
+        }
       }
     }
   }
@@ -477,7 +493,7 @@ bool isReadyForTransition(uint8_t phase) {
     return isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]
            && ((fabs(z_error) < kZErrorHardMax)
            ||
-           (fabs(z_error) > kZErrorHardMax && !(fabs(rpy_lateral[0]) < kThetaSoftMax && fabs(rpy_lateral[1]) < kThetaSoftMax)));  // true if both swing legs have made contact and body height regulation is not needed; deleting the body height condition results the motion primitive often being skipped
+           (fabs(z_error) > kZErrorHardMax && !(fabs(rpy_lateral[0]) < kThetaNominal && fabs(rpy_lateral[1]) < kThetaNominal)));  // true if both swing legs have made contact and body height regulation is not needed; deleting the body height condition results the motion primitive often being skipped
 
   } else {
     return false;

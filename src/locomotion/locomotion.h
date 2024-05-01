@@ -39,7 +39,7 @@ const uint8_t kMinCountsSteadyCmd = 10;     // minimum number of steady input va
 
 // leg touchdown parameters
 const float kDqLegMotorStartup = 20;         // leg touchdown displacement after which a lower torque is applied
-const uint32_t kDtTouchdown = 500;          // minimum time duration for the touchdown phase
+const uint32_t kDtTouchdown = 750;           // minimum time duration for the touchdown phase
 
 // kRetractLeg parameters
 const float kDqLegUnevenTerrain = 100;  // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
@@ -60,9 +60,10 @@ const float kLegSwingPercentMin = 0.2;
 // blocking motion primitive parameters
 const float kZErrorSoftMax = 20;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
-const float kThetaSoftMax = 1;          // body Euler angle above which non-blocking regulation is executed
+const float kThetaNominal = 1;          // body Euler angle above which non-blocking regulation is executed
+const float kThetaSoftMax_1 = 4;        // body Euler angle above which slip recovery is executed
+const float kThetaSoftMax_2 = 2;        // body Euler angle above which slip recovery is executed
 const float kThetaHardMax = 60;         // body Euler angle above which robot is stopped
-const float kDthetaMax = 6;             // body Euler angle increase since stance switch above which blocking regulation is executed
 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
@@ -80,6 +81,7 @@ extern uint8_t gait_phase;              // current gait phase; (0 medial swing/l
 extern uint8_t actuation_phase;         // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 extern uint32_t gait_cycles;            // number of completed gait cycles
 extern bool isBlocking;                 // true if any motion primitive outside of the standard gait cycle is in progress
+extern bool isScheduled;                // true if a motion primitive is scheduled for execution
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity

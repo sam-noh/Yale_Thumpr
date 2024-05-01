@@ -66,17 +66,22 @@ std::vector<MovingAvgFilter> q_ddot_filters = {MovingAvgFilter(kLegAccelFilterLe
                                                MovingAvgFilter(kLegAccelFilterLength),
                                                MovingAvgFilter(kLegAccelFilterLength)};
 
-std::vector<float> q(kNumOfJoints, 0);            // joint position from encoders
-std::vector<float> q_prev(kNumOfJoints, 0);       // q at last velocity update
-std::vector<float> q_dot(kNumOfJoints, 0);        // unfiltered joint velocity from numerical difference
-std::vector<float> q_dot_prev(kNumOfJoints, 0);   // q_dot at last acceleration update
-std::vector<float> q_ddot(kNumOfJoints, 0);       // unfiltered joint acceleration from numerical difference
-float z_body_local = 0;                           // height of body above local terrain
-float dist_traveled = 0;                          // distance traveled estimated with translational joint displacement
+std::vector<float> q(kNumOfJoints, 0);                // joint position from encoders
+std::vector<float> q_prev(kNumOfJoints, 0);           // q at last velocity update
+std::vector<float> q_dot(kNumOfJoints, 0);            // unfiltered joint velocity from numerical difference
+std::vector<float> q_dot_prev(kNumOfJoints, 0);       // q_dot at last acceleration update
+std::vector<float> q_ddot(kNumOfJoints, 0);           // unfiltered joint acceleration from numerical difference
+float z_body_local = 0;                               // height of body above local terrain
+float dist_traveled = 0;                              // distance traveled estimated with translational joint displacement
 
-std::vector<float> rpy_lateral_0 = {-4.2, 0.45, 0};     // lateral body roll pitch yaw after homing
-std::vector<float> rpy_lateral = {0, 0, 0};       // lateral body roll pitch yaw relative to rpy_lateral_0
-std::vector<float> omega_lateral = {0, 0, 0};     // lateral body angular velocity with respect to body frame axes
+std::vector<float> rpy_lateral_0 = {-4.2, 0.45, 0};   // lateral body roll pitch yaw after homing
+std::vector<float> rpy_lateral = {0, 0, 0};           // lateral body roll pitch yaw relative to rpy_lateral_0
+std::vector<float> omega_lateral = {0, 0, 0};         // lateral body angular velocity with respect to body frame axes
+
+// moving average filter for body angular velocity
+std::vector<MovingAvgFilter> omega_filters = {MovingAvgFilter(kGyroFilterLength),
+                                              MovingAvgFilter(kGyroFilterLength),
+                                              MovingAvgFilter(kGyroFilterLength)};
 
 std::vector<int> isInContact = {false, false, false, false};   // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
 std::vector<int> isDecelerated(kNumOfLegs, false);             // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
@@ -447,9 +452,18 @@ void updateIMUEstimate() {
     omega_lateral = input_omega;
     #endif
 
-    std::transform(rpy_lateral.begin(), rpy_lateral.end(), rpy_lateral_0.begin(), rpy_lateral.begin(), std::minus<float>());
+    std::transform(rpy_lateral.begin(), rpy_lateral.end(), rpy_lateral_0.begin(), rpy_lateral.begin(), std::minus<float>());  // subtract IMU mounting offset
+    updateOmegaFilters();                                                                                                     // filter angular velocity estimates
   }
   
+}
+
+// call the updateFilter() function for body angular velocity filters
+// update frequency tracks sampling rate
+void updateOmegaFilters() {
+  for (uint8_t i = 0; i < omega_filters.size(); i++) {
+    omega_filters[i].updateFilter(omega_lateral[i]);
+  }
 }
 
 // estimate total power consumption by motors
@@ -516,6 +530,8 @@ void updateContactState(uint8_t idx_body) {
           #endif
         }
 
+        // snprintf(sent_data, sizeof(sent_data), "idx_leg = %lu\tdt_touchdown = %lu\n", idx_leg, t_current - t_start_contact);
+        // writeToSerial();
         // time-based contact detection
         if (t_current - t_start_contact > kDtTouchdown
             && isNotStuck(idx_motor)) {

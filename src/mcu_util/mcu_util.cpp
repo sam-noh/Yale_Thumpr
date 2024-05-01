@@ -404,7 +404,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // IMU angular velocity
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t", omega_lateral[0], omega_lateral[1], omega_lateral[2]);
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t", omega_filters[0].filtered_value, omega_filters[1].filtered_value, omega_filters[2].filtered_value);
 
     #ifdef DEBUG_OMEGA
     SERIAL_USB.print("omega: ");
@@ -433,10 +433,6 @@ void sendTelemetry() {
 
     snprintf(sent_data, sizeof(sent_data), "%i\t%d\t", std::get<0>(mp), std::get<1>(mp));
     SERIAL_USB.print("MotorGroup, behavior: ");
-    writeToSerial();
-
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t", rpy_lateral_contact[0], rpy_lateral_contact[1]);
-    SERIAL_USB.print("rpy_contact: ");
     writeToSerial();
 
     snprintf(sent_data, sizeof(sent_data), "\n");

@@ -61,6 +61,7 @@ const int kLegAccelFilterLength = 4;        // number of leg acceleration sample
 
 // IMU parameters
 const int kIMUAvgSize = 100;                                // IMU pose estimation initial value average sample size
+const int kGyroFilterLength = 5;                            // number of gyro samples to hold in the FIFO queue
 const std::vector<int> kBodyFrameAxisIndex = {2, -1, 3};    // IMU frame to body frame mapping
                                                             // e.g. {2, -1, 3} means
                                                             // body x-axis is positive IMU y-axis
@@ -167,6 +168,7 @@ extern float dist_traveled;                                 // distance traveled
 extern std::vector<float> rpy_lateral_0;                    // lateral body roll pitch yaw after homing
 extern std::vector<float> rpy_lateral;                      // lateral body roll pitch yaw relative to rpy_lateral_0
 extern std::vector<float> omega_lateral;                    // lateral body angular velocity with respect to body frame axes
+extern std::vector<MovingAvgFilter> omega_filters;          // moving average filter for body angular velocity
 
 extern std::vector<int> isInContact;                       // true if the corresponding motor's legs are on the ground; see contact estimation
 extern std::vector<int> isDecelerated;                     // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
@@ -186,6 +188,10 @@ void updateJointEstimates();
 
 // fetch IMU reading and update the body orientation relative to the initial orientation
 void updateIMUEstimate();
+
+// call the updateFilter() function for body angular velocity filters
+// update frequency tracks sampling rate
+void updateOmegaFilters();
 
 // estimates the contact state of each swing leg motors
 void updateContactState(uint8_t idx_body);
