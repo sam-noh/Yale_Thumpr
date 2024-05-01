@@ -22,7 +22,6 @@ void loop() {
   while (!stop_signal) {
     handleODriveCANMsg();
     parseJetsonSerial();
-    parseTeensySerial();
     updateTrajectory();
     updateStates();
     updateGait();

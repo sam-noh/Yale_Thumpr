@@ -32,7 +32,7 @@ float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw c
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax, kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
 std::vector<float> q_leg_swing = {kQLegMin, kQLegMin, kQLegMin, kQLegMin};    // position setpoint of swing leg actuators during leg retraction
 std::vector<float> rpy_lateral_contact = {0, 0, 0};                           // lateral body roll pitch yaw upon contact
-float t_start_contact = 0;                                                    // time at which leg contact begins
+uint32_t t_start_contact = 0;                                                    // time at which leg contact begins
 
 uint8_t counts_steady_x = 0;                              // number of times a steay x command was received
 uint8_t counts_steady_y = 0;                              // number of times a steay y command was received
@@ -315,7 +315,6 @@ void regulateBodyPose() {
                                                                                                                                           // the absolute value of angle change is taken 
                                                                                                                                           // because any large tilt without actuation, even towards a level posture, is considered undesirable
                                                                                                                                           
-    SERIAL_USB.println("executing slip recovery");
     isBlocking = true;
     actuation_phase = ActuationPhases::kTouchDown;
 
@@ -335,7 +334,7 @@ void regulateBodyPose() {
       q_leg_swing[idx_motor] = motors[idx_motor].states_.q;
     }
 
-    mp = std::make_tuple(stance, ReactiveBehaviors::kSwingTorque, updateMotorsStance);
+    mp = std::make_tuple(MotorGroupID::kMotorGroupLegs, ReactiveBehaviors::kSwingTorque, updateMotorsStance);
 
   }
   
@@ -365,7 +364,7 @@ void regulateBodyPose() {
 
     // adjust swing legs for ground clearance
     float dq_leg_max_clearance = min(dq_stance[0], dq_stance[1]);   // greater of the two leg retractions or lesser of the two leg extensions
-    if (fabs(dq_leg_max_clearance) > 20) {                          // enforce minimum displacement to prevent frequent swing leg movements/jitters
+    if (dq_leg_max_clearance < 20) {                          // enforce minimum displacement to prevent frequent swing leg movements/jitters
       std::vector<float> dq_swing{dq_leg_max_clearance, dq_leg_max_clearance};
       updateBodyMotorsPosition(gait_phase, dq_swing);
       q_leg_swing[gait_phase*2] = motors[gait_phase*2].states_.q_d;
@@ -390,6 +389,8 @@ void regulateBodyPose() {
   
   // check if an ongoing motion primitive is completed and call the callback function
   if (std::get<1>(mp)) {
+
+    SERIAL_USB.println("checking motion primitive completion");
     bool done = false;
 
     // if stance legs are in position control
@@ -416,10 +417,14 @@ void regulateBodyPose() {
 
     // if swing legs are in torque control (slip recovery using all legs)
     } else if (std::get<1>(mp) == ReactiveBehaviors::kSwingTorque) {
+      SERIAL_USB.println("checking kSwingTorque");
 
       // check the contact state of all legs for this maneuver
       updateContactState(GaitPhases::kLateralSwing);
       updateContactState(GaitPhases::kMedialSwing);
+
+      updateTouchdownTorque(GaitPhases::kLateralSwing);
+      updateTouchdownTorque(GaitPhases::kMedialSwing);
 
       updateMotorsStance(GaitPhases::kLateralSwing);
       updateMotorsStance(GaitPhases::kMedialSwing);
@@ -530,7 +535,7 @@ void updateSetpoints() {
       }
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {    // if currently touching down
-      updateTouchdownTorque();
+      updateTouchdownTorque(gait_phase);
       updateMotorsStance(gait_phase);
     }
   }
@@ -554,8 +559,8 @@ void updateMotorsTouchdown(uint8_t idx_body, float vel_limit) {
   t_start_contact = millis();
 }
 
-void updateTouchdownTorque() {
-  for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
+void updateTouchdownTorque(uint8_t idx_body) {
+  for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
 
     // if the motor is not in contact
     if (!isInContact[idx_motor]) {

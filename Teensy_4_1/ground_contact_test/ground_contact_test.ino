@@ -35,7 +35,7 @@ void setup() {
     updateMotorsTouchdown();
     while (!isInContact[gait_phase * 2] || !isInContact[gait_phase * 2 + 1]) {
       updateFunctions();
-      updateTouchdownTorque();
+      updateTouchdownTorque(gait_phase);
       updateMotorsStance(gait_phase);
     }
 

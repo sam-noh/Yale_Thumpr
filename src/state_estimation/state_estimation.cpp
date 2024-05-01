@@ -442,6 +442,7 @@ void updateIMUEstimate() {
     rpy_lateral = bno08x_imu.getRPY();
     omega_lateral = bno08x_imu.getOmega();
     #else
+    parseTeensySerial();
     rpy_lateral = input_rpy;
     omega_lateral = input_omega;
     #endif
@@ -484,7 +485,7 @@ void updateContactState(uint8_t idx_body) {
         int idx_motor = (int) idx_leg / 2;
 
         if (motors[idx_motor].states_.q - q_leg_swing[idx_motor] > kDqLegMotorStartContact  // if the actuator has moved some amount
-            && isNotStuck(idx_motor)) {                                                         // AND the legs are not stuck
+            && isNotStuck(idx_motor)) {                                                     // AND the legs are not stuck
 
           // contact detection using velocity reduction percentage
           #ifdef USE_SCALED_VELOCITY_THRESHOLD
@@ -516,6 +517,8 @@ void updateContactState(uint8_t idx_body) {
         }
 
         // time-based contact detection
+        snprintf(sent_data, sizeof(sent_data), "leg idx: %d\telapsed time: %d\tisNotStuck: %d\n", idx_leg, t_current - t_start_contact, isNotStuck(idx_motor));
+        writeToSerial();
         if (t_current - t_start_contact > kDtTouchdown*1000
             && isNotStuck(idx_motor)) {
           isDecelerated[idx_leg] = q_dot[idx_leg] < kQdotLegContact;

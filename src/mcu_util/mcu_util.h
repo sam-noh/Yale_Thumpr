@@ -15,7 +15,7 @@
 
 // #define DEBUG_TIMER
 // #define DEBUG_ACTUATOR_POSITION
-// #define DEBUG_ACTUATOR_SETPOINT
+#define DEBUG_ACTUATOR_SETPOINT
 // #define DEBUG_ACTUATOR_TORQUE
 // #define DEBUG_ACTUATOR_TEMP
 // #define DEBUG_LEG_POSITION
@@ -24,7 +24,7 @@
 #define DEBUG_CONTACT
 // #define DEBUG_POWER
 #define DEBUG_RPY
-// #define DEBUG_OMEGA
+#define DEBUG_OMEGA
 // #define DEBUG_TRAJECTORY
 #define DEBUG_GAIT
 

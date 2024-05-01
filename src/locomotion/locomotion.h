@@ -62,7 +62,7 @@ const float kZErrorSoftMax = 20;        // body height deviation in mm above whi
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
 const float kThetaSoftMax = 1;          // body Euler angle above which non-blocking regulation is executed
 const float kThetaHardMax = 60;         // body Euler angle above which robot is stopped
-const float kDthetaMax = 7;             // body Euler angle increase since stance switch above which blocking regulation is executed
+const float kDthetaMax = 4;             // body Euler angle increase since stance switch above which blocking regulation is executed
 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
@@ -89,7 +89,7 @@ extern float leg_swing_percent;             // swing leg stroke as a percentage 
 extern std::vector<float> q_leg_contact;            // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;              // position setpoint of swing leg actuators during leg retraction
 extern std::vector<float> rpy_lateral_contact;      // lateral body roll pitch yaw upon contact
-extern float t_start_contact;                       // time at which leg contact begins
+extern uint32_t t_start_contact;                    // time at which leg contact begins
 
 extern uint8_t counts_steady_x;             // number of times a steay x command was received
 extern uint8_t counts_steady_y;             // number of times a steay y command was received
@@ -119,7 +119,7 @@ void checkStopCondition();
 
 void updateMotorsTouchdown(uint8_t idx_body, float vel_limit);
 
-void updateTouchdownTorque();
+void updateTouchdownTorque(uint8_t idx_body);
 
 // updates the specified stance body's leg motors for zero torque stance, leveraging the non-backdrivable legs
 void updateMotorsStance(uint8_t idx_body);
