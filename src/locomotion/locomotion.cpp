@@ -311,7 +311,7 @@ void regulateBodyPose() {
 
   // slip recovery (if the body tilts without actuation, then the ground contacts have changed)
   if (std::get<1>(mp) != ReactiveBehaviors::kSwingTorque
-      && (rpy_lateral[0] - rpy_lateral_contact[0] > kDthetaMax || rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax)) {
+      && (fabs(rpy_lateral[0] - rpy_lateral_contact[0]) > kDthetaMax || fabs(rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax))) {
     SERIAL_USB.println("executing slip recovery");
     isBlocking = true;
     actuation_phase = ActuationPhases::kTouchDown;
