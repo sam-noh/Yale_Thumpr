@@ -311,9 +311,11 @@ void regulateBodyPose() {
 
   // slip recovery (if the body tilts without actuation, then the ground contacts have changed)
   if (std::get<1>(mp) != ReactiveBehaviors::kSwingTorque                                                                                  // if currently not peforming a slip recovery (swing leg torque cmd)
-      && (fabs(rpy_lateral[0] - rpy_lateral_contact[0]) > kDthetaMax || fabs(rpy_lateral[1] - rpy_lateral_contact[1] > kDthetaMax))) {    // AND the body has tilted beyond a threshold since leg touchdown
-                                                                                                                                          // the absolute value of angle change is taken 
-                                                                                                                                          // because any large tilt without actuation, even towards a level posture, is considered undesirable
+      && (fabs(omega_lateral[0]) > 20 || fabs(omega_lateral[1]) > 20) && std::get<1>(mp) != ReactiveBehaviors::kStancePosition  // AND the body is tilting without actuation
+     ) {
+      // && (fabs(rpy_lateral[0] - rpy_lateral_contact[0]) > kDthetaMax || fabs(rpy_lateral[1] - rpy_lateral_contact[1]) > kDthetaMax)) {    // AND the body has tilted beyond a threshold since leg touchdown
+      //                                                                                                                                     // the absolute value of angle change is taken 
+      //                                                                                                                                     // because any large tilt without actuation, even towards a level posture, is considered undesirable
                                                                                                                                           
     isBlocking = true;
     actuation_phase = ActuationPhases::kTouchDown;
@@ -390,7 +392,6 @@ void regulateBodyPose() {
   // check if an ongoing motion primitive is completed and call the callback function
   if (std::get<1>(mp)) {
 
-    SERIAL_USB.println("checking motion primitive completion");
     bool done = false;
 
     // if stance legs are in position control
@@ -417,21 +418,19 @@ void regulateBodyPose() {
 
     // if swing legs are in torque control (slip recovery using all legs)
     } else if (std::get<1>(mp) == ReactiveBehaviors::kSwingTorque) {
-      SERIAL_USB.println("checking kSwingTorque");
 
       // check the contact state of all legs for this maneuver
       updateContactState(GaitPhases::kLateralSwing);
       updateContactState(GaitPhases::kMedialSwing);
 
-      updateTouchdownTorque(GaitPhases::kLateralSwing);
-      updateTouchdownTorque(GaitPhases::kMedialSwing);
+      // updateTouchdownTorque(GaitPhases::kLateralSwing);
+      // updateTouchdownTorque(GaitPhases::kMedialSwing);
 
       updateMotorsStance(GaitPhases::kLateralSwing);
       updateMotorsStance(GaitPhases::kMedialSwing);
       
       done = std::all_of(isInContact.begin(), isInContact.end(), [](bool v) {return v;}); // if all legs are in contact
       if (done) {
-        SERIAL_USB.println("slip recovery complete");
         mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
         isBlocking = false;
         // select the next swing body based on the required tilt regulation

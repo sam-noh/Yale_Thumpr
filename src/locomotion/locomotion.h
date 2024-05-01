@@ -39,7 +39,7 @@ const uint8_t kMinCountsSteadyCmd = 10;     // minimum number of steady input va
 
 // leg touchdown parameters
 const float kDqLegMotorStartup = 20;         // leg touchdown displacement after which a lower torque is applied
-const float kDtTouchdown = 2;                // minimum time duration for the touchdown phase
+const uint32_t kDtTouchdown = 500;          // minimum time duration for the touchdown phase
 
 // kRetractLeg parameters
 const float kDqLegUnevenTerrain = 100;  // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
@@ -62,7 +62,7 @@ const float kZErrorSoftMax = 20;        // body height deviation in mm above whi
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
 const float kThetaSoftMax = 1;          // body Euler angle above which non-blocking regulation is executed
 const float kThetaHardMax = 60;         // body Euler angle above which robot is stopped
-const float kDthetaMax = 4;             // body Euler angle increase since stance switch above which blocking regulation is executed
+const float kDthetaMax = 6;             // body Euler angle increase since stance switch above which blocking regulation is executed
 
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion

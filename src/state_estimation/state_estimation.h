@@ -27,7 +27,7 @@ const uint8_t k_dtMotorTorqueFilterUpdate = 10;     // motor torque filtering pe
 extern elapsedMicros dt_last_pos_update;            // time since last position sampling in microseconds
 extern elapsedMicros dt_last_vel_update;            // time since last velocity sampling in microseconds
 extern elapsedMicros dt_last_accel_update;          // time since last acceleration sampling in microseconds
-extern uint32_t t_last_contact_update;              // timestamp in milliseconds at last leg ground contact update
+extern std::vector<uint32_t> t_last_contact_update; // timestamp in milliseconds at last leg ground contact update
 extern uint32_t t_last_kinematics_update;           // timestamp in milliseconds at last kinematics update
 
 extern uint32_t t_last_IMU_update;                  // timestamp in milliseconds at last IMU sampling

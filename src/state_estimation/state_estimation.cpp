@@ -7,14 +7,14 @@
 #include "../locomotion/locomotion.h"
 
 // time variables
-elapsedMicros dt_last_pos_update = 0;             // time since last leg position sampling in microseconds
-elapsedMicros dt_last_vel_update = 0;             // time since last leg velocity sampling in microseconds
-elapsedMicros dt_last_accel_update = 0;           // time since last leg acceleration sampling in microseconds
-uint32_t t_last_IMU_update = 0;                   // timestamp in milliseconds at last IMU sampling
-uint32_t t_last_contact_update = 0;               // timestamp in milliseconds at last leg ground contact update
-uint32_t t_last_power_update = 0;                 // timestamp in milliseconds at last power update
-uint32_t t_last_motor_torque_filter_update = 0;   // timestamp in milliseconds at last motor torque filter update
-uint32_t t_last_kinematics_update = 0;            // timestamp in milliseconds at last kinematics update
+elapsedMicros dt_last_pos_update = 0;               // time since last leg position sampling in microseconds
+elapsedMicros dt_last_vel_update = 0;               // time since last leg velocity sampling in microseconds
+elapsedMicros dt_last_accel_update = 0;             // time since last leg acceleration sampling in microseconds
+uint32_t t_last_IMU_update = 0;                     // timestamp in milliseconds at last IMU sampling
+std::vector<uint32_t> t_last_contact_update{0, 0};  // timestamp in milliseconds at last leg ground contact update
+uint32_t t_last_power_update = 0;                   // timestamp in milliseconds at last power update
+uint32_t t_last_motor_torque_filter_update = 0;     // timestamp in milliseconds at last motor torque filter update
+uint32_t t_last_kinematics_update = 0;              // timestamp in milliseconds at last kinematics update
 
 // hardware interrupt encoders
 Encoder encoders[] = {Encoder(ENC_2_A, ENC_2_B),  // medial body; front right leg
@@ -477,8 +477,8 @@ void updateContactState(uint8_t idx_body) {
   if (actuation_phase == ActuationPhases::kTouchDown) {   // only check contact state of the swing leg motors during touchdown phase
 
     uint32_t t_current = millis();
-    if (t_current - t_last_contact_update >= k_dtContactUpdate) {
-      t_last_contact_update = t_current;
+    if (t_current - t_last_contact_update[idx_body] >= k_dtContactUpdate) {
+      t_last_contact_update[idx_body] = t_current;
 
       // for each leg in touchdown
       for (uint8_t idx_leg = idx_body*4; idx_leg < idx_body*4 + 4; ++idx_leg) {
@@ -517,9 +517,7 @@ void updateContactState(uint8_t idx_body) {
         }
 
         // time-based contact detection
-        snprintf(sent_data, sizeof(sent_data), "leg idx: %d\telapsed time: %d\tisNotStuck: %d\n", idx_leg, t_current - t_start_contact, isNotStuck(idx_motor));
-        writeToSerial();
-        if (t_current - t_start_contact > kDtTouchdown*1000
+        if (t_current - t_start_contact > kDtTouchdown
             && isNotStuck(idx_motor)) {
           isDecelerated[idx_leg] = q_dot[idx_leg] < kQdotLegContact;
         }
