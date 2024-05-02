@@ -12,23 +12,29 @@ typedef std::tuple<uint8_t, uint8_t, std::function<void(uint8_t)>> MotionPrimiti
 const int kNumOfGaitPhases = 2;             // number of gait phases in a gait cycle
 const int kNumOfActuationPhases = 3;        // number of actuation phases in swing
 
+// enum for swing phase body
 enum GaitPhases {
     kMedialSwing = 0,          // medial body swing phase & lateral body stance phase
     kLateralSwing = 1          // lateral body swing phase & medial body stance phase
 };
 
+// enum for actuation phase
+// transitions are handled by updateSetpoints()
+// can be overridden by motion primitives in regulateBodyPose()
 enum ActuationPhases {
-    kRetractLeg = 0,
-    kLocomote = 1,
-    kTouchDown = 2
+    kRetractLeg = 0,    // legs retract for swing phase
+    kLocomote = 1,      // body translates and/or turns based on command; legs may be still retracting
+    kTouchDown = 2      // legs touch down; body may be still translating or turning
 };
 
+// enum for reactive behaviors
+// used as one of the elements in MotionPrimitive
 enum ReactiveBehaviors {
-    kNone = 0,
-    kStancePosition = 1,
-    kStanceTorque = 2,
-    kSwingPosition = 3,
-    kSwingTorque = 4
+    kNone = 0,              // no current reactive behavior
+    kStancePosition = 1,    // stance legs in position control; currently used in single and double stance
+    kStanceTorque = 2,      // stance legs in torque control; currently not used
+    kSwingPosition = 3,     // swing legs in position control; currently used for swing leg clearance
+    kSwingTorque = 4        // swing legs in torque control; currently used for slip recovery (when slipping, all legs are assumed to be in swing and their contact states are checked again)
 };
 
 // homing sequence parameters
@@ -57,12 +63,14 @@ const float kStepShort = 0.4;           // cmd_vector[1] below which translation
 const float kLegSwingPercentMax = 0.9;
 const float kLegSwingPercentMin = 0.2;
 
-// blocking motion primitive parameters
+// motion primitive parameters
 const float kZErrorSoftMax = 20;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
 const float kThetaNominal = 1;          // body Euler angle above which non-blocking regulation is executed
-const float kThetaSoftMax_1 = 4;        // body Euler angle above which slip recovery is executed
-const float kThetaSoftMax_2 = 2;        // body Euler angle above which slip recovery is executed
+const float kThetaSoftMax_1 = 4;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_1
+const float kThetaSoftMax_2 = 2;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_2
+const float kOmegaSoftMax_1 = 15;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_1 or greater tilt
+const float kOmegaSoftMax_2 = 25;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_2 or greater tilt
 const float kThetaHardMax = 60;         // body Euler angle above which robot is stopped
 
 // motor torque setpoints during leg touchdown; determined heuristically

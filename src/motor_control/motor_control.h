@@ -7,6 +7,7 @@
 //////////////////////////////////////////////////////////////////////////////////////
 // constants
 
+// enum for motor index
 enum MotorID {
     kMotorMedialFront = 0,
     kMotorMedialRear = 1,
@@ -16,12 +17,14 @@ enum MotorID {
     kMotorYaw = 5
 };
 
+// enum for motor group index
+// used as one of the elements in MotionPrimitive
 enum MotorGroupID {
-    kMotorGroupMedial = 0,
-    kMotorGroupLateral = 1,
-    kMotorGroupLegs = 2,
-    kMotorGroupTranslate = 3,
-    kMotorGroupYaw = 4
+    kMotorGroupMedial = 0,      // medial body leg motors; coincides with GaitPhases::kMedialSwing
+    kMotorGroupLateral = 1,     // lateral body leg motors; coincides with GaitPhases::kLateralSwing
+    kMotorGroupLegs = 2,        // medial and lateral body leg motors
+    kMotorGroupTranslate = 3,   // translation motor
+    kMotorGroupYaw = 4          // yaw motor
 };
 
 // battery parameters

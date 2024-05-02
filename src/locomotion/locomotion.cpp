@@ -16,7 +16,7 @@ std::vector<float> cmd_vector = {1, 0};                 // command vector: {forw
 uint8_t gait_phase = GaitPhases::kLateralSwing;         // current gait phase/swing body; (0 medial swing/lateral stance) -> (1 medial stance/lateral swing); double support is omitted
 uint8_t actuation_phase = ActuationPhases::kRetractLeg; // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 uint32_t gait_cycles = 0;                               // number of completed gait cycles
-bool isBlocking = false;                                // true if any motion primitive outside of the standard gait cycle is in progress
+bool isBlocking = false;                                // true if a blocking motion primitive is in progress; currently, motion primitives with MotorGroupID::kMotorGroupLegs are blocking
 bool isScheduled = false;                               // true if a motion primitive is scheduled for execution
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
@@ -304,6 +304,7 @@ void updateTrajectory() {
 }
 
 // executes blocking and non-blocking motions that regulate body pose
+// refer to the definition of MotionPrimitive = tuple(MotorGroupID, ReactiveBehaviors, callback)
 void regulateBodyPose() {
 
   uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
@@ -316,25 +317,22 @@ void regulateBodyPose() {
   }
 
   // check if the body is tipping over; two velocity ranges
-  bool roll_tipover = ((dir[0]*omega_filters[0].filtered_value) > 15 && fabs(rpy_lateral[0]) > kThetaSoftMax_1)
-                      || ((dir[0]*omega_filters[0].filtered_value) > 25 && fabs(rpy_lateral[0]) > kThetaSoftMax_2);
+  bool isTippingRoll = ((dir[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_1 && fabs(rpy_lateral[0]) > kThetaSoftMax_1)
+                      || ((dir[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_2 && fabs(rpy_lateral[0]) > kThetaSoftMax_2);
 
-  bool pitch_tipover = ((dir[1]*omega_filters[1].filtered_value) > 15 && fabs(rpy_lateral[1]) > kThetaSoftMax_1)
-                       || ((dir[1]*omega_filters[1].filtered_value) > 25 && fabs(rpy_lateral[1]) > kThetaSoftMax_2);
+  bool isTippingPitch = ((dir[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_1 && fabs(rpy_lateral[1]) > kThetaSoftMax_1)
+                       || ((dir[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_2 && fabs(rpy_lateral[1]) > kThetaSoftMax_2);
 
   // slip recovery (if the body tilts without actuation, then the ground contacts have changed)
   if (!isBlocking                           // if currently not peforming a double stance motion primitive
       && !isScheduled                       // AND no motion primitive is scheduled
-      && (roll_tipover || pitch_tipover)    // AND the body is tilting without actuation
+      && (isTippingRoll || isTippingPitch)  // AND the body is tilting without actuation
      ) {
                                                                                                                                           
-    isBlocking = true;
-    actuation_phase = ActuationPhases::kTouchDown;
-
     // stop the locomotion mechanism
     holdLocomotionMechanism();
 
-    // command all legs to touch down at max speed
+    // command all legs to touch down quickly
     updateMotorsTouchdown(GaitPhases::kLateralSwing, kVelLegFootSlip);
     updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegFootSlip);
 
@@ -348,7 +346,8 @@ void regulateBodyPose() {
     }
 
     mp = std::make_tuple(MotorGroupID::kMotorGroupLegs, ReactiveBehaviors::kSwingTorque, updateMotorsStance);
-
+    isBlocking = true;
+    actuation_phase = ActuationPhases::kTouchDown;
   }
   
   // single-stance pose regulation
