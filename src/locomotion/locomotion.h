@@ -41,7 +41,7 @@ enum ReactiveBehaviors {
 const float kQLegMotorLift = 60;        // leg motor position setpoint for homing the translation joint
 
 // higher-level command related parameters
-const uint8_t kMinCountsSteadyCmd = 10;     // minimum number of steady input values before the command changes; used to filter out input values changing or dropping out
+const uint8_t kMinCountsSteadyCmd = 5;     // minimum number of steady input values before the command changes; used to filter out input values changing or dropping out
 
 // leg touchdown parameters
 const float kDqLegMotorStartup = 20;         // leg touchdown displacement after which a lower torque is applied
@@ -98,7 +98,6 @@ extern float leg_swing_percent;             // swing leg stroke as a percentage 
 
 extern std::vector<float> q_leg_contact;            // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;              // position setpoint of swing leg actuators during leg retraction
-extern std::vector<float> rpy_lateral_contact;      // lateral body roll pitch yaw upon contact
 extern uint32_t t_start_contact;                    // time at which leg contact begins
 
 extern uint8_t counts_steady_x;             // number of times a steay x command was received

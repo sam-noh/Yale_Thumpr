@@ -32,7 +32,6 @@ float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw c
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax, kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
 std::vector<float> q_leg_swing = {kQLegMin, kQLegMin, kQLegMin, kQLegMin};    // position setpoint of swing leg actuators during leg retraction
-std::vector<float> rpy_lateral_contact = {0, 0, 0};                           // lateral body roll pitch yaw upon contact
 uint32_t t_start_contact = 0;                                                    // time at which leg contact begins
 
 uint8_t counts_steady_x = 0;                              // number of times a steay x command was received
@@ -228,7 +227,6 @@ void standUp() {
 
   // run necessary function calls and gait initialization here
   updateMotorsStance(stance);
-  rpy_lateral_contact = rpy_lateral;
   
   snprintf(sent_data, sizeof(sent_data), "Starting\n");
   writeToSerial();
@@ -311,23 +309,25 @@ void regulateBodyPose() {
   float z_error = z_body_local - z_body_nominal;
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
-  int dir[2] = {0, 0};
+  int dir_tipover[2] = {0, 0};  // direction of tipover; e.g. if pitch angle is negative, positive pitch velocity is stabilizing and negative pitch velocity is tipping
   for(auto i = 0; i < 2; ++i) {
-    dir[i] = (rpy_lateral[i] > 0) - (rpy_lateral[i] < 0);
+    dir_tipover[i] = (rpy_lateral[i] > 0) - (rpy_lateral[i] < 0);
   }
 
   // check if the body is tipping over; two velocity ranges
-  bool isTippingRoll = ((dir[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_1 && fabs(rpy_lateral[0]) > kThetaSoftMax_1)
-                      || ((dir[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_2 && fabs(rpy_lateral[0]) > kThetaSoftMax_2);
+  bool isTippingRoll = ((dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_1 && fabs(rpy_lateral[0]) > kThetaSoftMax_1)
+                      || ((dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_2 && fabs(rpy_lateral[0]) > kThetaSoftMax_2);
 
-  bool isTippingPitch = ((dir[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_1 && fabs(rpy_lateral[1]) > kThetaSoftMax_1)
-                       || ((dir[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_2 && fabs(rpy_lateral[1]) > kThetaSoftMax_2);
+  bool isTippingPitch = ((dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_1 && fabs(rpy_lateral[1]) > kThetaSoftMax_1)
+                       || ((dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_2 && fabs(rpy_lateral[1]) > kThetaSoftMax_2);
 
-  // slip recovery (if the body tilts without actuation, then the ground contacts have changed)
-  if (!isBlocking                           // if currently not peforming a double stance motion primitive
+  // slip recovery
+  // consists of (1) a blocking portion where all legs touchdown and (2) a scheduled non-blocking portion that follows
+  // this will override an ongoing non-blocking motion primitives such as single-stance pose regulation
+  if (!isBlocking                           // if currently there's no blocking motion primitive
       && !isScheduled                       // AND no motion primitive is scheduled
-      && (isTippingRoll || isTippingPitch)  // AND the body is tilting without actuation
-     ) {
+      && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
+     ){
                                                                                                                                           
     // stop the locomotion mechanism
     holdLocomotionMechanism();
@@ -350,11 +350,10 @@ void regulateBodyPose() {
     actuation_phase = ActuationPhases::kTouchDown;
   }
   
-  // single-stance pose regulation
-  if (!std::get<1>(mp)                                                                        // if there's no ongoing motion primitive
-      && actuation_phase == ActuationPhases::kLocomote                                        // AND the swing legs have retracted (single-stance)
+  // single-stance pose regulation (tilt and height)
+  if (!std::get<1>(mp)                                                                        // if currently there's no motion primitive
+      && actuation_phase == ActuationPhases::kLocomote                                        // AND in single stance
       && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kThetaNominal)    // AND body pose error is large
-      && (fabs(omega_filters[0].filtered_value) < 2 || fabs(omega_filters[1].filtered_value) < 2)                           // AND the body angular velocity is near zero; required to prevent activation during ongoing foot slip; omega needs filtering
      ){
 
     std::vector<float> dq_stance{0, 0};
@@ -376,7 +375,7 @@ void regulateBodyPose() {
 
     // adjust swing legs for ground clearance
     float dq_leg_max_clearance = min(dq_stance[0], dq_stance[1]);   // greater of the two leg retractions or lesser of the two leg extensions
-    if (dq_leg_max_clearance < 20) {                          // enforce minimum displacement to prevent frequent swing leg movements/jitters
+    if (dq_leg_max_clearance < -20) {                               // enforce minimum displacement to prevent frequent swing leg movements/jitters; only move swing legs upward
       std::vector<float> dq_swing{dq_leg_max_clearance, dq_leg_max_clearance};
       updateBodyMotorsPosition(gait_phase, dq_swing);
       q_leg_swing[gait_phase*2] = motors[gait_phase*2].states_.q_d;
@@ -386,10 +385,11 @@ void regulateBodyPose() {
     mp = std::make_tuple(stance, ReactiveBehaviors::kStancePosition, updateMotorsStance);
 
   // double-stance pose regulation (height only)
-  } else if (!std::get<1>(mp)                                                       // if there's no ongoing motion primitive
-             && actuation_phase == ActuationPhases::kTouchDown                      // AND currently touching down
+  } else if (!std::get<1>(mp)                                                       // if currently there's no motion primitive
+             && actuation_phase == ActuationPhases::kTouchDown                      // AND in double stance
+             && isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]
              && fabs(z_error) > kZErrorHardMax                                      // AND height error is large
-             && isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]) {   // AND the swing legs are now also on the ground
+            ){
 
       std::vector<float> dq_stance{-z_error, -z_error};
       updateBodyMotorsPosition(GaitPhases::kLateralSwing, dq_stance);
@@ -422,29 +422,29 @@ void regulateBodyPose() {
         if (done) {
           mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
           updateMotorsStance(stance);
-          rpy_lateral_contact = rpy_lateral;
+          isScheduled = false;        // if slip recovery was performed, clear the flag
         }
       }
 
     // if swing legs are in torque control (slip recovery using all legs)
     } else if (std::get<1>(mp) == ReactiveBehaviors::kSwingTorque) {
 
-      // check the contact state of all legs for this maneuver
+      // check the contact state of all legs for this motion primitive
       updateContactState(GaitPhases::kLateralSwing);
       updateContactState(GaitPhases::kMedialSwing);
 
-      // updateTouchdownTorque(GaitPhases::kLateralSwing);
-      // updateTouchdownTorque(GaitPhases::kMedialSwing);
-
+      // zero out torque commands for legs in contact
       updateMotorsStance(GaitPhases::kLateralSwing);
       updateMotorsStance(GaitPhases::kMedialSwing);
       
       done = std::all_of(isInContact.begin(), isInContact.end(), [](bool v) {return v;}); // if all legs are in contact
       if (done) {
         mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
-        isBlocking = false;
-        isScheduled = true;   // schedule a tilt correction to follow
-        // set the swing body such that the next stance body will be based on the required tilt regulation
+
+        isBlocking = false;   // the blocking portion is over, but slip recovery is not finished until tilt correct is completed
+        isScheduled = true;   // this is cleared when single-stance pose regulation is completed
+
+        // set the swing body such that the NEXT stance body will be based on the required tilt regulation
         // gait_phase is incremented immediately after this when the regular gait cycle resumes
         if (fabs(rpy_lateral[GaitPhases::kLateralSwing]) > fabs(rpy_lateral[GaitPhases::kMedialSwing])) {
           gait_phase = GaitPhases::kMedialSwing;
@@ -521,7 +521,6 @@ void updateSetpoints() {
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
       updateMotorsStance(gait_phase);
-      rpy_lateral_contact = rpy_lateral;    // remember the body orientation upon stance switch
 
       // advance the gait phase
       gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
