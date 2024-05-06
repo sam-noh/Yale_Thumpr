@@ -72,12 +72,12 @@ const float kVelTransTrajSlow = 8;              // translation motor trapezoidal
 const float kVelYawTraj = 0.4;                  // yaw motor trapezoidal trajectory velocity
 
 // motor trapezoidal trajectory accel/deceleratioin parameters
-const float kAccelLegTrajSwing = 300;           // 300; leg motor trapezoidal trajectory acceleration when retracting legs in turns/s^2
+const float kAccelLegTrajSwing = 250;           // 300; leg motor trapezoidal trajectory acceleration when retracting legs in turns/s^2
 const float kAccelLegTrajStandup = 100;         // 80; leg motor trapezoidal trajectory acceleration when changing height in turns/s^2
 const float kAccelTransTraj = 15;               // 25; translation motor trapezoidal trajectory acceleration;
 const float kAccelYawTraj = 10;                 // yaw motor trapezoidal trajectory acceleration
 
-const float kDecelLegTrajSwing = 200;           // 250; leg motor trapezoidal trajectory deceleration when retracting legs in turns/s^2
+const float kDecelLegTrajSwing = 150;           // 250; leg motor trapezoidal trajectory deceleration when retracting legs in turns/s^2
 const float kDecelLegTrajStandup = 80;          // 60; leg motor trapezoidal trajectory deceleration when changing height in turns/s^2;
 const float kDecelLegTrajTilt = 30;             // leg motor trapezoidal trajectory deceleration when tilt correcting in turns/s^2;
 const float kDecelTransTraj = 25;               // translation motor trapezoidal trajectory acceleration;
@@ -95,6 +95,7 @@ const float kTemperatureLegMotorMax = 60;       // leg motor temperature limit i
 
 // motor position control parameters
 const float kQErrorMax = 3;                     // maximum allowable position error in mm
+const float kDqJointLimit = 10;                 // offset from either side of the leg joint limit in mm when the position setpoint is outside the range of motion
 
 //////////////////////////////////////////////////////////////////////////////////////
 // global variables

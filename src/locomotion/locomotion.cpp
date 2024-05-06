@@ -5,10 +5,10 @@
 #include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> touchdown_torque = {
-  {0.55, 0.18, 0.12}, // 0.18 and 0.12
-  {0.55, 0.18, 0.12},
-  {0.55, 0.18, 0.10},
-  {0.55, 0.18, 0.12}
+  {0.55, 0.25, 0.12}, // 0.18 and 0.12
+  {0.55, 0.25, 0.12},
+  {0.55, 0.25, 0.10},
+  {0.55, 0.25, 0.12}
 };
 
 // gait variables
@@ -100,10 +100,16 @@ void homeLeggedRobot() {
   writeToSerial();
 
   uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
-  motors[stance*2].states_.q_d = kQLegMotorLift;
-  motors[stance*2 + 1].states_.q_d = kQLegMotorLift;
-  isInContact[stance*2] = true;
-  isInContact[stance*2 + 1] = true;
+
+  for (uint8_t axis_id = stance*2; axis_id < stance*2 + 2; ++axis_id) {
+    motors[axis_id].states_.q_d = kQLegMotorLift;
+    motors[axis_id].states_.holding = false;
+    motors[axis_id].states_.trap_traj_vel_limit = kVelLegTrajStandup;
+    motors[axis_id].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
+    motors[axis_id].states_.trap_traj_decel_limit = kDecelLegTrajStandup;
+    isInContact[axis_id] = true;
+  }
+  
   motors[gait_phase*2].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;
   motors[gait_phase*2 + 1].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;
 
@@ -638,6 +644,13 @@ void updateBodyMotorsPosition(uint8_t idx_body, std::vector<float> dq) {
     motors[idx_motor].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
     motors[idx_motor].states_.trap_traj_decel_limit = kDecelLegTrajStandup;
     motors[idx_motor].states_.q_d = motors[idx_motor].states_.q + dq[i];
+
+    // stay away from leg joint limits
+    if (motors[idx_motor].states_.q_d < motors[idx_motor].states_.q_min) {
+      motors[idx_motor].states_.q_d = motors[idx_motor].states_.q_min + kDqJointLimit;
+    } else if (motors[idx_motor].states_.q_d > motors[idx_motor].states_.q_max) {
+      motors[idx_motor].states_.q_d = motors[idx_motor].states_.q_max - kDqJointLimit;
+    }
   }
 }
 
