@@ -7,14 +7,14 @@
 #include "../locomotion/locomotion.h"
 
 // time variables
-elapsedMicros dt_last_pos_update = 0;               // time since last leg position sampling in microseconds
-elapsedMicros dt_last_vel_update = 0;               // time since last leg velocity sampling in microseconds
-elapsedMicros dt_last_accel_update = 0;             // time since last leg acceleration sampling in microseconds
-uint32_t t_last_IMU_update = 0;                     // timestamp in milliseconds at last IMU sampling
-std::vector<uint32_t> t_last_contact_update{0, 0};  // timestamp in milliseconds at last leg ground contact update
-uint32_t t_last_power_update = 0;                   // timestamp in milliseconds at last power update
-uint32_t t_last_motor_torque_filter_update = 0;     // timestamp in milliseconds at last motor torque filter update
-uint32_t t_last_kinematics_update = 0;              // timestamp in milliseconds at last kinematics update
+elapsedMicros dt_last_pos_update = 0;                     // time since last leg position sampling in microseconds
+elapsedMicros dt_last_vel_update = 0;                     // time since last leg velocity sampling in microseconds
+elapsedMicros dt_last_accel_update = 0;                   // time since last leg acceleration sampling in microseconds
+uint32_t t_last_IMU_update = 0;                           // timestamp in milliseconds at last IMU sampling
+std::vector<uint32_t> t_last_contact_update{0, 0, 0, 0};  // timestamp in milliseconds at last leg motor ground contact update
+uint32_t t_last_power_update = 0;                         // timestamp in milliseconds at last power update
+uint32_t t_last_motor_torque_filter_update = 0;           // timestamp in milliseconds at last motor torque filter update
+uint32_t t_last_kinematics_update = 0;                    // timestamp in milliseconds at last kinematics update
 
 // hardware interrupt encoders
 Encoder encoders[] = {Encoder(ENC_2_A, ENC_2_B),  // medial body; front right leg
@@ -359,7 +359,7 @@ void zeroIMUReading() {
 void updateStates() {
   updateJointEstimates();
   updateIMUEstimate();
-  updateContactState(gait_phase);
+  updateBodyLegContactState(gait_phase);
   updatePowerMeasurement();
   updateMotorTorqueFilters();
   updateKinematics();
@@ -486,75 +486,80 @@ void updatePowerMeasurement() {
   }
 }
 
-// estimates the contact state of each swing leg motors
-void updateContactState(uint8_t idx_body) {
-  if (actuation_phase == ActuationPhases::kTouchDown) {   // only check contact state of the swing leg motors during touchdown phase
+// estimates the contact state of the given leg motor
+void updateLegMotorContactState(uint8_t idx_motor) {
+  uint32_t t_current = millis();
+  if (t_current - t_last_contact_update[idx_motor] >= k_dtContactUpdate) {
+    t_last_contact_update[idx_motor] = t_current;
 
-    uint32_t t_current = millis();
-    if (t_current - t_last_contact_update[idx_body] >= k_dtContactUpdate) {
-      t_last_contact_update[idx_body] = t_current;
+    // for each leg in touchdown
+    for (uint8_t idx_leg = idx_motor*2; idx_leg < idx_motor*2 + 2; ++idx_leg) {
 
-      // for each leg in touchdown
-      for (uint8_t idx_leg = idx_body*4; idx_leg < idx_body*4 + 4; ++idx_leg) {
-        int idx_motor = (int) idx_leg / 2;
+      if (motors[idx_motor].states_.q - q_leg_swing[idx_motor] > kDqLegMotorStartContact  // if the actuator has moved some amount
+          && isNotStuck(idx_motor)) {                                                     // AND the legs are not stuck
 
-        if (motors[idx_motor].states_.q - q_leg_swing[idx_motor] > kDqLegMotorStartContact  // if the actuator has moved some amount
-            && isNotStuck(idx_motor)) {                                                     // AND the legs are not stuck
+        // contact detection using velocity reduction percentage
+        #ifdef USE_SCALED_VELOCITY_THRESHOLD
 
-          // contact detection using velocity reduction percentage
-          #ifdef USE_SCALED_VELOCITY_THRESHOLD
-
-          // update max leg velocity during touchdown
-          if (q_dot_filters[idx_leg].filtered_value > q_dot_max[idx_leg]) {           // if the current leg velocity exceeds the historical max value
-            q_dot_max[idx_leg] = q_dot_filters[idx_leg].filtered_value;
-          }
-
-          // check if the leg velocity has fallen below the threshold
-          isDecelerated[idx_leg] = (q_dot_filters[idx_leg].filtered_value < kQdotLegPercentContact*q_dot_max[idx_leg]);  // don't latch; condition should persist with true contact
-
-          #endif
-          
-          // contact detection checking for max deceleration
-          #ifdef USE_DECELERATION_THRESHOLD
-
-          isDecelerated[idx_leg] = isDecelerated[idx_leg] || (q_ddot_filters[idx_leg].filtered_value < kQddotLegContact);
-
-          #endif
-
-          // contact detection checking for stopped legs
-          // this should always be on
-          #ifdef USE_VELOCITY_THRESHOLD
-
-          isDecelerated[idx_leg] = q_dot[idx_leg] < kQdotLegContact;
-
-          #endif
+        // update max leg velocity during touchdown
+        if (q_dot_filters[idx_leg].filtered_value > q_dot_max[idx_leg]) {           // if the current leg velocity exceeds the historical max value
+          q_dot_max[idx_leg] = q_dot_filters[idx_leg].filtered_value;
         }
 
-        // snprintf(sent_data, sizeof(sent_data), "idx_leg = %lu\tdt_touchdown = %lu\n", idx_leg, t_current - t_start_contact);
-        // writeToSerial();
-        // time-based contact detection
-        if (t_current - t_start_contact > kDtTouchdown
-            && isNotStuck(idx_motor)) {
-          isDecelerated[idx_leg] = q_dot[idx_leg] < kQdotLegContact;
-        }
+        // check if the leg velocity has fallen below the threshold
+        isDecelerated[idx_leg] = (q_dot_filters[idx_leg].filtered_value < kQdotLegPercentContact*q_dot_max[idx_leg]);  // don't latch; condition should persist with true contact
+
+        #endif
+        
+        // contact detection checking for max deceleration
+        #ifdef USE_DECELERATION_THRESHOLD
+
+        isDecelerated[idx_leg] = isDecelerated[idx_leg] || (q_ddot_filters[idx_leg].filtered_value < kQddotLegContact);
+
+        #endif
+
+        // contact detection checking for stopped legs
+        // this should always be on
+        #ifdef USE_VELOCITY_THRESHOLD
+
+        isDecelerated[idx_leg] = isDecelerated[idx_leg] || (q_dot[idx_leg] < kQdotLegContact);
+
+        #endif
       }
 
-      // combine leg contact states to determine motor contact state
-      isInContact[idx_body * 2] = isDecelerated[idx_body*4] && isDecelerated[idx_body*4 + 1];
-      isInContact[idx_body * 2 + 1] = isDecelerated[idx_body*4 + 2] && isDecelerated[idx_body*4 + 3];
-
+      // if the leg cannot move kDqLegMotorStartContact after kDtTouchdown,
+      // assume it is in contact
+      if (t_current - t_start_contact > kDtTouchdown
+          && isNotStuck(idx_motor)) {
+        isDecelerated[idx_leg] = isDecelerated[idx_leg] || q_dot[idx_leg] < kQdotLegContact;
+      }
     }
+
+    // combine leg contact states to determine motor contact state
+    isInContact[idx_motor] = isDecelerated[idx_motor*2] && isDecelerated[idx_motor*2 + 1];
   }
 }
 
-void resetLegContactState(uint8_t idx_body) {
-  for (uint8_t i = 0; i < 2; i++) {
-    isInContact[idx_body * 2 + i] = false;
-    isDecelerated[idx_body*4 + i*2] = false;
-    isDecelerated[idx_body*4 + i*2 + 1] = false;
-    q_dot_max[idx_body*4 + i*2] = 0;
-    q_dot_max[idx_body*4 + i*2 + 1] = 0;
+// estimates the contact state of each swing leg motor
+void updateBodyLegContactState(uint8_t idx_body) {
+  if (actuation_phase == ActuationPhases::kTouchDown) {   // only check contact state of the swing leg motors during touchdown phase
+    updateLegMotorContactState(idx_body*2);
+    updateLegMotorContactState(idx_body*2 + 1);
+
   }
+}
+
+void resetLegMotorContactState(uint8_t idx_motor) {
+  isInContact[idx_motor] = false;
+  isDecelerated[idx_motor*2] = false;
+  isDecelerated[idx_motor*2 + 1] = false;
+  q_dot_max[idx_motor*2] = 0;
+  q_dot_max[idx_motor*2 + 1] = 0;
+}
+
+void resetBodyLegContactState(uint8_t idx_body) {
+  resetLegMotorContactState(idx_body*2);
+  resetLegMotorContactState(idx_body*2 + 1);
 }
 
 // call the updateFilter() function for motor torque filters
