@@ -337,7 +337,6 @@ void regulateBodyPose() {
   // this will override an ongoing non-blocking motion primitives such as single-stance pose regulation
 
   if (!isBlocking                           // if currently there's no blocking motion primitive
-      && !isScheduled                       // AND no motion primitive is scheduled
       && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
      ){
                                                                                                                                           
@@ -361,7 +360,7 @@ void regulateBodyPose() {
     }
     t_start_contact = millis(); // update the time variable for contact detection
 
-    motion_primitive = ReactiveBehaviors::kSwingTorque;
+    motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
     isBlocking = true;
     actuation_phase = ActuationPhases::kTouchDown;
   }
@@ -431,9 +430,9 @@ void regulateBodyPose() {
       }
 
       if (done) {
+        idx_motor_mp.clear();
         updateStanceBodyTorque(stance);
 
-        idx_motor_mp.clear();
         motion_primitive = ReactiveBehaviors::kNone;
         isBlocking = false;
       }
@@ -450,9 +449,62 @@ void regulateBodyPose() {
       
       if (done) {
         idx_motor_mp.clear();
+
+        if (isInContact[gait_phase*2] && isInContact[gait_phase*2 + 1]) {
+          SERIAL_USB.println("?????");
+          stop_signal = true;
+        }
+
+        if (!(isInContact[stance*2] && isInContact[stance*2 + 1])) {
+          SERIAL_USB.println("both stance legs are not in contact");
+          stop_signal = true;
+        }
+
+        // decide the next behavior based on current contact states
+        
+        // if only the stance legs are in contact, resume the normal gait cycle
+        if ((isInContact[stance*2] && isInContact[stance*2 + 1]) && !(isInContact[gait_phase*2] || isInContact[gait_phase*2 + 1])) {
+          actuation_phase = ActuationPhases::kRetractLeg; // resume the normal gait cycle by starting from leg retraction
+          updateRetract();                                // reapply the leg retraction in case the leg retraction was interrupted for some reason
+          
+          motion_primitive = ReactiveBehaviors::kNone;    // slip recovery is complete
+          isBlocking = false;
+          
+        // if there's a swing leg pair in contact, use it for single-side tilt correction
+        // for now, assume that not all legs will be in contact (no double-stance)
+        } else {
+          isInContact[gait_phase*2] ? idx_motor_mp.push_back(gait_phase*2) : idx_motor_mp.push_back(gait_phase*2 + 1);  // the swing leg motor in contact; assume that only one pair will be in contact
+          dq_tilt = stance_width[stance] * tan(rpy_lateral[stance] * DEG2RAD);                                          // body tilt angle to correct using the swing legs
+          updateLegPosition(idx_motor_mp[0], fabs(dq_tilt));                                                            // move the single swing leg pair for tilt correction
+
+          // sanity checks
+          if ((gait_phase*2 + (dq_tilt < 0)) != idx_motor_mp[0]) {
+            SERIAL_USB.println("tilt direction is not consistent with the swing leg in contact");
+            stop_signal = true;
+          }
+
+          updateTouchdown(stance, kVelLegMaxContact);             // maintain ground contact of the stance legs through force control while the swing leg moves in position control
+
+          motion_primitive = ReactiveBehaviors::kSwingPosition;   // the single pair of swing legs in contact is commanded in position control for tilt correct
+          isBlocking = true;
+        }
+      }
+
+    // if swing legs are in position control
+    } else if (motion_primitive == ReactiveBehaviors::kSwingPosition) {
+
+      for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
+        done = done && motors[*idx_motor].states_.holding;
+      }
+
+      if (done) {
+        updateStanceBodyTorque(stance);
+        actuation_phase = ActuationPhases::kRetractLeg; // resume the normal gait cycle by starting from leg retraction
+        updateRetract();                                // reapply the leg retraction in case the leg retraction was interrupted for some reason
+
+        idx_motor_mp.clear();
         motion_primitive = ReactiveBehaviors::kNone;
-        isBlocking = false;   // the blocking portion is over, but slip recovery is not finished until tilt correct is completed
-        isScheduled = true;   // this is cleared when the next motion primmitive is completed
+        isBlocking = false;
       }
     }
   }
@@ -604,8 +656,6 @@ void updateStanceBodyTorque(uint8_t idx_body) {
 // determine swing leg setpoints based on contact conditions and update the motor control mode and limits for swing phase
 void updateRetract() {
   for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
-
-    q_leg_contact[idx_motor] = motors[idx_motor].states_.q;             // remember the leg motor position at ground contact
     float q_leg_retract = q_leg_contact[idx_motor]*leg_swing_percent;   // nominal swing leg setpoint; NOT necessarily equal to the actual setpoint
     if (q_leg_contact[idx_motor]*(1 - leg_swing_percent) < kDqLegSwingMin) q_leg_retract = q_leg_contact[idx_motor] - kDqLegSwingMin; // enforce minimum required swing retraction
 
@@ -633,22 +683,26 @@ void updateRetract() {
   }
 }
 
+void updateLegPosition(uint8_t idx_motor, float dq) {
+  motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
+  motors[idx_motor].states_.holding = false;
+  motors[idx_motor].states_.trap_traj_vel_limit = kVelLegTrajStandup;
+  motors[idx_motor].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
+  motors[idx_motor].states_.trap_traj_decel_limit = kDecelLegTrajStandup;
+  motors[idx_motor].states_.q_d = motors[idx_motor].states_.q + dq;
+
+  // stay away from leg joint limits
+  if (motors[idx_motor].states_.q_d < motors[idx_motor].states_.q_min) {
+    motors[idx_motor].states_.q_d = motors[idx_motor].states_.q_min + kDqJointLimit;
+  } else if (motors[idx_motor].states_.q_d > motors[idx_motor].states_.q_max) {
+    motors[idx_motor].states_.q_d = motors[idx_motor].states_.q_max - kDqJointLimit;
+  }
+}
+
 void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
     uint8_t i = idx_motor - idx_body*2;
-    motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
-    motors[idx_motor].states_.holding = false;
-    motors[idx_motor].states_.trap_traj_vel_limit = kVelLegTrajStandup;
-    motors[idx_motor].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
-    motors[idx_motor].states_.trap_traj_decel_limit = kDecelLegTrajStandup;
-    motors[idx_motor].states_.q_d = motors[idx_motor].states_.q + dq[i];
-
-    // stay away from leg joint limits
-    if (motors[idx_motor].states_.q_d < motors[idx_motor].states_.q_min) {
-      motors[idx_motor].states_.q_d = motors[idx_motor].states_.q_min + kDqJointLimit;
-    } else if (motors[idx_motor].states_.q_d > motors[idx_motor].states_.q_max) {
-      motors[idx_motor].states_.q_d = motors[idx_motor].states_.q_max - kDqJointLimit;
-    }
+    updateLegPosition(idx_motor, dq[i]);
   }
 }
 

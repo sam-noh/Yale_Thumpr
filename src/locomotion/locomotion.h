@@ -4,7 +4,6 @@
 #include "Arduino.h"
 #include <vector>
 #include <deque>
-#include <tuple>
 #include <functional>
 #include <algorithm>
 
@@ -135,6 +134,8 @@ void updateStanceBodyTorque(uint8_t idx_body);
 
 // determine swing leg setpoints based on contact conditions and update the motor control mode and limits for swing phase
 void updateRetract();
+
+void updateLegPosition(uint8_t idx_motor, float dq);
 
 void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq);
 
