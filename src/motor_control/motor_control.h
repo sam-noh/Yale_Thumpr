@@ -17,16 +17,6 @@ enum MotorID {
     kMotorYaw = 5
 };
 
-// enum for motor group index
-// used as one of the elements in MotionPrimitive
-enum MotorGroupID {
-    kMotorGroupMedial = 0,      // medial body leg motors; coincides with GaitPhases::kMedialSwing
-    kMotorGroupLateral = 1,     // lateral body leg motors; coincides with GaitPhases::kLateralSwing
-    kMotorGroupLegs = 2,        // medial and lateral body leg motors
-    kMotorGroupTranslate = 3,   // translation motor
-    kMotorGroupYaw = 4          // yaw motor
-};
-
 // battery parameters
 const float kMinBatteryVoltage = 22.3;              // min battery voltage
 
@@ -128,6 +118,8 @@ void initActuators();
 
 // enters idle state on all axes
 void stopActuators();
+
+void updateMotorTorque(uint8_t idx_motor, float torque, float vel_limit = 0);
 
 // updates motor controller limits on all axes
 void updateMotorLimits();

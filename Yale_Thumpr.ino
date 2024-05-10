@@ -24,7 +24,7 @@ void loop() {
     parseJetsonSerial();
     updateTrajectory();
     updateStates();
-    updateGait();
+    updateLocomotion();
     updateMotorCommands();
     sendTelemetry();
   }

@@ -3,11 +3,10 @@
 
 #include "Arduino.h"
 #include <vector>
+#include <deque>
 #include <tuple>
 #include <functional>
 #include <algorithm>
-
-typedef std::tuple<uint8_t, uint8_t, std::function<void(uint8_t)>> MotionPrimitive;
 
 const int kNumOfGaitPhases = 2;             // number of gait phases in a gait cycle
 const int kNumOfActuationPhases = 3;        // number of actuation phases in swing
@@ -19,7 +18,7 @@ enum GaitPhases {
 };
 
 // enum for actuation phase
-// transitions are handled by updateSetpoints()
+// transitions are handled by updateGaitSetpoints()
 // can be overridden by motion primitives in regulateBodyPose()
 enum ActuationPhases {
     kRetractLeg = 0,    // legs retract for swing phase
@@ -28,7 +27,6 @@ enum ActuationPhases {
 };
 
 // enum for reactive behaviors
-// used as one of the elements in MotionPrimitive
 enum ReactiveBehaviors {
     kNone = 0,              // no current reactive behavior
     kStancePosition = 1,    // stance legs in position control; currently used in single and double stance
@@ -77,7 +75,7 @@ const float kThetaHardMax = 40;         // body Euler angle above which robot is
 // the first torque is the minimum necessary to initiate motion
 // the second torque command is the minimum necessary to maintain motion
 // after the motor moves "kDqLegMotorStartContact" mm, the second command is sent
-extern std::vector<std::vector<float>> touchdown_torque;
+extern std::vector<std::vector<float>> torque_profile_touchdown;
 
 // gait variables
 extern std::vector<float> cmd_vector;   // command vector: {forward-back, yaw angle}
@@ -98,6 +96,7 @@ extern float leg_swing_percent;             // swing leg stroke as a percentage 
 
 extern std::vector<float> q_leg_contact;            // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;              // position setpoint of swing leg actuators during leg retraction
+extern std::deque<int> idx_motor_mp;          // motors in touchdown as part of a motion primitive
 extern uint32_t t_start_contact;                    // time at which leg contact begins
 
 extern uint8_t counts_steady_x;             // number of times a steay x command was received
@@ -108,13 +107,11 @@ extern float input_x_prev;                  // previous input_x_filtered
 extern float input_y_prev;                  // previous input_y_filtered
 extern float input_height_prev;             // previous input_height
 
-extern MotionPrimitive mp;                  // current motion primitive; (MotorGroupID, ReactiveBehaviors, callback)
-
 void homeLeggedRobot();
 
 void standUp();
 
-void updateGait();
+void updateLocomotion();
 
 void updateTrajectory();
 
@@ -122,21 +119,24 @@ void regulateBodyPose();
 
 bool isReadyForTransition(uint8_t phase);
 
-void updateSetpoints();
+void updateGaitSetpoints();
 
 void checkStopCondition();
 
-void updateMotorsTouchdown(uint8_t idx_body, float vel_limit);
+void updateTouchdown(uint8_t idx_body, float vel_limit);
 
 void updateTouchdownTorque(uint8_t idx_body);
 
 // updates the specified stance body's leg motors for zero torque stance, leveraging the non-backdrivable legs
-void updateMotorsStance(uint8_t idx_body);
+void updateStanceTorque(uint8_t idx_body);
+
+// updates the given stance body leg motors' torque to zero
+void updateStanceBodyTorque(uint8_t idx_body);
 
 // determine swing leg setpoints based on contact conditions and update the motor control mode and limits for swing phase
-void updateMotorsSwing();
+void updateRetract();
 
-void updateBodyMotorsPosition(uint8_t idx_body, std::vector<float> dq);
+void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq);
 
 void moveLocomotionMechanism();
 

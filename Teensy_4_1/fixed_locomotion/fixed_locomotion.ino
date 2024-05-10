@@ -25,7 +25,7 @@ void loop() {
     parseTeensySerial();
     // updateTrajectory();
     updateStates();
-    updateGait();
+    updateLocomotion();
     updateMotorCommands();
     sendTelemetry();
   }

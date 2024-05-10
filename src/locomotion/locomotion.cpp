@@ -4,7 +4,7 @@
 #include "../motor_control/motor_control.h"
 #include "../state_estimation/state_estimation.h"
 
-std::vector<std::vector<float>> touchdown_torque = {
+std::vector<std::vector<float>> torque_profile_touchdown = {
   {0.55, 0.25, 0.12}, // 0.18 and 0.12
   {0.55, 0.25, 0.12},
   {0.55, 0.25, 0.10},
@@ -16,7 +16,8 @@ std::vector<float> cmd_vector = {1, 0};                 // command vector: {forw
 uint8_t gait_phase = GaitPhases::kLateralSwing;         // current gait phase/swing body; (0 medial swing/lateral stance) -> (1 medial stance/lateral swing); double support is omitted
 uint8_t actuation_phase = ActuationPhases::kRetractLeg; // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 uint32_t gait_cycles = 0;                               // number of completed gait cycles
-bool isBlocking = false;                                // true if a blocking motion primitive is in progress; currently, motion primitives with MotorGroupID::kMotorGroupLegs are blocking
+uint8_t motion_primitive = ReactiveBehaviors::kNone;    // current motion primitive
+bool isBlocking = false;                                // true if a blocking motion primitive is in progress
 bool isScheduled = false;                               // true if a motion primitive is scheduled for execution
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
@@ -32,7 +33,8 @@ float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw c
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax, kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
 std::vector<float> q_leg_swing = {kQLegMin, kQLegMin, kQLegMin, kQLegMin};    // position setpoint of swing leg actuators during leg retraction
-uint32_t t_start_contact = 0;                                                    // time at which leg contact begins
+std::deque<int> idx_motor_mp;                                           // motors in touchdown as part of a motion primitive
+uint32_t t_start_contact = 0;                                                 // time at which leg contact begins
 
 uint8_t counts_steady_x = 0;                              // number of times a steay x command was received
 uint8_t counts_steady_y = 0;                              // number of times a steay y command was received
@@ -41,8 +43,6 @@ uint8_t counts_steady_height = 0;                         // number of times a s
 float input_x_prev = 0;                                   // previous input_x_filtered
 float input_y_prev = 0;                                   // previous input_y_filtered
 float input_height_prev = 0.4;                            // previous input_height
-
-MotionPrimitive mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);    // current motion primitive; (MotorGroupID, ReactiveBehaviors, callback)
 
 void homeLeggedRobot() {
   snprintf(sent_data, sizeof(sent_data), "Homing all legs...\n\n");
@@ -232,20 +232,20 @@ void standUp() {
   }
 
   // run necessary function calls and gait initialization here
-  updateMotorsStance(stance);
+  updateStanceTorque(stance);
   
   snprintf(sent_data, sizeof(sent_data), "Starting\n");
   writeToSerial();
 }
 
-void updateGait() {
+void updateLocomotion() {
   uint32_t t_current = millis();
   if (t_current - t_last_setpoint_update >= k_dtSetpointUpdate) {
     t_last_setpoint_update = t_current;
 
     // calculate stability metrics here
     regulateBodyPose(); // if this function executes motions, updateSetpoint() is bypassed during the process
-    updateSetpoints();  // update setpoints for the motors in the swing phase
+    updateGaitSetpoints();  // update setpoints for the motors in the swing phase
     checkStopCondition();
   }
 }
@@ -308,7 +308,7 @@ void updateTrajectory() {
 }
 
 // executes blocking and non-blocking motions that regulate body pose
-// refer to the definition of MotionPrimitive = tuple(MotorGroupID, ReactiveBehaviors, callback)
+// refer to ReactiveBehaviors
 void regulateBodyPose() {
 
   uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
@@ -328,8 +328,14 @@ void regulateBodyPose() {
                        || ((dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_2 && fabs(rpy_lateral[1]) > kThetaSoftMax_2);
 
   // slip recovery
-  // consists of (1) a blocking portion where all legs touchdown and (2) a scheduled non-blocking portion that follows
+  // executes a blocking maneuver where legs on the tipping side touch down
+  // if only roll or pitch is detected, one leg pair will touch down
+  // if both are detected, two leg pairs will touch down
+  // at the end of this maneuver, if only one body's legs are in stance, regular gait cycle resumes
+  // if the swing body also has a leg pair on the ground, that leg pair is commanded in position control
+  // while the stance leg pairs are driven in torque control to regulate the Euler angle corresponding to the swing body
   // this will override an ongoing non-blocking motion primitives such as single-stance pose regulation
+
   if (!isBlocking                           // if currently there's no blocking motion primitive
       && !isScheduled                       // AND no motion primitive is scheduled
       && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
@@ -338,26 +344,30 @@ void regulateBodyPose() {
     // stop the locomotion mechanism
     holdLocomotionMechanism();
 
-    // command all legs to touch down quickly
-    updateMotorsTouchdown(GaitPhases::kLateralSwing, kVelLegFootSlip);
-    updateMotorsTouchdown(GaitPhases::kMedialSwing, kVelLegFootSlip);
-
-    // clear all contact states
-    resetLegContactState(GaitPhases::kLateralSwing);
-    resetLegContactState(GaitPhases::kMedialSwing);
-
-    // update q_leg_swing, which is used in updateContactState()
-    for (uint8_t idx_motor = 0; idx_motor < kNumOfLegs/2; ++idx_motor) {
-      q_leg_swing[idx_motor] = motors[idx_motor].states_.q;
+    // determine which legs to touchdown
+    if (isTippingRoll) {
+      dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
     }
 
-    mp = std::make_tuple(MotorGroupID::kMotorGroupLegs, ReactiveBehaviors::kSwingTorque, updateMotorsStance);
+    if (isTippingPitch) {
+      dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
+    }
+
+    // for each leg pair touching down
+    for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
+      updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][0], kVelLegFootSlip);  // apply the torque command
+      resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
+      q_leg_swing[*idx_motor] = motors[*idx_motor].states_.q;                                   // update q_leg_swing for the touchdown legs, which is used in updateLegMotorContactState()
+    }
+    t_start_contact = millis(); // update the time variable for contact detection
+
+    motion_primitive = ReactiveBehaviors::kSwingTorque;
     isBlocking = true;
     actuation_phase = ActuationPhases::kTouchDown;
   }
   
   // single-stance pose regulation (tilt and height)
-  if (!std::get<1>(mp)                                                                        // if currently there's no motion primitive
+  if (!motion_primitive                                                                        // if currently there's no motion primitive
       && actuation_phase == ActuationPhases::kLocomote                                        // AND in single stance
       && (fabs(z_error) > kZErrorSoftMax || fabs(rpy_lateral[gait_phase]) > kThetaNominal)    // AND body pose error is large
      ){
@@ -377,86 +387,72 @@ void regulateBodyPose() {
       dq_stance[1] -= z_error;
     }
 
-    updateBodyMotorsPosition(stance, dq_stance);   // move stance legs
+    updateBodyLegsPosition(stance, dq_stance);   // move stance legs
+    idx_motor_mp.push_back(stance*2);
+    idx_motor_mp.push_back(stance*2 + 1);
 
     // adjust swing legs for ground clearance
     float dq_leg_max_clearance = min(dq_stance[0], dq_stance[1]);   // greater of the two leg retractions or lesser of the two leg extensions
     if (dq_leg_max_clearance < -20) {                               // enforce minimum displacement to prevent frequent swing leg movements/jitters; only move swing legs upward
       std::vector<float> dq_swing{dq_leg_max_clearance, dq_leg_max_clearance};
-      updateBodyMotorsPosition(gait_phase, dq_swing);
+      updateBodyLegsPosition(gait_phase, dq_swing);
       q_leg_swing[gait_phase*2] = motors[gait_phase*2].states_.q_d;
       q_leg_swing[gait_phase*2 + 1] = motors[gait_phase*2 + 1].states_.q_d;
     }
 
-    mp = std::make_tuple(stance, ReactiveBehaviors::kStancePosition, updateMotorsStance);
+    motion_primitive = ReactiveBehaviors::kStancePosition;
 
   // double-stance pose regulation (height only)
-  } else if (!std::get<1>(mp)                                                       // if currently there's no motion primitive
+  } else if (!motion_primitive                                                       // if currently there's no motion primitive
              && actuation_phase == ActuationPhases::kTouchDown                      // AND in double stance
              && isInContact[gait_phase * 2] && isInContact[gait_phase * 2 + 1]
              && fabs(z_error) > kZErrorHardMax                                      // AND height error is large
             ){
 
       std::vector<float> dq_stance{-z_error, -z_error};
-      updateBodyMotorsPosition(GaitPhases::kLateralSwing, dq_stance);
-      updateBodyMotorsPosition(GaitPhases::kMedialSwing, dq_stance);
+      updateBodyLegsPosition(GaitPhases::kLateralSwing, dq_stance);
+      updateBodyLegsPosition(GaitPhases::kMedialSwing, dq_stance);
+      for (auto i = 0; i < 4; ++i) { idx_motor_mp.push_back(i); }
 
-      mp = std::make_tuple(MotorGroupID::kMotorGroupLegs, ReactiveBehaviors::kStancePosition, updateMotorsStance);
+      motion_primitive = ReactiveBehaviors::kStancePosition;
       isBlocking = true;
   }
   
   // check if an ongoing motion primitive is completed and call the callback function
-  if (std::get<1>(mp)) {
+  if (motion_primitive) {
 
     bool done = false;
 
     // if stance legs are in position control
-    if (std::get<1>(mp) == ReactiveBehaviors::kStancePosition) {
+    if (motion_primitive == ReactiveBehaviors::kStancePosition) {
 
-      // if double stance
-      if (std::get<0>(mp) == MotorGroupID::kMotorGroupLegs) {
-        done = motors[MotorID::kMotorMedialFront].states_.holding && motors[MotorID::kMotorMedialRear].states_.holding &&
-               motors[MotorID::kMotorLateralRight].states_.holding && motors[MotorID::kMotorLateralLeft].states_.holding;
-        if (done) {
-          mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
-          isBlocking = false;
-        }
-
-      // if single stance
-      } else {                                                    
-        done = motors[stance*2].states_.holding && motors[stance*2 + 1].states_.holding;
-        if (done) {
-          mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
-          updateMotorsStance(stance);
-          isScheduled = false;        // if slip recovery was performed, clear the flag
-        }
+      for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
+        done = done && motors[*idx_motor].states_.holding;
       }
 
-    // if swing legs are in torque control (slip recovery using all legs)
-    } else if (std::get<1>(mp) == ReactiveBehaviors::kSwingTorque) {
+      if (done) {
+        updateStanceBodyTorque(stance);
+
+        idx_motor_mp.clear();
+        motion_primitive = ReactiveBehaviors::kNone;
+        isBlocking = false;
+      }
+
+    // if swing legs are in torque control
+    } else if (motion_primitive == ReactiveBehaviors::kSwingTorque) {
 
       // check the contact state of all legs for this motion primitive
-      updateContactState(GaitPhases::kLateralSwing);
-      updateContactState(GaitPhases::kMedialSwing);
-
-      // zero out torque commands for legs in contact
-      updateMotorsStance(GaitPhases::kLateralSwing);
-      updateMotorsStance(GaitPhases::kMedialSwing);
+      for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
+        updateLegMotorContactState(*idx_motor);
+        updateStanceTorque(*idx_motor);
+        done = done && isInContact[*idx_motor];
+      }
       
-      done = std::all_of(isInContact.begin(), isInContact.end(), [](bool v) {return v;}); // if all legs are in contact
       if (done) {
-        mp = std::make_tuple(MotorGroupID::kMotorGroupMedial, ReactiveBehaviors::kNone, nullptr);
-
+        idx_motor_mp.clear();
+        motion_primitive = ReactiveBehaviors::kNone;
         isBlocking = false;   // the blocking portion is over, but slip recovery is not finished until tilt correct is completed
-        isScheduled = true;   // this is cleared when single-stance pose regulation is completed
-
-        // set the swing body such that the NEXT stance body will be based on the required tilt regulation
-        // gait_phase is incremented immediately after this when the regular gait cycle resumes
-        if (fabs(rpy_lateral[GaitPhases::kLateralSwing]) > fabs(rpy_lateral[GaitPhases::kMedialSwing])) {
-          gait_phase = GaitPhases::kMedialSwing;
-        } else {
-          gait_phase = GaitPhases::kLateralSwing;
-        }
+        isScheduled = true;   // this is cleared when the next motion primmitive is completed
       }
     }
   }
@@ -508,7 +504,7 @@ bool isReadyForTransition(uint8_t phase) {
 // touchdown: torque control
 // translate: position control
 // leg retract: position control
-void updateSetpoints() {
+void updateGaitSetpoints() {
   // update setpoints at gait phase transitions here
   if (!isBlocking && isReadyForTransition(actuation_phase)) {
 
@@ -522,11 +518,11 @@ void updateSetpoints() {
       }
 
     } else if (actuation_phase == ActuationPhases::kLocomote) { // if currently translating or turning
-      updateMotorsTouchdown(gait_phase, kVelLegMaxContact);
+      updateTouchdown(gait_phase, kVelLegMaxContact);
       moveLocomotionMechanism();      // reapply locomotion mechanism setpoints in the case of resuming locomotion from standstill
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
-      updateMotorsStance(gait_phase);
+      updateStanceTorque(gait_phase);
 
       // advance the gait phase
       gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
@@ -534,8 +530,8 @@ void updateSetpoints() {
         gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles
       }
 
-      updateMotorsSwing();
-      resetLegContactState(gait_phase);
+      updateRetract();
+      resetBodyLegContactState(gait_phase);
     }
 
     actuation_phase = (actuation_phase + 1) % kNumOfActuationPhases;
@@ -555,7 +551,7 @@ void updateSetpoints() {
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {    // if currently touching down
       updateTouchdownTorque(gait_phase);
-      updateMotorsStance(gait_phase);
+      updateStanceTorque(gait_phase);
     }
   }
 }
@@ -566,13 +562,11 @@ void checkStopCondition() {
   }
 }
 
-void updateMotorsTouchdown(uint8_t idx_body, float vel_limit) {
+void updateTouchdown(uint8_t idx_body, float vel_limit) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
-    motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl; // change to torque control for leg touchdown
-    motors[idx_motor].states_.velocity_limit = vel_limit;                                 // limit velocity in torque control during touchdown
-    motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][1];                     // set torque command for leg touchdown
+    updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][1], vel_limit);
     if (!isNotStuck(idx_motor)) {
-      motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][0];
+      updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][0], vel_limit);
     }
   }
   t_start_contact = millis();
@@ -585,26 +579,30 @@ void updateTouchdownTorque(uint8_t idx_body) {
     if (!isInContact[idx_motor]) {
       if ((motors[idx_motor].states_.q  - q_leg_swing[idx_motor]) > kDqLegMotorStartup  // if past the startup displacement
           && isNotStuck(idx_motor)) {                                           // AND the legs have moved away from the joint limit
-        motors[idx_motor].states_.tau_d = touchdown_torque[idx_motor][2];       // lower the leg torque
+        motors[idx_motor].states_.tau_d = torque_profile_touchdown[idx_motor][2];       // lower the leg torque
       }
     }
   }
 }
 
-// updates the specified stance body's leg motors for zero torque stance, leveraging the non-backdrivable legs
-void updateMotorsStance(uint8_t idx_body) {
+// updates the given stance leg motor torque to zero, leveraging the non-backdrivability
+void updateStanceTorque(uint8_t idx_motor) {
+  if(isInContact[idx_motor]) {                                    // cannot be in stance without being in contact
+    updateMotorTorque(idx_motor, 0);
+    motors[idx_motor].states_.q_d = motors[idx_motor].states_.q;  // set desired position for telemetry purposes and possible control changes
+    q_leg_contact[idx_motor] = motors[idx_motor].states_.q;       // remember the leg motor position at ground contact
+  }
+}
+
+// updates the given stance body leg motors' torque to zero
+void updateStanceBodyTorque(uint8_t idx_body) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
-    if(isInContact[idx_motor]) {                                                            // safety check; cannot be in stance without being in contact
-      motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl; // torque control
-      motors[idx_motor].states_.tau_d = 0;                                                  // zero torque command
-      motors[idx_motor].states_.q_d = motors[idx_motor].states_.q;                          // set desired position for telemetry purposes and possible control changes
-      q_leg_contact[idx_motor] = motors[idx_motor].states_.q;                    // remember the leg motor position at ground contact
-    }
+    updateStanceTorque(idx_motor);
   }
 }
 
 // determine swing leg setpoints based on contact conditions and update the motor control mode and limits for swing phase
-void updateMotorsSwing() {
+void updateRetract() {
   for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
 
     q_leg_contact[idx_motor] = motors[idx_motor].states_.q;             // remember the leg motor position at ground contact
@@ -635,7 +633,7 @@ void updateMotorsSwing() {
   }
 }
 
-void updateBodyMotorsPosition(uint8_t idx_body, std::vector<float> dq) {
+void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
     uint8_t i = idx_motor - idx_body*2;
     motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;

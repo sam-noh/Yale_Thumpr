@@ -212,6 +212,12 @@ void stopActuators() {
   writeToSerial();
 }
 
+void updateMotorTorque(uint8_t idx_motor, float torque, float vel_limit = 0) {
+  motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kTorqueControl;
+  motors[idx_motor].states_.tau_d = torque;
+  if (vel_limit > 0) {motors[idx_motor].states_.velocity_limit = vel_limit;}
+}
+
 // updates motor controller limits on all axes
 void updateMotorLimits() {
   uint32_t t_current = millis();
