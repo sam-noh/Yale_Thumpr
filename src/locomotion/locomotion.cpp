@@ -5,10 +5,10 @@
 #include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> torque_profile_touchdown = {
-  {0.55, 0.25, 0.12}, // 0.18 and 0.12
-  {0.55, 0.25, 0.12},
-  {0.55, 0.25, 0.10},
-  {0.55, 0.25, 0.12}
+  {0.4, 0.25, 0.12}, // 0.18 and 0.12
+  {0.4, 0.25, 0.12},
+  {0.4, 0.25, 0.10},
+  {0.4, 0.25, 0.12}
 };
 
 // gait variables
@@ -336,34 +336,34 @@ void regulateBodyPose() {
   // while the stance leg pairs are driven in torque control to regulate the Euler angle corresponding to the swing body
   // this will override an ongoing non-blocking motion primitives such as single-stance pose regulation
 
-  if (!isBlocking                           // if currently there's no blocking motion primitive
-      && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
-     ){
+  // if (!isBlocking                           // if currently there's no blocking motion primitive
+  //     && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
+  //    ){
                                                                                                                                           
-    // stop the locomotion mechanism
-    holdLocomotionMechanism();
+  //   // stop the locomotion mechanism
+  //   holdLocomotionMechanism();
 
-    // determine which legs to touchdown
-    if (isTippingRoll) {
-      dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
-    }
+  //   // determine which legs to touchdown
+  //   if (isTippingRoll) {
+  //     dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
+  //   }
 
-    if (isTippingPitch) {
-      dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
-    }
+  //   if (isTippingPitch) {
+  //     dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
+  //   }
 
-    // for each leg pair touching down
-    for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
-      updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][0], kVelLegFootSlip);  // apply the torque command
-      resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
-      q_leg_swing[*idx_motor] = motors[*idx_motor].states_.q;                                   // update q_leg_swing for the touchdown legs, which is used in updateLegMotorContactState()
-    }
-    t_start_contact = millis(); // update the time variable for contact detection
+  //   // for each leg pair touching down
+  //   for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
+  //     updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][0], kVelLegFootSlip);  // apply the torque command
+  //     resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
+  //     q_leg_swing[*idx_motor] = motors[*idx_motor].states_.q;                                   // update q_leg_swing for the touchdown legs, which is used in updateLegMotorContactState()
+  //   }
+  //   t_start_contact = millis(); // update the time variable for contact detection
 
-    motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
-    isBlocking = true;
-    actuation_phase = ActuationPhases::kTouchDown;
-  }
+  //   motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
+  //   isBlocking = true;
+  //   actuation_phase = ActuationPhases::kTouchDown;
+  // }
   
   // single-stance pose regulation (tilt and height)
   if (!motion_primitive                                                                        // if currently there's no motion primitive
@@ -389,6 +389,8 @@ void regulateBodyPose() {
     updateBodyLegsPosition(stance, dq_stance);   // move stance legs
     idx_motor_mp.push_back(stance*2);
     idx_motor_mp.push_back(stance*2 + 1);
+    snprintf(sent_data, sizeof(sent_data), "Single-stance pose regulation added motors %d and %d\n", stance*2, stance*2 + 1);
+    writeToSerial();
 
     // adjust swing legs for ground clearance
     float dq_leg_max_clearance = min(dq_stance[0], dq_stance[1]);   // greater of the two leg retractions or lesser of the two leg extensions
@@ -574,7 +576,7 @@ void updateGaitSetpoints() {
       moveLocomotionMechanism();      // reapply locomotion mechanism setpoints in the case of resuming locomotion from standstill
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
-      updateStanceTorque(gait_phase);
+      updateStanceBodyTorque(gait_phase);
 
       // advance the gait phase
       gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
@@ -603,7 +605,7 @@ void updateGaitSetpoints() {
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {    // if currently touching down
       updateTouchdownTorque(gait_phase);
-      updateStanceTorque(gait_phase);
+      updateStanceBodyTorque(gait_phase);
     }
   }
 }
@@ -657,6 +659,8 @@ void updateStanceBodyTorque(uint8_t idx_body) {
 void updateRetract() {
   for (uint8_t idx_motor = gait_phase*2; idx_motor < gait_phase*2 + 2; ++idx_motor) {
     float q_leg_retract = q_leg_contact[idx_motor]*leg_swing_percent;   // nominal swing leg setpoint; NOT necessarily equal to the actual setpoint
+    snprintf(sent_data, sizeof(sent_data), "For leg motor %d, nominal retraction is %.2f\n", idx_motor+1, q_leg_retract);
+    writeToSerial();
     if (q_leg_contact[idx_motor]*(1 - leg_swing_percent) < kDqLegSwingMin) q_leg_retract = q_leg_contact[idx_motor] - kDqLegSwingMin; // enforce minimum required swing retraction
 
     // TODO: change this logic to account for robot kinematics (body tilt)
