@@ -83,8 +83,9 @@ std::vector<MovingAvgFilter> omega_filters = {MovingAvgFilter(kGyroFilterLength)
                                               MovingAvgFilter(kGyroFilterLength),
                                               MovingAvgFilter(kGyroFilterLength)};
 
-std::vector<int> isInContact = {false, false, false, false};   // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
-std::vector<int> isDecelerated(kNumOfLegs, false);             // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
+std::vector<float> q_leg_init(kNumOfLegs/2, kQLegMin);          // leg motor position at the start of leg touchdown/contact detection
+std::vector<int> isInContact = {false, false, false, false};    // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
+std::vector<int> isDecelerated(kNumOfLegs, false);              // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
 std::vector<float> q_dot_max(kNumOfLegs, 0);                    // maximum leg velocity reached during leg touchdown; used for contact detection; reset after each cycle
 
 // read the joystick XY analog voltages and the select button and normalize
@@ -495,7 +496,7 @@ void updateLegMotorContactState(uint8_t idx_motor) {
     // for each leg in touchdown
     for (uint8_t idx_leg = idx_motor*2; idx_leg < idx_motor*2 + 2; ++idx_leg) {
 
-      if (motors[idx_motor].states_.q - q_leg_swing[idx_motor] > kDqLegMotorStartContact  // if the actuator has moved some amount
+      if (motors[idx_motor].states_.q - q_leg_init[idx_motor] > kDqLegMotorStartContact  // if the actuator has moved some amount
           && isNotStuck(idx_motor)) {                                                     // AND the legs are not stuck
 
         // contact detection using velocity reduction percentage

@@ -71,7 +71,7 @@ const std::vector<int> kBodyFrameAxisIndex = {2, -1, 3};    // IMU frame to body
 // contact detection
 const float kDqLegMotorStartContact = kQLegUnstuck;     // leg displacment in mm past which contact detection begins; this value MUST BE less than the leg retraction amount (see leg_swing_percent)
 const float kQdotLegContact = 5;                        // leg touchdown velocity in mm/s below which contact is likely
-const float kQddotLegContact = -1500;                   // leg acceleration in mm/s^2 above which (more negative) leg contact is likely
+const float kQddotLegContact = -1800;                   // leg acceleration in mm/s^2 above which (more negative) leg contact is likely
 const float kQdotLegPercentContact = 0.3;               // percentage of max leg touchdown velocity at which ground contact is assumed
                                                         // this method seeks to detect contact sooner than standstill by checking for velocity reduction
 
@@ -170,6 +170,7 @@ extern std::vector<float> rpy_lateral;                      // lateral body roll
 extern std::vector<float> omega_lateral;                    // lateral body angular velocity with respect to body frame axes
 extern std::vector<MovingAvgFilter> omega_filters;          // moving average filter for body angular velocity
 
+extern std::vector<float> q_leg_init;                       // leg motor position at the start of leg touchdown/contact detection
 extern std::vector<int> isInContact;                        // true if the corresponding motor's legs are on the ground; see contact estimation
 extern std::vector<int> isDecelerated;                      // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
 extern std::vector<float> q_dot_max;                        // maximum leg velocity reached during leg touchdown; used for contact detection; reset after each cycle

@@ -64,10 +64,10 @@ const float kLegSwingPercentMin = 0.2;
 const float kZErrorSoftMax = 20;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
 const float kThetaNominal = 1;          // body Euler angle above which non-blocking regulation is executed
-const float kThetaSoftMax_1 = 4;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_1
-const float kThetaSoftMax_2 = 2;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_2
-const float kOmegaSoftMax_1 = 15;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_1 or greater tilt
-const float kOmegaSoftMax_2 = 25;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_2 or greater tilt
+const float kThetaSoftMax_1 = 7;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_1
+const float kThetaSoftMax_2 = 5;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_2
+const float kOmegaSoftMax_1 = 20;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_1 or greater tilt
+const float kOmegaSoftMax_2 = 40;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_2 or greater tilt
 const float kThetaHardMax = 40;         // body Euler angle above which robot is stopped
 
 // motor torque setpoints during leg touchdown; determined heuristically

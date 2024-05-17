@@ -336,34 +336,45 @@ void regulateBodyPose() {
   // while the stance leg pairs are driven in torque control to regulate the Euler angle corresponding to the swing body
   // this will override an ongoing non-blocking motion primitives such as single-stance pose regulation
 
-  // if (!isBlocking                           // if currently there's no blocking motion primitive
-  //     && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
-  //    ){
+  if (!isBlocking                           // if currently there's no blocking motion primitive
+      && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
+     ){
+
+    SERIAL_USB.println("Slip recovery------------------------------------------------------\n");
+
+    // slip recovery overrides any ongoing motion primitives
+    // assume that motors currently involved in a motion primitive will complete their motion and/or
+    // will be overriden by the slip recovery motion primitive
+    idx_motor_mp.clear();
                                                                                                                                           
-  //   // stop the locomotion mechanism
-  //   holdLocomotionMechanism();
+    // stop the locomotion mechanism
+    holdLocomotionMechanism();
 
-  //   // determine which legs to touchdown
-  //   if (isTippingRoll) {
-  //     dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
-  //   }
+    // determine which legs to touchdown
+    if (isTippingRoll) {
+      dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
+      SERIAL_USB.println("Adding motor for roll tipover\n");
+    }
 
-  //   if (isTippingPitch) {
-  //     dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
-  //   }
+    if (isTippingPitch) {
+      dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
+      SERIAL_USB.println("Adding motor for pitch tipover\n");
+    }
 
-  //   // for each leg pair touching down
-  //   for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
-  //     updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][0], kVelLegFootSlip);  // apply the torque command
-  //     resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
-  //     q_leg_swing[*idx_motor] = motors[*idx_motor].states_.q;                                   // update q_leg_swing for the touchdown legs, which is used in updateLegMotorContactState()
-  //   }
-  //   t_start_contact = millis(); // update the time variable for contact detection
+    // for each leg pair touching down
+    for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
+      snprintf(sent_data, sizeof(sent_data), "Touching down motor %d\n", (*idx_motor)+1);
+      writeToSerial();
+      updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][0], kVelLegFootSlip);  // apply the torque command
+      resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
+      q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
+    }
+    t_start_contact = millis(); // update the time variable for contact detection
 
-  //   motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
-  //   isBlocking = true;
-  //   actuation_phase = ActuationPhases::kTouchDown;
-  // }
+    motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
+    isBlocking = true;
+    actuation_phase = ActuationPhases::kTouchDown;
+  }
   
   // single-stance pose regulation (tilt and height)
   if (!motion_primitive                                                                        // if currently there's no motion primitive
@@ -389,12 +400,12 @@ void regulateBodyPose() {
     updateBodyLegsPosition(stance, dq_stance);   // move stance legs
     idx_motor_mp.push_back(stance*2);
     idx_motor_mp.push_back(stance*2 + 1);
-    snprintf(sent_data, sizeof(sent_data), "Single-stance pose regulation added motors %d and %d\n", stance*2, stance*2 + 1);
+    snprintf(sent_data, sizeof(sent_data), "Single-stance pose regulation added motors %d and %d------------------------------------------------------\n", stance*2, stance*2 + 1);
     writeToSerial();
 
     // adjust swing legs for ground clearance
     float dq_leg_max_clearance = min(dq_stance[0], dq_stance[1]);   // greater of the two leg retractions or lesser of the two leg extensions
-    if (dq_leg_max_clearance < -20) {                               // enforce minimum displacement to prevent frequent swing leg movements/jitters; only move swing legs upward
+    if (dq_leg_max_clearance < -10) {                               // enforce minimum displacement to prevent frequent swing leg movements/jitters; only move swing legs upward
       std::vector<float> dq_swing{dq_leg_max_clearance, dq_leg_max_clearance};
       updateBodyLegsPosition(gait_phase, dq_swing);
       q_leg_swing[gait_phase*2] = motors[gait_phase*2].states_.q_d;
@@ -618,6 +629,7 @@ void checkStopCondition() {
 
 void updateTouchdown(uint8_t idx_body, float vel_limit) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
+    q_leg_init[idx_motor] = motors[idx_motor].states_.q;  // update the initial leg position for contact estimation
     updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][1], vel_limit);
     if (!isNotStuck(idx_motor)) {
       updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][0], vel_limit);
@@ -631,7 +643,7 @@ void updateTouchdownTorque(uint8_t idx_body) {
 
     // if the motor is not in contact
     if (!isInContact[idx_motor]) {
-      if ((motors[idx_motor].states_.q  - q_leg_swing[idx_motor]) > kDqLegMotorStartup  // if past the startup displacement
+      if ((motors[idx_motor].states_.q  - q_leg_init[idx_motor]) > kDqLegMotorStartup  // if past the startup displacement
           && isNotStuck(idx_motor)) {                                           // AND the legs have moved away from the joint limit
         motors[idx_motor].states_.tau_d = torque_profile_touchdown[idx_motor][2];       // lower the leg torque
       }
