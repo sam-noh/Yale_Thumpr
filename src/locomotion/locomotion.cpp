@@ -422,7 +422,7 @@ void regulateBodyPose() {
   // check if an ongoing motion primitive is completed and call the callback function
   if (motion_primitive) {
 
-    bool done = false;
+    bool done = true;
 
     // if stance legs are in position control
     if (motion_primitive == ReactiveBehaviors::kStancePosition) {
