@@ -543,7 +543,9 @@ void updateLegMotorContactState(uint8_t idx_motor) {
 
 // estimates the contact state of each swing leg motor
 void updateBodyLegContactState(uint8_t idx_body) {
-  if (actuation_phase == ActuationPhases::kTouchDown) {   // only check contact state of the swing leg motors during touchdown phase
+  if (actuation_phase == ActuationPhases::kTouchDown
+      && (motion_primitive == ReactiveBehaviors::kNone || motion_primitive == ReactiveBehaviors::kStancePosition)
+      ) {   // only check contact state of the swing leg motors during touchdown phase
     updateLegMotorContactState(idx_body*2);
     updateLegMotorContactState(idx_body*2 + 1);
 
