@@ -64,10 +64,10 @@ const float kLegSwingPercentMin = 0.2;
 const float kZErrorSoftMax = 20;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
 const float kThetaNominal = 1;          // body Euler angle above which non-blocking regulation is executed
-const float kThetaSoftMax_1 = 7;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_1
-const float kThetaSoftMax_2 = 5;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_2
-const float kOmegaSoftMax_1 = 20;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_1 or greater tilt
-const float kOmegaSoftMax_2 = 40;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_2 or greater tilt
+const float kThetaSoftMax_1 = 5;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_1
+const float kThetaSoftMax_2 = 3;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_2
+const float kOmegaSoftMax_1 = 12;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_1 or greater tilt
+const float kOmegaSoftMax_2 = 35;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_2 or greater tilt
 const float kThetaHardMax = 40;         // body Euler angle above which robot is stopped
 
 // motor torque setpoints during leg touchdown; determined heuristically
@@ -85,6 +85,7 @@ extern std::vector<float> cmd_vector;   // command vector: {forward-back, yaw an
 extern uint8_t gait_phase;              // current gait phase; (0 medial swing/lateral stance) -> (1 medial stance/lateral swing); double support is omitted
 extern uint8_t actuation_phase;         // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 extern uint32_t gait_cycles;            // number of completed gait cycles
+extern uint8_t motion_primitive;        // current motion primitive
 extern bool isBlocking;                 // true if any motion primitive outside of the standard gait cycle is in progress
 extern bool isScheduled;                // true if a motion primitive is scheduled for execution
 

@@ -431,6 +431,9 @@ void sendTelemetry() {
     #endif
     writeToCard(sent_data);
 
+    snprintf(sent_data, sizeof(sent_data), "motion primitive: %d\n", motion_primitive);
+    writeToSerial();
+
     snprintf(sent_data, sizeof(sent_data), "\n");
     writeToSerial();
     writeToCard(sent_data);
