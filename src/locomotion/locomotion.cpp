@@ -24,6 +24,8 @@ bool isScheduled = false;                               // true if a motion prim
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 float z_body_nominal = 180;               // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
 float leg_swing_percent = 0.9;            // swing leg stroke as a percentage of its stroke at last stance phase
+float q_trans_min = -kQTransMax;
+float q_trans_max = 30;
 
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
@@ -294,6 +296,11 @@ void updateTrajectory() {
   if (counts_steady_y > kMinCountsSteadyCmd) cmd_vector[1] = input_y_filtered;
   if (counts_steady_height > kMinCountsSteadyCmd) z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;  // for now, nominal body height is equal to the leg actuator setpoint in stance
 
+  // adjust translation joint range based on normalized energy stability margin
+  // if (terrain_pitch > 20) {
+  //   q_trans_max = 
+  // }
+
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
   swing_percent_at_translate = leg_swing_percent;                                       // set translation transition percentage equal to swing retraction percentage
                                                                                         // the idea is: if large retraction is needed, then translation should also occur later
@@ -529,6 +536,7 @@ bool isReadyForTransition(uint8_t phase) {
     // if there is a translation command
     if (fabs(cmd_vector[0]) > EPS) {
       int dir = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                              // direction of translation command
+      // float q_trans_transition = pow(-1, gait_phase + 1)*trans_percent_at_touchdown*(q_trans_max - q_trans_min) + q_trans_min;
       float q_trans_transition = fabs(trans_percent_at_touchdown*motors[MotorID::kMotorTranslate].states_.q_d);             // this value is always positive since it represents forward motion, regardless of direction
       isTranslated = dir * pow(-1, gait_phase + 1) * q[JointID::kJointTranslate] > q_trans_transition;  // the translational joint has reached the transition point
                                                                                                         // don't check yaw; assume that any concurrent yaw motion will be completed in time

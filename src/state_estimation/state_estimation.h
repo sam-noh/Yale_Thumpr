@@ -174,6 +174,7 @@ extern std::vector<float> q_leg_init;                       // leg motor positio
 extern std::vector<int> isInContact;                        // true if the corresponding motor's legs are on the ground; see contact estimation
 extern std::vector<int> isDecelerated;                      // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
 extern std::vector<float> q_dot_max;                        // maximum leg velocity reached during leg touchdown; used for contact detection; reset after each cycle
+extern float terrain_pitch;                                 // pitch of the terrain in degrees; take care of the sign and the direction of locomotion
 
 //////////////////////////////////////////////////////////////////////////////////////
 // global functions
@@ -223,5 +224,9 @@ void updateKinematics();
 
 // returns true if the two legs for the corresponding motor are away from the minimum joint limit by a margin
 bool isNotStuck(uint8_t idx_motor);
+
+// estimates the terrain slope based on current ground contacts
+// using 2D simplification until vector support is added
+void estimateTerrainSlope();
 
 #endif

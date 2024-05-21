@@ -87,6 +87,7 @@ std::vector<float> q_leg_init(kNumOfLegs/2, kQLegMin);          // leg motor pos
 std::vector<int> isInContact = {false, false, false, false};    // true if the motor's current exceeds the threshold during touchdown; stays true until legs lift
 std::vector<int> isDecelerated(kNumOfLegs, false);              // true if a leg's deceleration has exceeded a threshold during touchdown; reset after each cycle
 std::vector<float> q_dot_max(kNumOfLegs, 0);                    // maximum leg velocity reached during leg touchdown; used for contact detection; reset after each cycle
+float terrain_pitch = 0;                                        // pitch of the terrain in degrees; take care of the sign and the direction of locomotion
 
 // read the joystick XY analog voltages and the select button and normalize
 void TwoAxisJoystick::readJoystick() {
@@ -610,4 +611,50 @@ void updateKinematics() {
 // returning false does NOT necessarily mean the legs are stuck; they may still be moving away from the joint limit
 bool isNotStuck(uint8_t idx_motor) {
   return (q[idx_motor*2] > kQLegUnstuck) && (q[idx_motor*2 + 1] > kQLegUnstuck);
+}
+
+// estimates the terrain slope based on current ground contacts
+// using 2D simplification until vector support is added
+void estimateTerrainSlope() {
+  float q_front, q_rear = 0;
+  int dir = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);    // direction of translation command
+
+  // if medial stance
+  if (gait_phase == GaitPhases::kLateralSwing) {
+
+    // if moving forward
+    if (dir == 1) {
+      q_front = motors[MotorID::kMotorMedialFront].states_.q;
+      q_rear  = motors[MotorID::kMotorMedialRear].states_.q;
+
+    // if moving backward
+    } else {
+      q_front = motors[MotorID::kMotorMedialRear].states_.q;
+      q_rear  = motors[MotorID::kMotorMedialFront].states_.q;
+    }
+
+  // if lateral stance
+  } else {
+
+    // if moving forward
+    if (dir == 1) {
+      q_front = (q[kJointLateralFrontRight] + q[kJointLateralFrontLeft])/2;
+      q_rear = (q[kJointLateralRearRight] + q[kJointLateralRearLeft])/2;
+
+    // if moving backward
+    } else {
+      q_front = (q[kJointLateralRearRight] + q[kJointLateralRearLeft])/2;
+      q_rear = (q[kJointLateralFrontRight] + q[kJointLateralFrontLeft])/2;
+    }
+  }
+
+  float x_front = (stance_length[gait_phase]/2)*cos(rpy_lateral[gait_phase]) + q_front*sin(rpy_lateral[gait_phase]);    
+  float x_rear = (-stance_length[gait_phase]/2)*cos(rpy_lateral[gait_phase]) + q_rear*sin(rpy_lateral[gait_phase]);
+  float dx = x_front - x_rear;
+
+  float z_front = (stance_length[gait_phase]/2)*sin(rpy_lateral[gait_phase]) - q_front*cos(rpy_lateral[gait_phase]);    
+  float z_rear = (-stance_length[gait_phase]/2)*sin(rpy_lateral[gait_phase]) - q_rear*cos(rpy_lateral[gait_phase]);
+  float dz = z_front - z_rear;
+  
+  terrain_pitch = atan2(dz, dx);
 }
