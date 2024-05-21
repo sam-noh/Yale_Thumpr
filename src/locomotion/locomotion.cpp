@@ -5,10 +5,10 @@
 #include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> torque_profile_touchdown = {
-  {0.35, 0.25, 0.12}, // 0.18 and 0.12
-  {0.35, 0.25, 0.12},
-  {0.35, 0.25, 0.12},
-  {0.35, 0.25, 0.12}
+  {0.4, 0.35, 0.25, 0.12}, // 0.18 and 0.12
+  {0.4, 0.35, 0.25, 0.12},
+  {0.4, 0.35, 0.25, 0.12},
+  {0.4, 0.35, 0.25, 0.12}
 };
 
 // gait variables
@@ -24,6 +24,8 @@ bool isScheduled = false;                               // true if a motion prim
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 float z_body_nominal = 180;               // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
 float leg_swing_percent = 0.9;            // swing leg stroke as a percentage of its stroke at last stance phase
+float q_trans_min = -kQTransMax;
+float q_trans_max = 30;
 
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
@@ -294,6 +296,11 @@ void updateTrajectory() {
   if (counts_steady_y > kMinCountsSteadyCmd) cmd_vector[1] = input_y_filtered;
   if (counts_steady_height > kMinCountsSteadyCmd) z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;  // for now, nominal body height is equal to the leg actuator setpoint in stance
 
+  // adjust translation joint range based on normalized energy stability margin
+  // if (terrain_pitch > 20) {
+  //   q_trans_max = 
+  // }
+
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
   swing_percent_at_translate = leg_swing_percent;                                       // set translation transition percentage equal to swing retraction percentage
                                                                                         // the idea is: if large retraction is needed, then translation should also occur later
@@ -360,7 +367,7 @@ void regulateBodyPose() {
 
     // for each leg pair touching down
     for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
-      updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][0], kVelLegFootSlip);  // apply the torque command
+      updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][1], kVelLegFootSlip);  // apply the torque command
       resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
       q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
     }
@@ -368,7 +375,7 @@ void regulateBodyPose() {
     // maintain ground contact with the current stance legs by pushing down on the ground
     for (uint8_t idx_motor = stance*2; idx_motor < stance*2 + 2; ++idx_motor) {
       idx_motor_mp.push_back(idx_motor);
-      updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][2], kVelLegMaxContact);
+      updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][3], kVelLegMaxContact);
       resetLegMotorContactState(idx_motor);
     }
     t_start_contact = millis(); // update the time variable for contact detection
@@ -529,6 +536,7 @@ bool isReadyForTransition(uint8_t phase) {
     // if there is a translation command
     if (fabs(cmd_vector[0]) > EPS) {
       int dir = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                              // direction of translation command
+      // float q_trans_transition = pow(-1, gait_phase + 1)*trans_percent_at_touchdown*(q_trans_max - q_trans_min) + q_trans_min;
       float q_trans_transition = fabs(trans_percent_at_touchdown*motors[MotorID::kMotorTranslate].states_.q_d);             // this value is always positive since it represents forward motion, regardless of direction
       isTranslated = dir * pow(-1, gait_phase + 1) * q[JointID::kJointTranslate] > q_trans_transition;  // the translational joint has reached the transition point
                                                                                                         // don't check yaw; assume that any concurrent yaw motion will be completed in time
@@ -621,7 +629,7 @@ void checkStopCondition() {
 void updateTouchdown(uint8_t idx_body, float vel_limit) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
     q_leg_init[idx_motor] = motors[idx_motor].states_.q;  // update the initial leg position for contact estimation
-    updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][1], vel_limit);
+    updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][2], vel_limit);
     if (!isNotStuck(idx_motor)) {
       updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][0], vel_limit);
     }
@@ -636,7 +644,7 @@ void updateTouchdownTorque(uint8_t idx_body) {
     if (!isInContact[idx_motor]) {
       if ((motors[idx_motor].states_.q  - q_leg_init[idx_motor]) > kDqLegMotorStartup  // if past the startup displacement
           && isNotStuck(idx_motor)) {                                           // AND the legs have moved away from the joint limit
-        motors[idx_motor].states_.tau_d = torque_profile_touchdown[idx_motor][2];       // lower the leg torque
+        motors[idx_motor].states_.tau_d = torque_profile_touchdown[idx_motor][3];       // lower the leg torque
       }
     }
   }

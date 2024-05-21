@@ -42,8 +42,10 @@ const int kDirectionWorm[] = {-1, 1, 1, -1, 1, -1, -1, 1};
 // kinematic parameters
 const float kL_1 = 728;                     // perpendicular distance between opposite legs on the medial body
 const float kW_1 = 468;                     // perpendicular distance between opposite legs on the lateral body
+const float kW_2 = 350;                     // perpendicular distance between the front and rear legs on the lateral body
 const float kBodyZOffset = 0;               // vertical distance between medial body's and lateral body's shoulders
-const float stance_width[2] = {kW_1, kL_1};  // perpendiculuar distance between opposite legs in stance; used to calculate the required joint displacement for tilt control
+const float stance_width[2] = {kW_1, kL_1}; // perpendiculuar distance between opposite legs in stance; used to calculate the required joint displacement for tilt control
+const float stance_length[2] = {kL_1, kW_2};
 
 // mechanical joint limits and offsets
 const float kQLegMin = 0;               // min leg joint position in mm
