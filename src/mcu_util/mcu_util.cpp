@@ -289,7 +289,7 @@ void sendTelemetry() {
         motors[i].states_.q = 0;
       }
     }
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n",
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t",
              motors[0].states_.q, motors[1].states_.q, motors[2].states_.q, motors[3].states_.q, motors[4].states_.q, motors[5].states_.q);
 
     #ifdef DEBUG_ACTUATOR_POSITION
@@ -299,7 +299,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // actuator position setpoint
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n",
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t",
              motors[0].states_.q_d, motors[1].states_.q_d, motors[2].states_.q_d, motors[3].states_.q_d, motors[4].states_.q_d, motors[5].states_.q_d);
 
     #ifdef DEBUG_ACTUATOR_SETPOINT
@@ -314,7 +314,7 @@ void sendTelemetry() {
         motor_torque_filters[i].filtered_value = 0;
       }
     }
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n",
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t",
              motor_torque_filters[0].filtered_value, motor_torque_filters[1].filtered_value, motor_torque_filters[2].filtered_value,
              motor_torque_filters[3].filtered_value, motor_torque_filters[4].filtered_value, motor_torque_filters[5].filtered_value);
 
@@ -365,7 +365,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // ground contacts
-    snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%d\t%d\n",
+    snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%d\t%d\t",
              isInContact[0], isInContact[1], isInContact[2], isInContact[3]);
 
     #ifdef DEBUG_CONTACT
@@ -375,7 +375,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // battery voltage, current, power for motors
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\n", battery_voltage, battery_current, battery_power);
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t", battery_voltage, battery_current, battery_power);
 
     #ifdef DEBUG_POWER
     SERIAL_USB.print("battery V, A, P: ");
@@ -395,7 +395,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // IMU pose estimation
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\n", rpy_lateral[0], rpy_lateral[1], rpy_lateral[2]);
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t", rpy_lateral[0], rpy_lateral[1], rpy_lateral[2]);
 
     #ifdef DEBUG_RPY
     SERIAL_USB.print("RPY: ");
@@ -404,7 +404,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // IMU angular velocity
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\n", omega_filters[0].filtered_value, omega_filters[1].filtered_value, omega_filters[2].filtered_value);
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t", omega_filters[0].filtered_value, omega_filters[1].filtered_value, omega_filters[2].filtered_value);
 
     #ifdef DEBUG_OMEGA
     SERIAL_USB.print("omega: ");
@@ -413,7 +413,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // robot trajectory parameters
-    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\n", cmd_vector[0], cmd_vector[1], z_body_nominal, leg_swing_percent);
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t", cmd_vector[0], cmd_vector[1], z_body_nominal, leg_swing_percent);
 
     #ifdef DEBUG_TRAJECTORY
     SERIAL_USB.print("trajectory: ");
@@ -423,7 +423,7 @@ void sendTelemetry() {
     writeToCard(sent_data);
 
     // gait variables
-    snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%lu\t%.2f\n", gait_phase, actuation_phase, gait_cycles, dist_traveled/1000);
+    snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%lu\t%.2f\t", gait_phase, actuation_phase, gait_cycles, dist_traveled/1000);
 
     #ifdef DEBUG_GAIT
     SERIAL_USB.print("gait, actuation, cycles, dist: ");
@@ -431,7 +431,7 @@ void sendTelemetry() {
     #endif
     writeToCard(sent_data);
 
-    snprintf(sent_data, sizeof(sent_data), "motion primitive: %d\n", motion_primitive);
+    snprintf(sent_data, sizeof(sent_data), "motion primitive: %d\t", motion_primitive);
     writeToSerial();
 
     snprintf(sent_data, sizeof(sent_data), "\n");
