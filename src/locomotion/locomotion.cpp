@@ -337,11 +337,9 @@ void regulateBodyPose() {
   // this will override an ongoing non-blocking motion primitives such as single-stance pose regulation
 
   if (!isBlocking                           // if currently there's no blocking motion primitive
-      && !isScheduled                       // AND slip recovery was not just completed (prevents high angular velocity when tilted in both roll and pitch from triggering slip recovery again right away)
+      && !isScheduled                       // AND slip recovery was not just completed (prevents slip recovery from triggering again right away so that single-stance pose regulation can occur)
       && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
      ){
-
-    SERIAL_USB.println("Slip recovery------------------------------------------------------\n");
 
     // slip recovery overrides any ongoing motion primitives
     // assume that motors currently involved in a motion primitive will complete their motion and/or
@@ -354,18 +352,14 @@ void regulateBodyPose() {
     // determine which legs to touchdown
     if (isTippingRoll) {
       dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
-      SERIAL_USB.println("Adding motor for roll tipover\n");
     }
 
     if (isTippingPitch) {
       dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
-      SERIAL_USB.println("Adding motor for pitch tipover\n");
     }
 
     // for each leg pair touching down
     for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
-      snprintf(sent_data, sizeof(sent_data), "Touching down motor %d\n", (*idx_motor)+1);
-      writeToSerial();
       updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][0], kVelLegFootSlip);  // apply the torque command
       resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
       q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
@@ -470,24 +464,9 @@ void regulateBodyPose() {
       
       if (done) {
         idx_motor_mp.clear();
-
-        if (isInContact[gait_phase*2] && isInContact[gait_phase*2 + 1]) {
-          snprintf(sent_data, sizeof(sent_data), "Gait phase is %d\n", gait_phase);
-          writeToSerial();
-          SERIAL_USB.println("?????");
-          stop_signal = true;
-        }
-
-        if (!(isInContact[stance*2] && isInContact[stance*2 + 1])) {
-          SERIAL_USB.println("both stance legs are not in contact");
-          stop_signal = true;
-        }
-
-        // decide the next behavior based on current contact states
         
         // if only the stance legs are in contact, resume the normal gait cycle
         if ((isInContact[stance*2] && isInContact[stance*2 + 1]) && !(isInContact[gait_phase*2] || isInContact[gait_phase*2 + 1])) {
-          SERIAL_USB.println("Resuming normal gait cycle\n");
           actuation_phase = ActuationPhases::kRetractLeg; // resume the normal gait cycle by starting from leg retraction
           updateRetract();                                // reapply the leg retraction in case the leg retraction was interrupted for some reason
           
@@ -500,26 +479,13 @@ void regulateBodyPose() {
           isInContact[gait_phase*2] ? idx_motor_mp.push_back(gait_phase*2) : idx_motor_mp.push_back(gait_phase*2 + 1);  // the swing leg motor in contact; assume that only one pair will be in contact
           dq_tilt = (stance_width[stance]/2) * tan(rpy_lateral[stance] * DEG2RAD);                                      // body tilt angle to correct using the swing legs
           updateLegPosition(idx_motor_mp[0], fabs(dq_tilt));                                                            // move the single swing leg pair for tilt correction
-          snprintf(sent_data, sizeof(sent_data), "Single-side tilt correction using motor %d\n", idx_motor_mp[0]+1);
-          writeToSerial();
-
-          // sanity checks
-          if ((gait_phase*2 + (dq_tilt < 0)) != idx_motor_mp[0]) {
-            SERIAL_USB.println("tilt direction is not consistent with the swing leg in contact");
-            stop_signal = true;
-          }
-
-          updateTouchdown(stance, kVelLegMaxContact);             // maintain ground contact of the stance legs through force control while the swing leg moves in position control
-          snprintf(sent_data, sizeof(sent_data), "Leg motors %d and %d in touchdown to maintain ground contact\n", stance*2+1, stance*2 + 2);
-          writeToSerial();
+          updateTouchdown(stance, kVelLegMaxContact);                                                                   // maintain ground contact with the current stance legs by pushing down on the ground
 
           // if both tilt angles are severe, correct the stance tilt as well
           if(fabs(rpy_lateral[gait_phase]) > kThetaNominal) {
             rpy_lateral[gait_phase] > 0 ? idx_motor_mp.push_back(stance*2) : idx_motor_mp.push_back(stance*2 + 1);
             dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
             updateLegPosition(idx_motor_mp[1], fabs(dq_tilt));
-            snprintf(sent_data, sizeof(sent_data), "Single-side tilt correction using motor %d\n", idx_motor_mp[1]+1);
-            writeToSerial();
           }
 
           motion_primitive = ReactiveBehaviors::kSwingPosition;   // the single pair of swing legs in contact is commanded in position control for tilt correct
