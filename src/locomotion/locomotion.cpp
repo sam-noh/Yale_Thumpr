@@ -5,10 +5,10 @@
 #include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> torque_profile_touchdown = {
-  {0.35, 0.25, 0.12}, // 0.18 and 0.12
-  {0.35, 0.25, 0.12},
-  {0.35, 0.25, 0.12},
-  {0.35, 0.25, 0.12}
+  {0.4, 0.35, 0.25, 0.12}, // 0.18 and 0.12
+  {0.4, 0.35, 0.25, 0.12},
+  {0.4, 0.35, 0.25, 0.12},
+  {0.4, 0.35, 0.25, 0.12}
 };
 
 // gait variables
@@ -367,7 +367,7 @@ void regulateBodyPose() {
 
     // for each leg pair touching down
     for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
-      updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][0], kVelLegFootSlip);  // apply the torque command
+      updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][1], kVelLegFootSlip);  // apply the torque command
       resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
       q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
     }
@@ -375,7 +375,7 @@ void regulateBodyPose() {
     // maintain ground contact with the current stance legs by pushing down on the ground
     for (uint8_t idx_motor = stance*2; idx_motor < stance*2 + 2; ++idx_motor) {
       idx_motor_mp.push_back(idx_motor);
-      updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][2], kVelLegMaxContact);
+      updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][3], kVelLegMaxContact);
       resetLegMotorContactState(idx_motor);
     }
     t_start_contact = millis(); // update the time variable for contact detection
@@ -629,7 +629,7 @@ void checkStopCondition() {
 void updateTouchdown(uint8_t idx_body, float vel_limit) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
     q_leg_init[idx_motor] = motors[idx_motor].states_.q;  // update the initial leg position for contact estimation
-    updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][1], vel_limit);
+    updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][2], vel_limit);
     if (!isNotStuck(idx_motor)) {
       updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][0], vel_limit);
     }
@@ -644,7 +644,7 @@ void updateTouchdownTorque(uint8_t idx_body) {
     if (!isInContact[idx_motor]) {
       if ((motors[idx_motor].states_.q  - q_leg_init[idx_motor]) > kDqLegMotorStartup  // if past the startup displacement
           && isNotStuck(idx_motor)) {                                           // AND the legs have moved away from the joint limit
-        motors[idx_motor].states_.tau_d = torque_profile_touchdown[idx_motor][2];       // lower the leg torque
+        motors[idx_motor].states_.tau_d = torque_profile_touchdown[idx_motor][3];       // lower the leg torque
       }
     }
   }
