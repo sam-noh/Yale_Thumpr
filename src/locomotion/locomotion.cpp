@@ -5,10 +5,10 @@
 #include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> torque_profile_touchdown = {
-  {0.4, 0.25, 0.12}, // 0.18 and 0.12
-  {0.4, 0.25, 0.12},
-  {0.4, 0.25, 0.12},
-  {0.4, 0.25, 0.12}
+  {0.35, 0.25, 0.12}, // 0.18 and 0.12
+  {0.35, 0.25, 0.12},
+  {0.35, 0.25, 0.12},
+  {0.35, 0.25, 0.12}
 };
 
 // gait variables
