@@ -621,31 +621,13 @@ void estimateTerrainSlope() {
 
   // if medial stance
   if (gait_phase == GaitPhases::kLateralSwing) {
-
-    // if moving forward
-    if (dir == 1) {
-      q_front = motors[MotorID::kMotorMedialFront].states_.q;
-      q_rear  = motors[MotorID::kMotorMedialRear].states_.q;
-
-    // if moving backward
-    } else {
-      q_front = motors[MotorID::kMotorMedialRear].states_.q;
-      q_rear  = motors[MotorID::kMotorMedialFront].states_.q;
-    }
+    q_front = motors[MotorID::kMotorMedialFront].states_.q;
+    q_rear  = motors[MotorID::kMotorMedialRear].states_.q;
 
   // if lateral stance
   } else {
-
-    // if moving forward
-    if (dir == 1) {
-      q_front = (q[kJointLateralFrontRight] + q[kJointLateralFrontLeft])/2;
-      q_rear = (q[kJointLateralRearRight] + q[kJointLateralRearLeft])/2;
-
-    // if moving backward
-    } else {
-      q_front = (q[kJointLateralRearRight] + q[kJointLateralRearLeft])/2;
-      q_rear = (q[kJointLateralFrontRight] + q[kJointLateralFrontLeft])/2;
-    }
+    q_front = (q[kJointLateralFrontRight] + q[kJointLateralFrontLeft])/2;
+    q_rear = (q[kJointLateralRearRight] + q[kJointLateralRearLeft])/2;
   }
 
   float x_front = (stance_length[gait_phase]/2)*cos(rpy_lateral[gait_phase]) + q_front*sin(rpy_lateral[gait_phase]);    

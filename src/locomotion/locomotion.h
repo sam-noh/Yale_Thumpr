@@ -60,6 +60,9 @@ const float kStepShort = 0.4;           // cmd_vector[1] below which translation
 const float kLegSwingPercentMax = 0.9;
 const float kLegSwingPercentMin = 0.2;
 
+// energy stabiliy margin parameters
+const float kTerrainPitchMax = 30;      // maximum terrain pitch in degrees used for scaling the step length over terrain slopes
+
 // motion primitive parameters
 const float kZErrorSoftMax = 20;        // body height deviation in mm above which non-blocking regulation is executed
 const float kZErrorHardMax = 200;       // body height deviation in mm above which blocking regulation is executed
@@ -93,8 +96,8 @@ extern bool isScheduled;                // true if a motion primitive is schedul
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 extern float z_body_nominal;                // nominal body height over local terrain; currently taken as avg of stance leg motors joint position
 extern float leg_swing_percent;             // swing leg stroke as a percentage of its stroke at last stance phase
-extern float q_trans_min;
-extern float q_trans_max;
+extern std::vector<float> q_trans_limit;    // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
+extern float q_trans_prev;                  // translation joint position at last ground contact; used for phase transition check
 
 extern std::vector<float> q_leg_contact;            // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;              // position setpoint of swing leg actuators during leg retraction
