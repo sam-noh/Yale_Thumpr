@@ -450,6 +450,10 @@ void sendTelemetry() {
     writeToSerial();
     SERIAL_USB.println();
 
+    snprintf(sent_data, sizeof(sent_data), "q_trans: [%.2f, %.2f]\t", q_trans_limit[0], q_trans_limit[1]);
+    writeToSerial();
+    SERIAL_USB.println();
+    
     snprintf(sent_data, sizeof(sent_data), "\n");
     writeToSerial();
     writeToCard(sent_data);
