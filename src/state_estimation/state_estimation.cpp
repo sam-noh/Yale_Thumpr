@@ -365,6 +365,7 @@ void updateStates() {
   updatePowerMeasurement();
   updateMotorTorqueFilters();
   updateKinematics();
+  estimateTerrainSlope();
 }
 
 // update robot joint position, velocity, accelerations
@@ -617,7 +618,6 @@ bool isNotStuck(uint8_t idx_motor) {
 // using 2D simplification until vector support is added
 void estimateTerrainSlope() {
   float q_front, q_rear = 0;
-  int dir = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);    // direction of translation command
 
   // if medial stance
   if (gait_phase == GaitPhases::kLateralSwing) {
@@ -630,13 +630,13 @@ void estimateTerrainSlope() {
     q_rear = (q[kJointLateralRearRight] + q[kJointLateralRearLeft])/2;
   }
 
-  float x_front = (stance_length[gait_phase]/2)*cos(rpy_lateral[gait_phase]) + q_front*sin(rpy_lateral[gait_phase]);    
-  float x_rear = (-stance_length[gait_phase]/2)*cos(rpy_lateral[gait_phase]) + q_rear*sin(rpy_lateral[gait_phase]);
+  float x_front = (stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[gait_phase]) + q_front*sin(DEG2RAD*rpy_lateral[gait_phase]);    
+  float x_rear = (-stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[gait_phase]) + q_rear*sin(DEG2RAD*rpy_lateral[gait_phase]);
   float dx = x_front - x_rear;
 
-  float z_front = (stance_length[gait_phase]/2)*sin(rpy_lateral[gait_phase]) - q_front*cos(rpy_lateral[gait_phase]);    
-  float z_rear = (-stance_length[gait_phase]/2)*sin(rpy_lateral[gait_phase]) - q_rear*cos(rpy_lateral[gait_phase]);
+  float z_front = (stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[gait_phase]) - q_front*cos(DEG2RAD*rpy_lateral[gait_phase]);    
+  float z_rear = (-stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[gait_phase]) - q_rear*cos(DEG2RAD*rpy_lateral[gait_phase]);
   float dz = z_front - z_rear;
   
-  terrain_pitch = atan2(dz, dx);
+  terrain_pitch = RAD2DEG*atan2(dz, dx);
 }
