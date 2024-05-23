@@ -299,9 +299,9 @@ void updateTrajectory() {
   // adjust translation joint range based on normalized energy stability margin
   if (terrain_pitch > 0) {
     q_trans_limit[0] = -kQTransMax;
-    q_trans_limit[1] = kQTransMax*(1 - min(1, fabs(terrain_pitch)/kTerrainPitchMax));
+    q_trans_limit[1] = kQTransMax*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
   } else {
-    q_trans_limit[0] = -kQTransMax*(1 - min(1, fabs(terrain_pitch)/kTerrainPitchMax));
+    q_trans_limit[0] = -kQTransMax*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
     q_trans_limit[1] = kQTransMax;
   }
 
@@ -729,9 +729,18 @@ void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq) {
 }
 
 void moveLocomotionMechanism() {
-  float q_trans_min = q_trans_limit[(gait_phase+1) % 2];
-  float q_trans_max = q_trans_limit[gait_phase];
-  float q_trans = q_trans_min + cmd_vector[0]*(q_trans_max - q_trans_min);
+  int dir_cmd = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                              // direction of translation command
+  int dir_gait = pow(-1, gait_phase + 1);
+  float q_trans_min, q_trans_max;
+  if (dir_cmd*dir_gait == 1) {
+    q_trans_min = q_trans_limit[0];
+    q_trans_max = q_trans_limit[1];
+  } else {
+    q_trans_min = q_trans_limit[1];
+    q_trans_max = q_trans_limit[0];
+  }
+    
+  float q_trans = q_trans_min + fabs(cmd_vector[0])*(q_trans_max - q_trans_min);
   float q_yaw = pow(-1, gait_phase)*kQYawMax*cmd_vector[1];
   if (fabs(kQTransMax - fabs(q_trans)) < kDqTransEndYawLimit) q_yaw = pow(-1, gait_phase)*(kQYawMax - kDqYawLimit)*cmd_vector[1];
   motors[MotorID::kMotorTranslate].states_.q_d = q_trans;

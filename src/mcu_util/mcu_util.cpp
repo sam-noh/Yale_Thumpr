@@ -294,7 +294,7 @@ void sendTelemetry() {
              motors[0].states_.q, motors[1].states_.q, motors[2].states_.q, motors[3].states_.q, motors[4].states_.q, motors[5].states_.q);
 
     #ifdef DEBUG_ACTUATOR_POSITION
-    SERIAL_USB.print("actuator q (mm): ");
+    SERIAL_USB.print("actuator q (mm):\t");
     writeToSerial();
     SERIAL_USB.println();
     #endif
@@ -305,7 +305,7 @@ void sendTelemetry() {
              motors[0].states_.q_d, motors[1].states_.q_d, motors[2].states_.q_d, motors[3].states_.q_d, motors[4].states_.q_d, motors[5].states_.q_d);
 
     #ifdef DEBUG_ACTUATOR_SETPOINT
-    SERIAL_USB.print("actuator q_d (mm): ");
+    SERIAL_USB.print("actuator q_d (mm):\t");
     writeToSerial();
     SERIAL_USB.println();
     #endif
@@ -324,7 +324,6 @@ void sendTelemetry() {
     #ifdef DEBUG_ACTUATOR_TORQUE
     SERIAL_USB.print("motor torque (Nm): ");
     writeToSerial();
-    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -379,7 +378,6 @@ void sendTelemetry() {
     #ifdef DEBUG_CONTACT
     SERIAL_USB.print("contacts: ");
     writeToSerial();
-    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -389,7 +387,6 @@ void sendTelemetry() {
     #ifdef DEBUG_POWER
     SERIAL_USB.print("battery V, A, P: ");
     writeToSerial();
-    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -401,7 +398,6 @@ void sendTelemetry() {
     #ifdef DEBUG_POWER
     SERIAL_USB.print("motor P: ");
     writeToSerial();
-    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -411,7 +407,6 @@ void sendTelemetry() {
     #ifdef DEBUG_RPY
     SERIAL_USB.print("RPY: ");
     writeToSerial();
-    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -448,7 +443,6 @@ void sendTelemetry() {
 
     snprintf(sent_data, sizeof(sent_data), "terrain slope: %.2f\t", terrain_pitch);
     writeToSerial();
-    SERIAL_USB.println();
 
     snprintf(sent_data, sizeof(sent_data), "q_trans: [%.2f, %.2f]\t", q_trans_limit[0], q_trans_limit[1]);
     writeToSerial();
