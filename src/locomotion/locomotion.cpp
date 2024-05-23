@@ -22,15 +22,15 @@ bool isScheduled = false;                               // true if a motion prim
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
-float z_body_nominal = 180;               // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
-float leg_swing_percent = 0.9;            // swing leg stroke as a percentage of its stroke at last stance phase
-float q_trans_min = -kQTransMax;
-float q_trans_max = 30;
+float z_body_nominal = 180;                                 // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
+float leg_swing_percent = 0.9;                              // swing leg stroke as a percentage of its stroke at last stance phase
+std::vector<float> q_trans_limit = {-kQTransMax, kQTransMax};  // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
+float q_trans_prev = 0;                                     // translation joint position at last ground contact; used for phase transition check
 
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
 float swing_percent_at_translate = leg_swing_percent;     // 0.5; percentage of swing leg retraction after which translation begins; values closer to 1 can cause swing legs to collide with rough terrains
-float trans_percent_at_touchdown = 0.4;                   // 0.3; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
+float trans_percent_at_touchdown = 0.7;                   // 0.4; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
 float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw command from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
 std::vector<float> q_leg_contact = {kQLegMax, kQLegMax, kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
@@ -297,8 +297,12 @@ void updateTrajectory() {
   if (counts_steady_height > kMinCountsSteadyCmd) z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;  // for now, nominal body height is equal to the leg actuator setpoint in stance
 
   // adjust translation joint range based on normalized energy stability margin
-  // if (terrain_pitch > 20) {
-  //   q_trans_max = 
+  // if (terrain_pitch > 0) {
+  //   q_trans_limit[0] = -kQTransMax;
+  //   q_trans_limit[1] = kQTransMax*(1 - min(1, fabs(terrain_pitch)/kTerrainPitchMax));
+  // } else {
+  //   q_trans_limit[0] = -kQTransMax*(1 - min(1, fabs(terrain_pitch)/kTerrainPitchMax));
+  //   q_trans_limit[1] = kQTransMax;
   // }
 
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
@@ -535,11 +539,14 @@ bool isReadyForTransition(uint8_t phase) {
 
     // if there is a translation command
     if (fabs(cmd_vector[0]) > EPS) {
-      int dir = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                              // direction of translation command
-      // float q_trans_transition = pow(-1, gait_phase + 1)*trans_percent_at_touchdown*(q_trans_max - q_trans_min) + q_trans_min;
-      float q_trans_transition = fabs(trans_percent_at_touchdown*motors[MotorID::kMotorTranslate].states_.q_d);             // this value is always positive since it represents forward motion, regardless of direction
-      isTranslated = dir * pow(-1, gait_phase + 1) * q[JointID::kJointTranslate] > q_trans_transition;  // the translational joint has reached the transition point
-                                                                                                        // don't check yaw; assume that any concurrent yaw motion will be completed in time
+      int dir_cmd = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                              // direction of translation command
+      int dir_gait = pow(-1, gait_phase + 1);
+      float q_trans_transition = q_trans_prev + trans_percent_at_touchdown*(motors[MotorID::kMotorTranslate].states_.q_d - q_trans_prev);
+      if (dir_cmd*dir_gait == 1) {
+        isTranslated = q[JointID::kJointTranslate] > q_trans_transition;    // don't check yaw; assume that any concurrent yaw motion will be completed in time
+      } else {
+        isTranslated = q[JointID::kJointTranslate] < q_trans_transition;
+      }
 
     // if there is an in-place turn command
     } else if (fabs(cmd_vector[1]) > EPS) {
@@ -573,6 +580,8 @@ void updateGaitSetpoints() {
   if (!isBlocking && isReadyForTransition(actuation_phase)) {
 
     if (actuation_phase == ActuationPhases::kRetractLeg) {  // if currently retracting leg
+
+      q_trans_prev = q[JointID::kJointTranslate];  // remember the translation joint starting position 
 
       if (fabs(cmd_vector[0]) < EPS && fabs(cmd_vector[1]) < EPS) {   // if no translation or yaw command
         holdLocomotionMechanism();
@@ -720,7 +729,9 @@ void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq) {
 }
 
 void moveLocomotionMechanism() {
-  float q_trans = pow(-1, gait_phase + 1) * kQTransMax*cmd_vector[0];
+  float q_trans_min = q_trans_limit[(gait_phase+1) % 2];
+  float q_trans_max = q_trans_limit[gait_phase];
+  float q_trans = q_trans_min + cmd_vector[0]*(q_trans_max - q_trans_min);
   float q_yaw = pow(-1, gait_phase)*kQYawMax*cmd_vector[1];
   if (fabs(kQTransMax - fabs(q_trans)) < kDqTransEndYawLimit) q_yaw = pow(-1, gait_phase)*(kQYawMax - kDqYawLimit)*cmd_vector[1];
   motors[MotorID::kMotorTranslate].states_.q_d = q_trans;

@@ -281,6 +281,7 @@ void sendTelemetry() {
     // current time
     snprintf(sent_data, sizeof(sent_data), "%.3f\t", (float)t_current / 1000);
     writeToSerial();
+    SERIAL_USB.println();
     writeToCard(sent_data);
 
     // actuator position
@@ -295,6 +296,7 @@ void sendTelemetry() {
     #ifdef DEBUG_ACTUATOR_POSITION
     SERIAL_USB.print("actuator q (mm): ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -305,6 +307,7 @@ void sendTelemetry() {
     #ifdef DEBUG_ACTUATOR_SETPOINT
     SERIAL_USB.print("actuator q_d (mm): ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -321,6 +324,7 @@ void sendTelemetry() {
     #ifdef DEBUG_ACTUATOR_TORQUE
     SERIAL_USB.print("motor torque (Nm): ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -331,6 +335,7 @@ void sendTelemetry() {
     #ifdef DEBUG_ACTUATOR_TEMP
     SERIAL_USB.print("actuator temp (C): ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -341,6 +346,7 @@ void sendTelemetry() {
     #ifdef DEBUG_LEG_POSITION
     SERIAL_USB.print("leg q (mm): ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -351,6 +357,7 @@ void sendTelemetry() {
     #ifdef DEBUG_LEG_VELOCITY
     SERIAL_USB.print("leg q_dot (mm/s): ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -361,6 +368,7 @@ void sendTelemetry() {
     #ifdef DEBUG_LEG_ACCELERATION
     SERIAL_USB.print("leg q_ddot (mm/s^2): ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -371,6 +379,7 @@ void sendTelemetry() {
     #ifdef DEBUG_CONTACT
     SERIAL_USB.print("contacts: ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -380,6 +389,7 @@ void sendTelemetry() {
     #ifdef DEBUG_POWER
     SERIAL_USB.print("battery V, A, P: ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -389,8 +399,9 @@ void sendTelemetry() {
               motors[3].states_.bus_voltage*motors[3].states_.bus_current, motors[4].states_.bus_voltage*motors[4].states_.bus_current, motors[5].states_.bus_voltage*motors[5].states_.bus_current);
 
     #ifdef DEBUG_POWER
-    // SERIAL_USB.print("motor P: ");
-    // writeToSerial();
+    SERIAL_USB.print("motor P: ");
+    writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -400,6 +411,7 @@ void sendTelemetry() {
     #ifdef DEBUG_RPY
     SERIAL_USB.print("RPY: ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -409,6 +421,7 @@ void sendTelemetry() {
     #ifdef DEBUG_OMEGA
     SERIAL_USB.print("omega: ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -418,6 +431,7 @@ void sendTelemetry() {
     #ifdef DEBUG_TRAJECTORY
     SERIAL_USB.print("trajectory: ");
     writeToSerial();
+    SERIAL_USB.println();
 
     #endif
     writeToCard(sent_data);
@@ -428,11 +442,13 @@ void sendTelemetry() {
     #ifdef DEBUG_GAIT
     SERIAL_USB.print("gait, actuation, cycles, dist: ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
-    snprintf(sent_data, sizeof(sent_data), "motion primitive: %d\t", motion_primitive);
+    snprintf(sent_data, sizeof(sent_data), "terrain slope: %.2f\t", terrain_pitch);
     writeToSerial();
+    SERIAL_USB.println();
 
     snprintf(sent_data, sizeof(sent_data), "\n");
     writeToSerial();
