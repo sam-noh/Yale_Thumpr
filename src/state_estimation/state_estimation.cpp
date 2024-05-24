@@ -533,7 +533,7 @@ void updateLegMotorContactState(uint8_t idx_motor) {
       // if the leg cannot move kDqLegMotorStartContact after kDtTouchdown,
       // assume it is in contact
       if (t_current - t_start_contact > kDtTouchdown
-          && isNotStuck(idx_motor)) {
+          ) {
         isDecelerated[idx_leg] = isDecelerated[idx_leg] || q_dot[idx_leg] < kQdotLegContact;
       }
     }

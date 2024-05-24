@@ -42,7 +42,7 @@ const uint8_t kMinCountsSteadyCmd = 5;     // minimum number of steady input val
 
 // leg touchdown parameters
 const float kDqLegMotorStartup = 20;         // leg touchdown displacement after which a lower torque is applied
-const uint32_t kDtTouchdown = 750;           // minimum time duration for the touchdown phase
+const uint32_t kDtTouchdown = 1500;          // minimum time duration for the touchdown phase
 
 // kRetractLeg parameters
 const float kDqLegUnevenTerrain = 100;  // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
