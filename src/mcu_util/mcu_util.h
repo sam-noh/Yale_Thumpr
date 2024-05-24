@@ -10,7 +10,7 @@
 
 #define ENABLE_JETSON
 #define ENABLE_2ND_TEENSY
-#define ENABLE_SD_CARD
+// #define ENABLE_SD_CARD
 // #define ENABLE_IMU
 
 // #define DEBUG_TIMER
@@ -22,10 +22,11 @@
 // #define DEBUG_LEG_VELOCITY
 // #define DEBUG_LEG_ACCELERATION
 #define DEBUG_CONTACT
-// #define DEBUG_POWER
+#define DEBUG_SYSTEM_POWER
+// #define DEBUG_MOTOR_POWER
 #define DEBUG_RPY
 #define DEBUG_OMEGA
-// #define DEBUG_TRAJECTORY
+#define DEBUG_TRAJECTORY
 #define DEBUG_GAIT
 
 // AMT102-V incremental encoder pins
@@ -70,7 +71,7 @@
 #define TIME_HEADER  "T"                        // Header tag for serial time sync message
 
 // control loop periods
-const uint8_t k_dtPrint = 10;               // data print period in ms
+const uint8_t k_dtPrint = 50;               // data print period in ms
 const uint8_t k_dtSetpointUpdate = 2;       // joint setpoint update period in ms
 const uint8_t k_dtMotorLimitsUpdate = 50;   // motor controller limits update period in ms
 const uint8_t k_dtMotorCmdUpdate = 20;      // motor command update period in ms;

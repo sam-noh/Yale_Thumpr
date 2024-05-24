@@ -384,9 +384,10 @@ void sendTelemetry() {
     // battery voltage, current, power for motors
     snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t", battery_voltage, battery_current, battery_power);
 
-    #ifdef DEBUG_POWER
+    #ifdef DEBUG_SYSTEM_POWER
     SERIAL_USB.print("battery V, A, P: ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -395,9 +396,10 @@ void sendTelemetry() {
               motors[0].states_.bus_voltage*motors[0].states_.bus_current, motors[1].states_.bus_voltage*motors[1].states_.bus_current, motors[2].states_.bus_voltage*motors[2].states_.bus_current,
               motors[3].states_.bus_voltage*motors[3].states_.bus_current, motors[4].states_.bus_voltage*motors[4].states_.bus_current, motors[5].states_.bus_voltage*motors[5].states_.bus_current);
 
-    #ifdef DEBUG_POWER
+    #ifdef DEBUG_MOTOR_POWER
     SERIAL_USB.print("motor P: ");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -426,10 +428,23 @@ void sendTelemetry() {
     #ifdef DEBUG_TRAJECTORY
     SERIAL_USB.print("trajectory: ");
     writeToSerial();
-    SERIAL_USB.println();
 
     #endif
     writeToCard(sent_data);
+
+    snprintf(sent_data, sizeof(sent_data), "z_body: %.2f\t", z_body_local);
+    writeToSerial();
+    SERIAL_USB.println();
+
+    snprintf(sent_data, sizeof(sent_data), "terrain slope: %.2f\t", terrain_pitch);
+    writeToSerial();
+
+    snprintf(sent_data, sizeof(sent_data), "q_trans: [%.2f, %.2f]\t", q_trans_limit[0], q_trans_limit[1]);
+    writeToSerial();
+
+    snprintf(sent_data, sizeof(sent_data), "motion primitive: %d\t", motion_primitive);
+    writeToSerial();
+    SERIAL_USB.println();
 
     // gait variables
     snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%lu\t%.2f\t", gait_phase, actuation_phase, gait_cycles, dist_traveled/1000);
@@ -440,13 +455,6 @@ void sendTelemetry() {
     SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
-
-    snprintf(sent_data, sizeof(sent_data), "terrain slope: %.2f\t", terrain_pitch);
-    writeToSerial();
-
-    snprintf(sent_data, sizeof(sent_data), "q_trans: [%.2f, %.2f]\t", q_trans_limit[0], q_trans_limit[1]);
-    writeToSerial();
-    SERIAL_USB.println();
     
     snprintf(sent_data, sizeof(sent_data), "\n");
     writeToSerial();
