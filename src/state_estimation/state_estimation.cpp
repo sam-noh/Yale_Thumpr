@@ -630,12 +630,12 @@ void estimateTerrainSlope() {
     q_rear = (q[kJointLateralRearRight] + q[kJointLateralRearLeft])/2;
   }
 
-  float x_front = (stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[gait_phase]) + q_front*sin(DEG2RAD*rpy_lateral[gait_phase]);    
-  float x_rear = (-stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[gait_phase]) + q_rear*sin(DEG2RAD*rpy_lateral[gait_phase]);
+  float x_front = (stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[1]) - q_front*sin(DEG2RAD*rpy_lateral[1]);    
+  float x_rear = (-stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[1]) - q_rear*sin(DEG2RAD*rpy_lateral[1]);
   float dx = x_front - x_rear;
 
-  float z_front = (stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[gait_phase]) - q_front*cos(DEG2RAD*rpy_lateral[gait_phase]);    
-  float z_rear = (-stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[gait_phase]) - q_rear*cos(DEG2RAD*rpy_lateral[gait_phase]);
+  float z_front = (-stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[1]) - q_front*cos(DEG2RAD*rpy_lateral[1]);    
+  float z_rear = (stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[1]) - q_rear*cos(DEG2RAD*rpy_lateral[1]);
   float dz = z_front - z_rear;
   
   terrain_pitch = RAD2DEG*atan2(dz, dx);
