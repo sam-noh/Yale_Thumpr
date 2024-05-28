@@ -22,8 +22,8 @@ void loop() {
   while (!stop_signal) {
     handleODriveCANMsg();
     parseJetsonSerial();
-    updateTrajectory();
     updateStates();
+    updateTrajectory();
     updateLocomotion();
     updateMotorCommands();
     sendTelemetry();
