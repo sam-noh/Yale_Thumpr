@@ -48,6 +48,9 @@ const uint32_t kDtTouchdown = 1500;          // minimum time duration for the to
 const float kDqLegUnevenTerrain = 100;  // leg pair stroke difference in mm greater than which the terrain is assumed to be uneven
 const float kDqLegSwingMin = 60;        // minimum required leg retraction during swing
 
+// swing leg control parameters
+const float kMinDqClearance = -20;      // minimum required leg retraction for swing leg adjustment during single-stance pose regulation
+
 // body height regulation parameters
 const float kZBodyMin = 100;            // minimum allowable value for z_body_local
 const float kZBodyMax = 450;            // maximum allowable value for z_body_local

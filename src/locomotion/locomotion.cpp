@@ -417,7 +417,7 @@ void regulateBodyPose() {
 
     // adjust swing legs for ground clearance
     float dq_leg_max_clearance = min(dq_stance[0], dq_stance[1]);   // greater of the two leg retractions or lesser of the two leg extensions
-    if (dq_leg_max_clearance < -10) {                               // enforce minimum displacement to prevent frequent swing leg movements/jitters; only move swing legs upward
+    if (dq_leg_max_clearance < kMinDqClearance) {                   // enforce minimum displacement to prevent frequent swing leg movements/jitters; only move swing legs upward
       std::vector<float> dq_swing{dq_leg_max_clearance, dq_leg_max_clearance};
       updateBodyLegsPosition(gait_phase, dq_swing);
       q_leg_swing[gait_phase*2] = motors[gait_phase*2].states_.q_d;
