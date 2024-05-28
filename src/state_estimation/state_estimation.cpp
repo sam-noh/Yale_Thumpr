@@ -616,27 +616,32 @@ bool isNotStuck(uint8_t idx_motor) {
 
 // estimates the terrain slope based on current ground contacts
 // using 2D simplification until vector support is added
+// update terrain slope only upon ground contact
 void estimateTerrainSlope() {
-  float q_front, q_rear = 0;
+  if (actuation_phase == ActuationPhases::kTouchDown
+      && isInContact[gait_phase*2] && isInContact[gait_phase*2 + 1]
+      ) {
+    float q_front, q_rear = 0;
 
-  // if medial stance
-  if (gait_phase == GaitPhases::kLateralSwing) {
-    q_front = motors[MotorID::kMotorMedialFront].states_.q;
-    q_rear  = motors[MotorID::kMotorMedialRear].states_.q;
+    // if medial legs touched down
+    if (gait_phase == GaitPhases::kMedialSwing) {
+      q_front = motors[MotorID::kMotorMedialFront].states_.q;
+      q_rear  = motors[MotorID::kMotorMedialRear].states_.q;
 
-  // if lateral stance
-  } else {
-    q_front = (q[kJointLateralFrontRight] + q[kJointLateralFrontLeft])/2;
-    q_rear = (q[kJointLateralRearRight] + q[kJointLateralRearLeft])/2;
+    // if lateral legs touched down
+    } else {
+      q_front = (q[kJointLateralFrontRight] + q[kJointLateralFrontLeft])/2;
+      q_rear = (q[kJointLateralRearRight] + q[kJointLateralRearLeft])/2;
+    }
+
+    float x_front = (stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[1]) - q_front*sin(DEG2RAD*rpy_lateral[1]);    
+    float x_rear = (-stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[1]) - q_rear*sin(DEG2RAD*rpy_lateral[1]);
+    float dx = x_front - x_rear;
+
+    float z_front = (-stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[1]) - q_front*cos(DEG2RAD*rpy_lateral[1]);    
+    float z_rear = (stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[1]) - q_rear*cos(DEG2RAD*rpy_lateral[1]);
+    float dz = z_front - z_rear;
+    
+    terrain_pitch = RAD2DEG*atan2(dz, dx);
   }
-
-  float x_front = (stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[1]) - q_front*sin(DEG2RAD*rpy_lateral[1]);    
-  float x_rear = (-stance_length[gait_phase]/2)*cos(DEG2RAD*rpy_lateral[1]) - q_rear*sin(DEG2RAD*rpy_lateral[1]);
-  float dx = x_front - x_rear;
-
-  float z_front = (-stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[1]) - q_front*cos(DEG2RAD*rpy_lateral[1]);    
-  float z_rear = (stance_length[gait_phase]/2)*sin(DEG2RAD*rpy_lateral[1]) - q_rear*cos(DEG2RAD*rpy_lateral[1]);
-  float dz = z_front - z_rear;
-  
-  terrain_pitch = RAD2DEG*atan2(dz, dx);
 }

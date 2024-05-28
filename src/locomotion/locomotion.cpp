@@ -597,10 +597,14 @@ void updateGaitSetpoints() {
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
       updateStanceBodyTorque(gait_phase);
 
+      // if the robot's NESM is high enough (estimated by terrain slope and translational position),
       // advance the gait phase
-      gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
-      if (gait_phase == 0) {
-        gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles
+      // else, retract the same legs again and translate back to the acceptable joint range
+      if (q[JointID::kJointTranslate] > q_trans_limit[0] && q[JointID::kJointTranslate] < q_trans_limit[1]) {
+        gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
+        if (gait_phase == 0) {
+          gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles
+        }
       }
 
       updateRetract();
