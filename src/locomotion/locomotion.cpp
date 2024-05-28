@@ -297,7 +297,7 @@ void updateTrajectory() {
   if (counts_steady_height > kMinCountsSteadyCmd) z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;  // for now, nominal body height is equal to the leg actuator setpoint in stance
 
   // adjust translation joint range based on normalized energy stability margin
-  if (terrain_pitch > 0) {
+  if (terrain_pitch < 0) {
     q_trans_limit[0] = -kQTransMax;
     q_trans_limit[1] = kQTransMax*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
   } else {
