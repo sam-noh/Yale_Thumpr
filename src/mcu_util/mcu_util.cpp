@@ -442,7 +442,7 @@ void sendTelemetry() {
     snprintf(sent_data, sizeof(sent_data), "q_trans: [%.2f, %.2f]\t", q_trans_limit[0], q_trans_limit[1]);
     writeToSerial();
 
-    snprintf(sent_data, sizeof(sent_data), "motion primitive: %d\t", motion_primitive);
+    snprintf(sent_data, sizeof(sent_data), "blocking, scheduled, motion primitive: %d\t%d\t%d\t", isBlocking, isScheduled, motion_primitive);
     writeToSerial();
     SERIAL_USB.println();
 

@@ -296,13 +296,22 @@ void updateTrajectory() {
   if (counts_steady_y > kMinCountsSteadyCmd) cmd_vector[1] = input_y_filtered;
   if (counts_steady_height > kMinCountsSteadyCmd) z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;  // for now, nominal body height is equal to the leg actuator setpoint in stance
 
-  // adjust translation joint range based on normalized energy stability margin
+  // adjust translation joint range based on body height (abstracting normalized energy stability margin with body height)
+  float q_trans_scaled = kQTransSoftMax;
+  if (z_body_local > kZBodyStepScaleMin) {
+    q_trans_scaled *= max(0.3, 1 - min(1, ((z_body_local - kZBodyStepScaleMin)/(kZBodyStepScaleMax - kZBodyStepScaleMin))));
+  }
+  
+  // adjust translation joint range based on terrain slope (abstracting normalized energy stability margin with terrain slope)
   if (terrain_pitch < -kTerrainPitchMin) {
-    q_trans_limit[0] = -kQTransSoftMax;
-    q_trans_limit[1] = kQTransSoftMax*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
+    q_trans_limit[0] = -q_trans_scaled;
+    q_trans_limit[1] = q_trans_scaled*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
   } else if (terrain_pitch > kTerrainPitchMin) {
-    q_trans_limit[0] = -kQTransSoftMax*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
-    q_trans_limit[1] = kQTransSoftMax;
+    q_trans_limit[0] = -q_trans_scaled*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
+    q_trans_limit[1] = q_trans_scaled;
+  } else {
+    q_trans_limit[0] = -q_trans_scaled;
+    q_trans_limit[1] = q_trans_scaled;
   }
 
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
@@ -582,6 +591,7 @@ void updateGaitSetpoints() {
     if (actuation_phase == ActuationPhases::kRetractLeg) {  // if currently retracting leg
 
       q_trans_prev = q[JointID::kJointTranslate];  // remember the translation joint starting position 
+      isScheduled = false;
 
       if (fabs(cmd_vector[0]) < EPS && fabs(cmd_vector[1]) < EPS) {   // if no translation or yaw command
         holdLocomotionMechanism();
