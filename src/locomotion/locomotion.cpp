@@ -299,7 +299,7 @@ void updateTrajectory() {
   // adjust translation joint range based on body height (abstracting normalized energy stability margin with body height)
   float q_trans_scaled = kQTransSoftMax;
   if (z_body_local > kZBodyStepScaleMin) {
-    q_trans_scaled *= max(0.3, 1 - min(1, ((z_body_local - kZBodyStepScaleMin)/(kZBodyStepScaleMax - kZBodyStepScaleMin))));
+    q_trans_scaled *= max(0.5, 1 - min(1, ((z_body_local - kZBodyStepScaleMin)/(kZBodyStepScaleMax - kZBodyStepScaleMin))));
   }
   
   // adjust translation joint range based on terrain slope (abstracting normalized energy stability margin with terrain slope)
@@ -610,11 +610,15 @@ void updateGaitSetpoints() {
       // if the robot's NESM is high enough (estimated by terrain slope and translational position),
       // advance the gait phase
       // else, retract the same legs again and translate back to the acceptable joint range
-      if (q[JointID::kJointTranslate] + kQErrorMax > q_trans_limit[0] && q[JointID::kJointTranslate] - kQErrorMax < q_trans_limit[1]) {
-        gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
-        if (gait_phase == 0) {
-          gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles
-        }
+      // if (q[JointID::kJointTranslate] + kQErrorMax > q_trans_limit[0] && q[JointID::kJointTranslate] - kQErrorMax < q_trans_limit[1]) {
+      //   gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
+      //   if (gait_phase == 0) {
+      //     gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles
+      //   }
+      // }
+      gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
+      if (gait_phase == 0) {
+        gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles
       }
 
       updateRetract();

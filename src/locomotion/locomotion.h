@@ -64,7 +64,7 @@ const float kLegSwingPercentMax = 0.9;
 const float kLegSwingPercentMin = 0.2;
 
 // energy stabiliy margin parameters
-const float kZBodyStepScaleMin = 200;
+const float kZBodyStepScaleMin = 250;
 const float kZBodyStepScaleMax = 400;
 const float kTerrainPitchMin = 5;       // minimum terrain pitch in degrees over which step length is scaled
 const float kTerrainPitchMax = 30;      // maximum terrain pitch in degrees used for scaling the step length over terrain slopes
@@ -76,7 +76,7 @@ const float kThetaNominal = 1;          // body Euler angle above which non-bloc
 const float kThetaSoftMax_1 = 7;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_1
 const float kThetaSoftMax_2 = 5;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_2
 const float kOmegaSoftMax_1 = 12;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_1 or greater tilt
-const float kOmegaSoftMax_2 = 20;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_2 or greater tilt
+const float kOmegaSoftMax_2 = 25;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_2 or greater tilt
 const float kThetaHardMax = 40;         // body Euler angle above which robot is stopped
 
 // motor torque setpoints during leg touchdown; determined heuristically
