@@ -53,6 +53,7 @@ const float kQLegMax = 450;             // max leg joint position in mm
 const float kQLegUnstuck = 10;          // leg joint position in mm used for checking stuck legs
 const float kLegOffset = 0;             // vertical distance between medial and lateral body in mm; used to adjust leg setpoints
 const float kQTransMax = 95;            // max/min translation position from zero position in mm
+const float kQTransSoftMax = 85;        // max/min translation position from zero position in mm for the controller
 const float kQYawMax = 12;              // max/min yaw position from zero position in degrees
 const float kDqTransEndYawLimit = 20;   // distance from translational joint limit below which yaw command is reduced to avoid self-collision
 const float kDqYawLimit = 3;            // max yaw angle reduction when the translational joint is near the limit

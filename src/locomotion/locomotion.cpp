@@ -24,7 +24,7 @@ bool isScheduled = false;                               // true if a motion prim
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 float z_body_nominal = 180;                                 // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
 float leg_swing_percent = 0.9;                              // swing leg stroke as a percentage of its stroke at last stance phase
-std::vector<float> q_trans_limit = {-kQTransMax, kQTransMax};  // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
+std::vector<float> q_trans_limit = {-kQTransSoftMax, kQTransSoftMax};  // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
 float q_trans_prev = 0;                                     // translation joint position at last ground contact; used for phase transition check
 
 // actuation phase transition parameters
@@ -297,12 +297,12 @@ void updateTrajectory() {
   if (counts_steady_height > kMinCountsSteadyCmd) z_body_nominal = (kZBodyMax - kZBodyMin)*input_height + kZBodyMin;  // for now, nominal body height is equal to the leg actuator setpoint in stance
 
   // adjust translation joint range based on normalized energy stability margin
-  if (terrain_pitch < 0) {
-    q_trans_limit[0] = -kQTransMax;
-    q_trans_limit[1] = kQTransMax*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
-  } else {
-    q_trans_limit[0] = -kQTransMax*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
-    q_trans_limit[1] = kQTransMax;
+  if (terrain_pitch < -kTerrainPitchMin) {
+    q_trans_limit[0] = -kQTransSoftMax;
+    q_trans_limit[1] = kQTransSoftMax*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
+  } else if (terrain_pitch > kTerrainPitchMin) {
+    q_trans_limit[0] = -kQTransSoftMax*(1 - 1.5*min(1, fabs(terrain_pitch)/kTerrainPitchMax));
+    q_trans_limit[1] = kQTransSoftMax;
   }
 
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
@@ -600,7 +600,7 @@ void updateGaitSetpoints() {
       // if the robot's NESM is high enough (estimated by terrain slope and translational position),
       // advance the gait phase
       // else, retract the same legs again and translate back to the acceptable joint range
-      if (q[JointID::kJointTranslate] > q_trans_limit[0] && q[JointID::kJointTranslate] < q_trans_limit[1]) {
+      if (q[JointID::kJointTranslate] + kQErrorMax > q_trans_limit[0] && q[JointID::kJointTranslate] - kQErrorMax < q_trans_limit[1]) {
         gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
         if (gait_phase == 0) {
           gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles

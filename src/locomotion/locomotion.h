@@ -64,6 +64,7 @@ const float kLegSwingPercentMax = 0.9;
 const float kLegSwingPercentMin = 0.2;
 
 // energy stabiliy margin parameters
+const float kTerrainPitchMin = 10;      // minimum terrain pitch in degrees over which step length is scaled
 const float kTerrainPitchMax = 30;      // maximum terrain pitch in degrees used for scaling the step length over terrain slopes
 
 // motion primitive parameters
