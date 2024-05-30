@@ -420,7 +420,9 @@ void regulateBodyPose() {
       dq_stance[1] -= z_error;
     }
 
-    updateBodyLegsPosition(stance, dq_stance);   // move stance legs
+    float vel_lim = 0;
+    fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_1 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
+    updateBodyLegsPosition(stance, dq_stance, vel_lim);   // move stance legs
     idx_motor_mp.push_back(stance*2);
     idx_motor_mp.push_back(stance*2 + 1);
 
@@ -428,7 +430,7 @@ void regulateBodyPose() {
     float dq_leg_max_clearance = min(dq_stance[0], dq_stance[1]);   // greater of the two leg retractions or lesser of the two leg extensions
     if (dq_leg_max_clearance < kMinDqClearance) {                   // enforce minimum displacement to prevent frequent swing leg movements/jitters; only move swing legs upward
       std::vector<float> dq_swing{dq_leg_max_clearance, dq_leg_max_clearance};
-      updateBodyLegsPosition(gait_phase, dq_swing);
+      updateBodyLegsPosition(gait_phase, dq_swing, kVelLegTrajStandup);
       q_leg_swing[gait_phase*2] = motors[gait_phase*2].states_.q_d;
       q_leg_swing[gait_phase*2 + 1] = motors[gait_phase*2 + 1].states_.q_d;
     }
@@ -443,8 +445,8 @@ void regulateBodyPose() {
             ){
 
       std::vector<float> dq_stance{-z_error, -z_error};
-      updateBodyLegsPosition(GaitPhases::kLateralSwing, dq_stance);
-      updateBodyLegsPosition(GaitPhases::kMedialSwing, dq_stance);
+      updateBodyLegsPosition(GaitPhases::kLateralSwing, dq_stance, kVelLegTrajStandup);
+      updateBodyLegsPosition(GaitPhases::kMedialSwing, dq_stance, kVelLegTrajStandup);
       for (auto i = 0; i < 4; ++i) { idx_motor_mp.push_back(i); }
 
       motion_primitive = ReactiveBehaviors::kStancePosition;
@@ -498,14 +500,18 @@ void regulateBodyPose() {
         } else {
           isInContact[gait_phase*2] ? idx_motor_mp.push_back(gait_phase*2) : idx_motor_mp.push_back(gait_phase*2 + 1);  // the swing leg motor in contact; assume that only one pair will be in contact
           dq_tilt = (stance_width[stance]/2) * tan(rpy_lateral[stance] * DEG2RAD);                                      // body tilt angle to correct using the swing legs
-          updateLegPosition(idx_motor_mp[0], fabs(dq_tilt));                                                            // move the single swing leg pair for tilt correction
+          float vel_lim = 0;
+          fabs(rpy_lateral[stance]) > kThetaSoftMax_1 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
+          updateLegPosition(idx_motor_mp[0], fabs(dq_tilt), vel_lim);                                                   // move the single swing leg pair for tilt correction
           updateTouchdown(stance, kVelLegMaxContact);                                                                   // maintain ground contact with the current stance legs by pushing down on the ground
 
           // if both tilt angles are severe, correct the stance tilt as well
           if(fabs(rpy_lateral[gait_phase]) > kThetaNominal) {
             rpy_lateral[gait_phase] > 0 ? idx_motor_mp.push_back(stance*2) : idx_motor_mp.push_back(stance*2 + 1);
             dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
-            updateLegPosition(idx_motor_mp[1], fabs(dq_tilt));
+            vel_lim = 0;
+            fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_1 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
+            updateLegPosition(idx_motor_mp[1], fabs(dq_tilt), vel_lim);
           }
 
           motion_primitive = ReactiveBehaviors::kSwingPosition;   // the single pair of swing legs in contact is commanded in position control for tilt correct
@@ -723,10 +729,10 @@ void updateRetract() {
   }
 }
 
-void updateLegPosition(uint8_t idx_motor, float dq) {
+void updateLegPosition(uint8_t idx_motor, float dq, float vel_lim) {
   motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
   motors[idx_motor].states_.holding = false;
-  motors[idx_motor].states_.trap_traj_vel_limit = kVelLegTrajStandup;
+  motors[idx_motor].states_.trap_traj_vel_limit = vel_lim;
   motors[idx_motor].states_.trap_traj_accel_limit = kAccelLegTrajStandup;
   motors[idx_motor].states_.trap_traj_decel_limit = kDecelLegTrajStandup;
   motors[idx_motor].states_.q_d = motors[idx_motor].states_.q + dq;
@@ -739,10 +745,10 @@ void updateLegPosition(uint8_t idx_motor, float dq) {
   }
 }
 
-void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq) {
+void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq, float vel_lim) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
     uint8_t i = idx_motor - idx_body*2;
-    updateLegPosition(idx_motor, dq[i]);
+    updateLegPosition(idx_motor, dq[i], vel_lim);
   }
 }
 
