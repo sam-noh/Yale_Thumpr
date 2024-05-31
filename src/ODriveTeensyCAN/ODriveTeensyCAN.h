@@ -5,7 +5,23 @@
 #include <FlexCAN_T4.h>
 #include <string>
 
-// HeartbeatMsg_t struct defintion
+// EndpointMsg_t struct definition
+struct EndpointMsg_t {
+    uint8_t reserved0 = 0;
+    uint16_t endpoint_id = 0;
+    uint8_t reserved1 = 0;
+    float value = 0;
+
+    void parseMessage(const CAN_message_t &inMsg) {
+        memcpy(&(reserved0), &inMsg.buf[0], 1);
+        memcpy(&(endpoint_id), &inMsg.buf[1], 2);
+        memcpy(&(reserved0), &inMsg.buf[3], 1);
+        memcpy(&(value), &inMsg.buf[4], 4);
+    }
+
+};
+
+// HeartbeatMsg_t struct definition
 struct HeartbeatMsg_t {
     uint32_t Axis_Error = 0;
     uint8_t Axis_State = 0;
@@ -178,6 +194,14 @@ public:
     void sendMessage(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes);
 	
 	bool ReadMsg(CAN_message_t& inMsg);
+
+    void RxSdo(int axis_id, int op_code, int endpoint_id, float value = 0);
+
+    void ReadParameter(int axis_id, int endpoint_id);
+
+    void WriteParameter(int axis_id, int endpoint_id, float value);
+
+    void GetEndpointResponse(EndpointMsg_t &returnVals, CAN_message_t &inMsg);
 	
 	// Heartbeat
 	void Heartbeat(HeartbeatMsg_t &returnVals, CAN_message_t &inMsg);

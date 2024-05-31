@@ -42,11 +42,34 @@ bool ODriveTeensyCAN::ReadMsg(CAN_message_t& inMsg) {
 	}
 }
 
-// void ODriveTeensyCAN::RxSdo(int axis_id, uint16 endpoint_id) {
-// 	byte* node_id_b = (byte*) &node_id;
-	
-// 	sendMessage(axis_id, kCmdIdRxSdo, false, 4, node_id_b);
-// }
+void ODriveTeensyCAN::RxSdo(int axis_id, int op_code, int endpoint_id, float value) {
+    byte* op_code_b = (byte*) &op_code;
+    byte* endpoint_id_b = (byte*) &endpoint_id;
+    byte* value_b = (byte*) &value;
+    byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+    msg_data[0] = op_code_b[0];
+    msg_data[1] = endpoint_id_b[0];
+    msg_data[2] = endpoint_id_b[1];
+    msg_data[4] = value_b[0];
+    msg_data[5] = value_b[1];
+    msg_data[6] = value_b[2];
+    msg_data[7] = value_b[3];
+
+    sendMessage(axis_id, kCmdIdRxSdo, false, 8, msg_data);
+}
+
+void ODriveTeensyCAN::ReadParameter(int axis_id, int endpoint_id) {
+    RxSdo(axis_id, 0, endpoint_id);
+}
+
+void ODriveTeensyCAN::WriteParameter(int axis_id, int endpoint_id, float value) {
+    RxSdo(axis_id, 1, endpoint_id, value);
+}
+
+void ODriveTeensyCAN::GetEndpointResponse(EndpointMsg_t &returnVals, CAN_message_t &inMsg) {
+    returnVals.parseMessage(inMsg);
+}
 
 void ODriveTeensyCAN::Heartbeat(HeartbeatMsg_t &returnVals, CAN_message_t &inMsg) {
 	returnVals.parseMessage(inMsg);

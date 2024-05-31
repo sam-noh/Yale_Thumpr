@@ -56,6 +56,11 @@ uint32_t handleODriveCANMsg() {
         }
       }
 
+    // read returned parameter
+    } else if (cmd_id == ODriveTeensyCAN::CommandId_t::kCmdIdTxSdo) {
+      EndpointMsg_t endpoint_msg;
+      ODrive_CAN.GetEndpointResponse(endpoint_msg, msg);
+      
     // read active_error
     } else if (cmd_id == ODriveTeensyCAN::CommandId_t::kCmdIdGetError) {
       ErrorMsg_t error_msg;
