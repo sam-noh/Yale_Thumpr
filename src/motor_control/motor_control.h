@@ -50,7 +50,7 @@ const float kQdotYawHomingStop = 8;             // yaw motor homing stop conditi
 
 // motor (1) controller velocity limits and (2) trapezoidal trajectory velocity limits
 const float kVelLegMax = 100;                   // leg motor controller velocity limit in turns/s
-const float kVelLegMaxContact = 30;             // leg motor controller velocity limit during touchdown in turns/s
+const float kVelLegMaxContact = 25;             // leg motor controller velocity limit during touchdown in turns/s
 const float kVelLegFootSlip = 80;               // leg motor controller velocity limit during unexpected foot slip and body tilt in turns/s
 const float kVelTransMax = 22;                  // translation motor controller velocity limit in turns/s
 const float kVelYawMax = 5.8;                   // yaw motor controller velocity limit in turns/s
@@ -71,7 +71,7 @@ const float kAccelYawTraj = 10;                 // yaw motor trapezoidal traject
 const float kDecelLegTrajSwing = 150;           // 250; leg motor trapezoidal trajectory deceleration when retracting legs in turns/s^2
 const float kDecelLegTrajStandup = 80;          // 60; leg motor trapezoidal trajectory deceleration when changing height in turns/s^2;
 const float kDecelLegTrajTilt = 30;             // leg motor trapezoidal trajectory deceleration when tilt correcting in turns/s^2;
-const float kDecelTransTraj = 25;               // translation motor trapezoidal trajectory acceleration;
+const float kDecelTransTraj = 18;               // translation motor trapezoidal trajectory acceleration;
 const float kDecelYawTraj = 5;                  // yaw motor trapezoidal trajectory acceleration
 
 // motor current limits
