@@ -341,11 +341,13 @@ void regulateBodyPose() {
   }
 
   // check if the body is tipping over; two velocity ranges
-  bool isTippingRoll = ((dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_1 && fabs(rpy_lateral[0]) > kThetaSoftMax_1)
-                      || ((dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_2 && fabs(rpy_lateral[0]) > kThetaSoftMax_2);
+  bool isTippingRoll = (fabs(rpy_lateral[0]) > kThetaSoftMax_1 && (dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_1)
+                       || (fabs(rpy_lateral[0]) > kThetaSoftMax_2 && (dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_2)
+                       || fabs(rpy_lateral[0]) > kThetaSoftMax_3;
 
-  bool isTippingPitch = ((dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_1 && fabs(rpy_lateral[1]) > kThetaSoftMax_1)
-                       || ((dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_2 && fabs(rpy_lateral[1]) > kThetaSoftMax_2);
+  bool isTippingPitch = (fabs(rpy_lateral[1]) > kThetaSoftMax_1 && (dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_1)
+                        || (fabs(rpy_lateral[1]) > kThetaSoftMax_2 && (dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_2)
+                        || fabs(rpy_lateral[1]) > kThetaSoftMax_3;
 
   // slip recovery
   // executes a blocking maneuver where legs on the tipping side touch down
@@ -421,7 +423,7 @@ void regulateBodyPose() {
     }
 
     float vel_lim = 0;
-    fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_1 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
+    fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
     updateBodyLegsPosition(stance, dq_stance, vel_lim);   // move stance legs
     idx_motor_mp.push_back(stance*2);
     idx_motor_mp.push_back(stance*2 + 1);
@@ -501,7 +503,7 @@ void regulateBodyPose() {
           isInContact[gait_phase*2] ? idx_motor_mp.push_back(gait_phase*2) : idx_motor_mp.push_back(gait_phase*2 + 1);  // the swing leg motor in contact; assume that only one pair will be in contact
           dq_tilt = (stance_width[stance]/2) * tan(rpy_lateral[stance] * DEG2RAD);                                      // body tilt angle to correct using the swing legs
           float vel_lim = 0;
-          fabs(rpy_lateral[stance]) > kThetaSoftMax_1 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
+          fabs(rpy_lateral[stance]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
           updateLegPosition(idx_motor_mp[0], fabs(dq_tilt), vel_lim);                                                   // move the single swing leg pair for tilt correction
           updateTouchdown(stance, kVelLegMaxContact);                                                                   // maintain ground contact with the current stance legs by pushing down on the ground
 
@@ -510,7 +512,7 @@ void regulateBodyPose() {
             rpy_lateral[gait_phase] > 0 ? idx_motor_mp.push_back(stance*2) : idx_motor_mp.push_back(stance*2 + 1);
             dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
             vel_lim = 0;
-            fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_1 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
+            fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
             updateLegPosition(idx_motor_mp[1], fabs(dq_tilt), vel_lim);
           }
 
