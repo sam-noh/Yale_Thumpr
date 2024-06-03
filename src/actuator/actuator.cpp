@@ -14,6 +14,9 @@ Actuator::Actuator(const ODriveTeensyCAN & _ODrive, usb_serial_class & _USB_Seri
 
     states_.velocity_limit = _vel_lim;
     states_.current_limit = _cur_lim;
+    
+    states_.torque_soft_min = -std::numeric_limits<float>::infinity();
+    states_.torque_soft_max = std::numeric_limits<float>::infinity();
 
     states_.trap_traj_accel_limit = _tt_accel_limit;
     states_.trap_traj_decel_limit = _tt_decel_limit;

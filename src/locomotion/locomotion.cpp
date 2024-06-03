@@ -246,9 +246,9 @@ void updateLocomotion() {
     t_last_setpoint_update = t_current;
 
     // calculate stability metrics here
-    regulateBodyPose(); // if this function executes motions, updateSetpoint() is bypassed during the process
-    updateGaitSetpoints();  // update setpoints for the motors in the swing phase
-    checkStopCondition();
+    regulateBodyPose();     // if a blocking motion primitive is executed here, updateGaitSetpoints() is bypassed
+    updateGaitSetpoints();  // update motor setpoints throughout the normal gait cycle
+    checkStopCondition();   // add kill conditions here
   }
 }
 
@@ -630,6 +630,7 @@ void updateGaitSetpoints() {
       }
 
       updateRetract();
+      limitRetractionTorque(gait_phase);
       resetBodyLegContactState(gait_phase);
     }
 
@@ -638,6 +639,8 @@ void updateGaitSetpoints() {
     // update setpoints that do not involve an actuation phase transition here
   } else if (!isBlocking) {
     if (actuation_phase == ActuationPhases::kRetractLeg) {          // if currently retracting leg
+
+      limitRetractionTorque(gait_phase);                            // update torque limit based on leg position
       
     } else if (actuation_phase == ActuationPhases::kLocomote) {     // if currently translating or turning
       
@@ -728,6 +731,18 @@ void updateRetract() {
     motors[idx_motor].states_.trap_traj_vel_limit = kVelLegTrajSwing;
     motors[idx_motor].states_.trap_traj_accel_limit = kAccelLegTrajSwing;
     motors[idx_motor].states_.trap_traj_decel_limit = kDecelLegTrajSwing;
+  }
+}
+
+// limit leg motor torque during retraction if at least one leg is near the joint limit
+// to prevent the leg from locking up due to belt tension
+void limitRetractionTorque(uint8_t idx_body) {
+  for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
+    if (!isNotStuck(idx_motor)) {
+      motors[idx_motor].states_.torque_soft_min = kTorqueLegMinJointLimit;
+    } else {
+      motors[idx_motor].states_.torque_soft_min = -std::numeric_limits<float>::infinity();
+    }
   }
 }
 

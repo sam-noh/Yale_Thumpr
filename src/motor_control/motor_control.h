@@ -81,6 +81,9 @@ const float kCurrentTransMax = 8;               // translation motor current lim
 const float kCurrentYawMax = 5;                 // yaw motor current limit in ampere
 const float kCurrentTransMaxHoming = 6;         // translation motor current limit while homing in ampere
 
+// motor torque limits
+const float kTorqueLegMinJointLimit = -0.14;    // leg motor torque limit in Nm when retracting with at least one leg near the joint limit
+
 // motor temperature limits
 const float kTemperatureLegMotorMax = 60;       // leg motor temperature limit in celsius
 

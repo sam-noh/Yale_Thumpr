@@ -19,6 +19,9 @@ class Actuator {
     float velocity_limit;
     float current_limit;
 
+    float torque_soft_min;
+    float torque_soft_max;
+
     float trap_traj_accel_limit;
     float trap_traj_decel_limit;
     float trap_traj_vel_limit;

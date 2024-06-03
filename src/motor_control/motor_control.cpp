@@ -36,7 +36,7 @@ uint32_t handleODriveCANMsg() {
     stop_signal = true;
   }
 
-  if (ODrive_CAN.ReadMsg(msg)) {
+  if (ODrive_CAN.readMsg(msg)) {
     t_last_CAN_msg = millis();    // feed the watchdog
 
     msg_id = msg.id;
@@ -264,6 +264,7 @@ void updateMotorCommands() {
 
       // update motor and controller limits
       ODrive_CAN.SetLimits(idx_motor, motors[idx_motor].states_.velocity_limit, motors[idx_motor].states_.current_limit);
+      if (idx_motor < 4) { ODrive_CAN.SetMinTorqueLimit(idx_motor, motors[idx_motor].states_.torque_soft_min); }   // currently, only leg motors' torque limits need to be updated during retraction
       ODrive_CAN.SetTrajVelLimit(idx_motor, motors[idx_motor].states_.trap_traj_vel_limit);
       ODrive_CAN.SetTrajAccelLimits(idx_motor, motors[idx_motor].states_.trap_traj_accel_limit, motors[idx_motor].states_.trap_traj_decel_limit);
       motors[idx_motor].setControlMode(motors[idx_motor].states_.ctrl_mode);

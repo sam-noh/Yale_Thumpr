@@ -148,6 +148,10 @@ void updateStanceBodyTorque(uint8_t idx_body);
 // determine swing leg setpoints based on contact conditions and update the motor control mode and limits for swing phase
 void updateRetract();
 
+// limit leg motor torque during retraction if at least one leg is near the joint limit
+// to prevent the leg from locking up due to belt tension
+void limitRetractionTorque(uint8_t idx_body);
+
 void updateLegPosition(uint8_t idx_motor, float dq, float vel_lim);
 
 void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq, float vel_lim);

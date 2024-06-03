@@ -161,6 +161,11 @@ public:
         kCmdIdEnterDFUMode = 0x01F,
     };
 
+    enum EndpointID_t {
+        kEndpointIDTorqueSoftMin = 254,
+        kEndpointIDTorqueSoftMax = 255,
+    };
+
     enum ODriveError {
         ODRIVE_ERROR_NONE                        = 0x00000000,
         ODRIVE_ERROR_INITIALIZING                = 0x00000001,
@@ -191,15 +196,15 @@ public:
 	
 	int CANBaudRate = 250000;  //250,000 is odrive default
 
-    void sendMessage(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes);
+    void sendMsg(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes);
 	
-	bool ReadMsg(CAN_message_t& inMsg);
+	bool readMsg(CAN_message_t& inMsg);
 
     void RxSdo(int axis_id, int op_code, int endpoint_id, float value = 0);
 
-    void ReadParameter(int axis_id, int endpoint_id);
+    void readParam(int axis_id, int endpoint_id);
 
-    void WriteParameter(int axis_id, int endpoint_id, float value);
+    void writeParam(int axis_id, int endpoint_id, float value);
 
     void GetEndpointResponse(EndpointMsg_t &returnVals, CAN_message_t &inMsg);
 	
@@ -216,6 +221,7 @@ public:
     void SetVelocity(int axis_id, float velocity, float current_feedforward);
     void SetTorque(int axis_id, float torque);
 	void SetLimits(int axis_id, float velocity_limit, float current_limit);
+    void SetMinTorqueLimit(int axis_id, float min_torque_limit);    // endpoint id may change with firmware; check flat_endpoints.json from ODrive
 	void SetTrajVelLimit(int axis_id, float traj_vel_limit);
 	void SetTrajAccelLimits(int axis_id, float traj_accel_limit, float traj_decel_limit);
 	void SetTrajInertia(int axis_id, float traj_inertia);
