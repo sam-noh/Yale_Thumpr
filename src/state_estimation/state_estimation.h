@@ -225,6 +225,8 @@ void updateKinematics();
 // returns true if the two legs for the corresponding motor are away from the minimum joint limit by a margin
 bool isNotStuck(uint8_t idx_motor);
 
+bool isNearLimitLeg(uint8_t idx_motor);
+
 // estimates the terrain slope based on current ground contacts
 // using 2D simplification until vector support is added
 void estimateTerrainSlope();

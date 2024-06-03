@@ -613,6 +613,9 @@ void updateKinematics() {
 bool isNotStuck(uint8_t idx_motor) {
   return (q[idx_motor*2] > kQLegUnstuck) && (q[idx_motor*2 + 1] > kQLegUnstuck);
 }
+bool isNearLimitLeg(uint8_t idx_motor) {
+  return (q[idx_motor*2] < kQLegNearLimit) || (q[idx_motor*2 + 1] < kQLegNearLimit);
+}
 
 // estimates the terrain slope based on current ground contacts
 // using 2D simplification until vector support is added

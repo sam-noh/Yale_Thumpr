@@ -53,6 +53,7 @@ void homeLeggedRobot() {
   // leg actuator homing
   for (uint8_t idx_motor = 0; idx_motor < kNumOfLegs/2; ++idx_motor) {
     motors[idx_motor].states_.current_limit = kCurrentLegMaxHoming;
+    motors[idx_motor].states_.torque_soft_min = -0.2;
     motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kVelocityControl;
     motors[idx_motor].states_.q_dot_d = kQdotLegHoming;
   }
@@ -75,6 +76,7 @@ void homeLeggedRobot() {
         motors[idx_motor].states_.ctrl_mode = ODriveTeensyCAN::ControlMode_t::kPositionControl;
         motors[idx_motor].states_.trap_traj_vel_limit = kVelLegTrajStandup;
         motors[idx_motor].states_.current_limit = kCurrentLegMax;
+        motors[idx_motor].states_.torque_soft_min = -std::numeric_limits<float>::infinity();
                 
         motors[idx_motor].states_.homed = true;
         motors[idx_motor].states_.pos_home = motors[idx_motor].states_.pos_abs;
@@ -667,6 +669,7 @@ void checkStopCondition() {
 void updateTouchdown(uint8_t idx_body, float vel_limit) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
     q_leg_init[idx_motor] = motors[idx_motor].states_.q;  // update the initial leg position for contact estimation
+    motors[idx_motor].states_.torque_soft_min = -std::numeric_limits<float>::infinity();  // remove the torque limit
     updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][2], vel_limit);
     if (!isNotStuck(idx_motor)) {
       updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][0], vel_limit);
@@ -738,7 +741,7 @@ void updateRetract() {
 // to prevent the leg from locking up due to belt tension
 void limitRetractionTorque(uint8_t idx_body) {
   for (uint8_t idx_motor = idx_body*2; idx_motor < idx_body*2 + 2; ++idx_motor) {
-    if (!isNotStuck(idx_motor)) {
+    if (isNearLimitLeg(idx_motor)) {
       motors[idx_motor].states_.torque_soft_min = kTorqueLegMinJointLimit;
     } else {
       motors[idx_motor].states_.torque_soft_min = -std::numeric_limits<float>::infinity();
