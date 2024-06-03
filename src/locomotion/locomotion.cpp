@@ -532,9 +532,19 @@ void regulateBodyPose() {
 
       if (done) {
         updateStanceBodyTorque(stance);
-        actuation_phase = ActuationPhases::kRetractLeg; // resume the normal gait cycle by starting from leg retraction
-        updateRetract();                                // reapply the leg retraction in case the leg retraction was interrupted for some reason
-        resetBodyLegContactState(gait_phase);
+        
+        // if the normalized energy stability is low (lateral stance and body not centered)
+        // transition to medial stance since it has a higher normalized energy stability margin
+        if (gait_phase == GaitPhases::kMedialSwing && fabs(q[JointID::kJointTranslate]) > kDqTransCentered) {
+          ++gait_phase;
+          actuation_phase = ActuationPhases::kTouchDown;
+          updateTouchdown(gait_phase, kVelLegMaxContact);
+
+        } else {
+          actuation_phase = ActuationPhases::kRetractLeg; // resume the normal gait cycle by starting from leg retraction
+          updateRetract();                                // reapply the leg retraction in case the leg retraction was interrupted for some reason
+          resetBodyLegContactState(gait_phase);
+        }
 
         idx_motor_mp.clear();
         motion_primitive = ReactiveBehaviors::kNone;
@@ -632,7 +642,6 @@ void updateGaitSetpoints() {
       }
 
       updateRetract();
-      limitRetractionTorque(gait_phase);
       resetBodyLegContactState(gait_phase);
     }
 
@@ -735,6 +744,7 @@ void updateRetract() {
     motors[idx_motor].states_.trap_traj_accel_limit = kAccelLegTrajSwing;
     motors[idx_motor].states_.trap_traj_decel_limit = kDecelLegTrajSwing;
   }
+  limitRetractionTorque(gait_phase);
 }
 
 // limit leg motor torque during retraction if at least one leg is near the joint limit

@@ -64,6 +64,7 @@ const float kLegSwingPercentMax = 0.9;
 const float kLegSwingPercentMin = 0.2;
 
 // energy stabiliy margin parameters
+const float kDqTransCentered = 20;      // displacement from the translational joint midpoint in mm below which the two bodies are considered to be centered
 const float kZBodyStepScaleMin = 250;
 const float kZBodyStepScaleMax = 400;
 const float kTerrainPitchMin = 5;       // minimum terrain pitch in degrees over which step length is scaled
