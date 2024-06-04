@@ -32,7 +32,7 @@ enum ReactiveBehaviors {
     kStanceTorque = 2,      // stance legs in torque control; currently used for the stance legs during single-side tilt correct; when kSwingPosition and kStanceTorque are both active, motion_primitive is set to kSwingPosition
     kSwingPosition = 3,     // swing legs in position control; currently used for swing leg clearance and single-side tilt correct
     kSwingTorque = 4,       // swing legs in torque control; currently used for slip recovery (when slipping, all legs are assumed to be in swing and their contact states are checked again)
-    kTransPosition = 5,     // translation motor in position control; used to move to a higher NESM configuration
+    kTransPosition = 5,     // translation motor in position control; currently not used
     kTransTorque = 6        // translation motor in torque control; currently not used
 };
 
@@ -101,6 +101,7 @@ extern uint32_t gait_cycles;            // number of completed gait cycles
 extern uint8_t motion_primitive;        // current motion primitive
 extern bool isBlocking;                 // true if any motion primitive outside of the standard gait cycle is in progress
 extern bool isScheduled;                // true if a motion primitive is scheduled for execution
+extern bool isScheduledTrans;           // true if a motion primitive is scheduled for the translation joint
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity

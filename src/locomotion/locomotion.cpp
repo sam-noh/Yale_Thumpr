@@ -19,6 +19,7 @@ uint32_t gait_cycles = 0;                               // number of completed g
 uint8_t motion_primitive = ReactiveBehaviors::kNone;    // current motion primitive
 bool isBlocking = false;                                // true if a blocking motion primitive is in progress
 bool isScheduled = false;                               // true if a motion primitive is scheduled for execution
+bool isScheduledTrans = false;                          // true if a motion primitive is scheduled for the translation joint
 
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
@@ -548,13 +549,16 @@ void regulateBodyPose() {
         // transition to medial stance since it has a higher normalized energy stability margin
         if (gait_phase == GaitPhases::kMedialSwing && fabs(q[JointID::kJointTranslate]) > kDqTransCentered) {
           ++gait_phase;
+          isScheduledTrans = true;
           actuation_phase = ActuationPhases::kTouchDown;
           updateTouchdown(gait_phase, kVelLegMaxContact);
+          SERIAL_USB.println("Scheduled to move to translation joint midpoint");
 
         } else {
           actuation_phase = ActuationPhases::kRetractLeg; // resume the normal gait cycle by starting from leg retraction
           updateRetract();                                // reapply the leg retraction in case the leg retraction was interrupted for some reason
           resetBodyLegContactState(gait_phase);
+          SERIAL_USB.println("Resuming normal gait cycle after kSwingPosition");
         }
 
         motion_primitive = ReactiveBehaviors::kNone;
@@ -635,6 +639,7 @@ void updateGaitSetpoints() {
       moveLocomotionMechanism();      // reapply locomotion mechanism setpoints in the case of resuming locomotion from standstill
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {        // if currently touching down
+      isScheduledTrans = false;
       updateStanceBodyTorque(gait_phase);
 
       // if the robot's NESM is high enough (estimated by terrain slope and translational position),
@@ -807,7 +812,7 @@ void moveLocomotionMechanism() {
   float q_trans = q_trans_min + fabs(cmd_vector[0])*(q_trans_max - q_trans_min);
   float q_yaw = pow(-1, gait_phase)*kQYawMax*cmd_vector[1];
   if (fabs(kQTransMax - fabs(q_trans)) < kDqTransEndYawLimit) q_yaw = pow(-1, gait_phase)*(kQYawMax - kDqYawLimit)*cmd_vector[1];
-  motors[MotorID::kMotorTranslate].states_.q_d = q_trans;
+  !isScheduledTrans ? motors[MotorID::kMotorTranslate].states_.q_d = q_trans : motors[MotorID::kMotorTranslate].states_.q_d = 0;
   motors[MotorID::kMotorYaw].states_.q_d = q_yaw;
 }
 
