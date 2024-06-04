@@ -389,11 +389,16 @@ void regulateBodyPose() {
       q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
     }
 
-    // maintain ground contact with the current stance legs by pushing down on the ground
+    // if any stance legs are not already in use for catching the fall
+    // apply torque commands on them to maintain ground contact
     for (uint8_t idx_motor = stance*2; idx_motor < stance*2 + 2; ++idx_motor) {
-      idx_motor_mp.push_back(idx_motor);
-      updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][3], kVelLegMaxContact);
-      resetLegMotorContactState(idx_motor);
+      if (std::find(idx_motor_mp.begin(), idx_motor_mp.end(), idx_motor) == idx_motor_mp.end()) {
+        idx_motor_mp.push_back(idx_motor);
+        updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][3], kVelLegMaxContact);
+        resetLegMotorContactState(idx_motor);
+        q_leg_init[idx_motor] = motors[idx_motor].states_.q;
+      }
+      
     }
     t_start_contact = millis(); // update the time variable for contact detection
 
@@ -513,7 +518,6 @@ void regulateBodyPose() {
           if(fabs(rpy_lateral[gait_phase]) > kThetaNominal) {
             rpy_lateral[gait_phase] > 0 ? idx_motor_mp.push_back(stance*2) : idx_motor_mp.push_back(stance*2 + 1);
             dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
-            vel_lim = 0;
             fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
             updateLegPosition(idx_motor_mp[1], fabs(dq_tilt), vel_lim);
           }
@@ -531,6 +535,7 @@ void regulateBodyPose() {
       }
 
       if (done) {
+        idx_motor_mp.clear();
         updateStanceBodyTorque(stance);
         
         // if the normalized energy stability is low (lateral stance and body not centered)
@@ -546,7 +551,6 @@ void regulateBodyPose() {
           resetBodyLegContactState(gait_phase);
         }
 
-        idx_motor_mp.clear();
         motion_primitive = ReactiveBehaviors::kNone;
         isBlocking = false;
       }

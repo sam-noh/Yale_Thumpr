@@ -27,11 +27,13 @@ enum ActuationPhases {
 
 // enum for reactive behaviors
 enum ReactiveBehaviors {
-    kNone = 0,              // no current reactive behavior
-    kStancePosition = 1,    // stance legs in position control; currently used in single and double stance
-    kStanceTorque = 2,      // stance legs in torque control; currently not used
-    kSwingPosition = 3,     // swing legs in position control; currently used for swing leg clearance
-    kSwingTorque = 4        // swing legs in torque control; currently used for slip recovery (when slipping, all legs are assumed to be in swing and their contact states are checked again)
+    kNone = 0,              // no ongoing reactive behavior
+    kStancePosition = 1,    // stance legs in position control; currently used in single and double stance pose regulation
+    kStanceTorque = 2,      // stance legs in torque control; currently used for the stance legs during single-side tilt correct; when kSwingPosition and kStanceTorque are both active, motion_primitive is set to kSwingPosition
+    kSwingPosition = 3,     // swing legs in position control; currently used for swing leg clearance and single-side tilt correct
+    kSwingTorque = 4,       // swing legs in torque control; currently used for slip recovery (when slipping, all legs are assumed to be in swing and their contact states are checked again)
+    kTransPosition = 5,     // translation motor in position control; used to move to a higher NESM configuration
+    kTransTorque = 6        // translation motor in torque control; currently not used
 };
 
 // homing sequence parameters
