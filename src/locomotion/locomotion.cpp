@@ -516,10 +516,16 @@ void regulateBodyPose() {
 
           // if both tilt angles are severe, correct the stance tilt as well
           if(fabs(rpy_lateral[gait_phase]) > kThetaNominal) {
-            rpy_lateral[gait_phase] > 0 ? idx_motor_mp.push_back(stance*2) : idx_motor_mp.push_back(stance*2 + 1);
+            std::vector<float> dq_stance{0, 0};
             dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
+            dq_stance[0] += dq_tilt / 2;
+            dq_stance[1] -= dq_tilt / 2;
+            
             fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
-            updateLegPosition(idx_motor_mp[1], fabs(dq_tilt), vel_lim);
+            updateBodyLegsPosition(stance, dq_stance, vel_lim);
+
+            idx_motor_mp.push_back(stance*2);
+            idx_motor_mp.push_back(stance*2 + 1);
           }
 
           motion_primitive = ReactiveBehaviors::kSwingPosition;   // the single pair of swing legs in contact is commanded in position control for tilt correct
