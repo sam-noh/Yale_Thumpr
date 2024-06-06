@@ -548,17 +548,14 @@ void regulateBodyPose() {
         // if the normalized energy stability is low (lateral stance and body not centered)
         // transition to medial stance since it has a higher normalized energy stability margin
         if (gait_phase == GaitPhases::kMedialSwing && fabs(q[JointID::kJointTranslate]) > kDqTransCentered) {
-          ++gait_phase;
           isScheduledTrans = true;
           actuation_phase = ActuationPhases::kTouchDown;
           updateTouchdown(gait_phase, kVelLegMaxContact);
-          SERIAL_USB.println("Scheduled to move to translation joint midpoint");
 
         } else {
           actuation_phase = ActuationPhases::kRetractLeg; // resume the normal gait cycle by starting from leg retraction
           updateRetract();                                // reapply the leg retraction in case the leg retraction was interrupted for some reason
           resetBodyLegContactState(gait_phase);
-          SERIAL_USB.println("Resuming normal gait cycle after kSwingPosition");
         }
 
         motion_primitive = ReactiveBehaviors::kNone;
