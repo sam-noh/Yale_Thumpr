@@ -509,10 +509,10 @@ void regulateBodyPose() {
         // for now, assume that not all legs will be in contact (no double-stance)
         } else {
           isInContact[gait_phase*2] ? idx_motor_mp.push_back(gait_phase*2) : idx_motor_mp.push_back(gait_phase*2 + 1);  // the swing leg motor in contact; assume that only one pair will be in contact
-          dq_tilt = (stance_width[stance]/2) * tan(rpy_lateral[stance] * DEG2RAD);                                      // body tilt angle to correct using the swing legs
+          dq_tilt = pow(-1, idx_motor_mp[0] % 2) * (stance_width[stance]/2) * tan(rpy_lateral[stance] * DEG2RAD);        // body tilt angle to correct using the swing legs
           float vel_lim = 0;
           fabs(rpy_lateral[stance]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
-          updateLegPosition(idx_motor_mp[0], fabs(dq_tilt), vel_lim);                                                   // move the single swing leg pair for tilt correction
+          updateLegPosition(idx_motor_mp[0], dq_tilt, vel_lim);                                                         // move the single swing leg pair for tilt correction
           updateTouchdown(stance, kVelLegMaxContact);                                                                   // maintain ground contact with the current stance legs by pushing down on the ground
 
           // if the stance tilt is severe as well, correct it
@@ -520,10 +520,10 @@ void regulateBodyPose() {
           // since the ground contacts are unknown, retracting the legs may cause loss of ground contacts
           if(fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_1) {
             rpy_lateral[gait_phase] > 0 ? idx_motor_mp.push_back(stance*2) : idx_motor_mp.push_back(stance*2 + 1);
-            dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
+            dq_tilt = pow(-1, idx_motor_mp[1] % 2) * (stance_width[gait_phase]/2) * tan(rpy_lateral[gait_phase] * DEG2RAD);
             
             fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
-            updateLegPosition(idx_motor_mp[1], fabs(dq_tilt), vel_lim);
+            updateLegPosition(idx_motor_mp[1], dq_tilt, vel_lim);
           }
 
           motion_primitive = ReactiveBehaviors::kSwingPosition;   // the single pair of swing legs in contact is commanded in position control for tilt correct

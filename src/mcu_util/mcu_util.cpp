@@ -318,12 +318,13 @@ void sendTelemetry() {
       }
     }
     snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t",
-             motor_torque_filters[0].filtered_value, motor_torque_filters[1].filtered_value, motor_torque_filters[2].filtered_value,
-             motor_torque_filters[3].filtered_value, motor_torque_filters[4].filtered_value, motor_torque_filters[5].filtered_value);
+             -1*motor_torque_filters[0].filtered_value, -1*motor_torque_filters[1].filtered_value, -1*motor_torque_filters[2].filtered_value,
+             -1*motor_torque_filters[3].filtered_value, motor_torque_filters[4].filtered_value, motor_torque_filters[5].filtered_value);
 
     #ifdef DEBUG_ACTUATOR_TORQUE
-    SERIAL_USB.print("motor torque (Nm): ");
+    SERIAL_USB.print("motor torque (Nm):\t");
     writeToSerial();
+    SERIAL_USB.println();
     #endif
     writeToCard(sent_data);
 
@@ -434,7 +435,6 @@ void sendTelemetry() {
 
     snprintf(sent_data, sizeof(sent_data), "z_body: %.2f\t", z_body_local);
     writeToSerial();
-    SERIAL_USB.println();
 
     snprintf(sent_data, sizeof(sent_data), "terrain slope: %.2f\t", terrain_pitch);
     writeToSerial();
