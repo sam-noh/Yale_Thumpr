@@ -390,17 +390,6 @@ void regulateBodyPose() {
       q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
     }
 
-    // if any stance legs are not already in use for catching the fall
-    // apply torque commands on them to maintain ground contact
-    for (uint8_t idx_motor = stance*2; idx_motor < stance*2 + 2; ++idx_motor) {
-      if (std::find(idx_motor_mp.begin(), idx_motor_mp.end(), idx_motor) == idx_motor_mp.end()) {
-        idx_motor_mp.push_back(idx_motor);
-        updateMotorTorque(idx_motor, torque_profile_touchdown[idx_motor][3], kVelLegMaxContact);
-        resetLegMotorContactState(idx_motor);
-        q_leg_init[idx_motor] = motors[idx_motor].states_.q;
-      }
-      
-    }
     t_start_contact = millis(); // update the time variable for contact detection
 
     motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
@@ -513,18 +502,17 @@ void regulateBodyPose() {
           float vel_lim = 0;
           fabs(rpy_lateral[stance]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
           updateLegPosition(idx_motor_mp[0], dq_tilt, vel_lim);                                                         // move the single swing leg pair for tilt correction
-          updateTouchdown(stance, kVelLegMaxContact);                                                                   // maintain ground contact with the current stance legs by pushing down on the ground
 
-          // if the stance tilt is severe as well, correct it
-          // unlike the regular single-stance pose regulation, this tilt correction extends the legs on both sides, one in position control (dq_tilt) and one in torque control
-          // since the ground contacts are unknown, retracting the legs may cause loss of ground contacts
-          if(fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_1) {
-            rpy_lateral[gait_phase] > 0 ? idx_motor_mp.push_back(stance*2) : idx_motor_mp.push_back(stance*2 + 1);
-            dq_tilt = pow(-1, idx_motor_mp[1] % 2) * (stance_width[gait_phase]/2) * tan(rpy_lateral[gait_phase] * DEG2RAD);
+          // // if the stance tilt is severe as well, correct it
+          // // unlike the regular single-stance pose regulation, this tilt correction extends the legs on both sides, one in position control (dq_tilt) and one in torque control
+          // // since the ground contacts are unknown, retracting the legs may cause loss of ground contacts
+          // if(fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_1) {
+          //   rpy_lateral[gait_phase] > 0 ? idx_motor_mp.push_back(stance*2) : idx_motor_mp.push_back(stance*2 + 1);
+          //   dq_tilt = pow(-1, idx_motor_mp[1] % 2) * (stance_width[gait_phase]/2) * tan(rpy_lateral[gait_phase] * DEG2RAD);
             
-            fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
-            updateLegPosition(idx_motor_mp[1], dq_tilt, vel_lim);
-          }
+          //   fabs(rpy_lateral[gait_phase]) > kThetaSoftMax_2 ? vel_lim = kVelLegTrajSlow : vel_lim = kVelLegTrajStandup;
+          //   updateLegPosition(idx_motor_mp[1], dq_tilt, vel_lim);
+          // }
 
           motion_primitive = ReactiveBehaviors::kSwingPosition;   // the single pair of swing legs in contact is commanded in position control for tilt correct
           isBlocking = true;
@@ -536,6 +524,27 @@ void regulateBodyPose() {
 
       for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
         done = done && motors[*idx_motor].states_.holding;
+      }
+
+      if (done) {
+        idx_motor_mp.clear();
+        updateTouchdown(stance, kVelLegMaxContact);   // reestablish ground contact with the stance legs after the single-side tilt correct is finished
+        for (auto idx_motor = stance*2; idx_motor < stance*2 + 2; ++idx_motor) {
+          idx_motor_mp.push_back(idx_motor);
+          q_leg_init[idx_motor] = motors[idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
+          resetLegMotorContactState(idx_motor);                                                    // clear the contact states on the new touchdown legs
+        }
+        
+        motion_primitive = ReactiveBehaviors::kStanceTorque;
+        isBlocking = true;
+      }
+
+    } else if (motion_primitive == ReactiveBehaviors::kStanceTorque) {
+
+      for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
+        updateLegMotorContactState(*idx_motor);
+        updateStanceTorque(*idx_motor);
+        done = done && isInContact[*idx_motor];
       }
 
       if (done) {
