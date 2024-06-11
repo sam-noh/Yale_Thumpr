@@ -433,24 +433,31 @@ void sendTelemetry() {
     #endif
     writeToCard(sent_data);
 
-    snprintf(sent_data, sizeof(sent_data), "z_body: %.2f\t", z_body_local);
-    writeToSerial();
-
-    snprintf(sent_data, sizeof(sent_data), "terrain slope: %.2f\t", terrain_pitch);
-    writeToSerial();
-
-    snprintf(sent_data, sizeof(sent_data), "q_trans: [%.2f, %.2f]\t", q_trans_limit[0], q_trans_limit[1]);
-    writeToSerial();
-
-    snprintf(sent_data, sizeof(sent_data), "blocking, scheduled, motion primitive: %d\t%d\t%d\t", isBlocking, isScheduled, motion_primitive);
-    writeToSerial();
-    SERIAL_USB.println();
-
     // gait variables
     snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%lu\t%.2f\t", gait_phase, actuation_phase, gait_cycles, dist_traveled/1000);
 
     #ifdef DEBUG_GAIT
     SERIAL_USB.print("gait, actuation, cycles, dist: ");
+    writeToSerial();
+    SERIAL_USB.println();
+    #endif
+    writeToCard(sent_data);
+
+    // body height, terrain slope, translation joint limits
+    snprintf(sent_data, sizeof(sent_data), "%.2f\t%.2f\t%.2f\t%.2f\t", z_body_local, terrain_pitch, q_trans_limit[0], q_trans_limit[1]);
+
+    #ifdef DEBUG_NESM
+    SERIAL_USB.print("z_body, terrain slope, q_trans limits: ");
+    writeToSerial();
+    SERIAL_USB.println();
+    #endif
+    writeToCard(sent_data);
+   
+    // motion primitive variables
+    snprintf(sent_data, sizeof(sent_data), "%d\t%d\t%d\t%d\t", isBlocking, isScheduled, isScheduledTrans, motion_primitive);
+
+    #ifdef DEBUG_MOTION_PRIMITIVE
+    SERIAL_USB.print("isBlocking, isScheduled, isScheduledTrans, motion_primitive: ");
     writeToSerial();
     SERIAL_USB.println();
     #endif

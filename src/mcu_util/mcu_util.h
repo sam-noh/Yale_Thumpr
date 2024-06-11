@@ -11,7 +11,7 @@
 
 #define ENABLE_JETSON
 #define ENABLE_2ND_TEENSY
-// #define ENABLE_SD_CARD
+#define ENABLE_SD_CARD
 // #define ENABLE_IMU
 
 // #define DEBUG_TIMER
@@ -29,6 +29,8 @@
 #define DEBUG_OMEGA
 // #define DEBUG_TRAJECTORY
 #define DEBUG_GAIT
+#define DEBUG_NESM
+#define DEBUG_MOTION_PRIMITIVE
 
 // AMT102-V incremental encoder pins
 #define ENC_1_A 1  // medial front right A
