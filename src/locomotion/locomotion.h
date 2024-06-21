@@ -81,6 +81,7 @@ const float kThetaSoftMax_2 = 6;        // body Euler angle above which slip rec
 const float kThetaSoftMax_3 = 8;      // body Euler angle above which slip recovery is executed
 const float kOmegaSoftMax_1 = 25;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_1 or greater tilt
 const float kOmegaSoftMax_2 = 12;       // body angular velocity above which slip recovery is executed at kThetaSoftMax_2 or greater tilt
+const float kOmegaSoftMax_3 = 7;        // body angular velocity above which slip recovery is executed at kThetaSoftMax_3 or greater tilt
 const float kThetaHardMax = 40;         // body Euler angle above which robot is stopped
 
 // motor torque setpoints during leg touchdown; determined heuristically

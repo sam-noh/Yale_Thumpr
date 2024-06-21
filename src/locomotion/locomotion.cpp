@@ -5,10 +5,10 @@
 #include "../state_estimation/state_estimation.h"
 
 std::vector<std::vector<float>> torque_profile_touchdown = {
-  {0.40, 0.35, 0.25, 0.12}, // 0.18 and 0.12
-  {0.40, 0.35, 0.25, 0.12},
-  {0.40, 0.35, 0.25, 0.12},
-  {0.40, 0.35, 0.25, 0.12}
+  {0.40, 0.32, 0.25, 0.14}, // 0.4, 0.35, 0.25, 0.12
+  {0.40, 0.32, 0.25, 0.14},
+  {0.40, 0.32, 0.25, 0.14},
+  {0.40, 0.32, 0.25, 0.14}
 };
 
 // gait variables
@@ -346,11 +346,11 @@ void regulateBodyPose() {
   // check if the body is tipping over; two velocity ranges
   bool isTippingRoll = (fabs(rpy_lateral[0]) > kThetaSoftMax_1 && (dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_1)
                        || (fabs(rpy_lateral[0]) > kThetaSoftMax_2 && (dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_2)
-                       || fabs(rpy_lateral[0]) > kThetaSoftMax_3;
+                       || (fabs(rpy_lateral[0]) > kThetaSoftMax_3 && (dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_3);
 
   bool isTippingPitch = (fabs(rpy_lateral[1]) > kThetaSoftMax_1 && (dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_1)
                         || (fabs(rpy_lateral[1]) > kThetaSoftMax_2 && (dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_2)
-                        || fabs(rpy_lateral[1]) > kThetaSoftMax_3;
+                        || (fabs(rpy_lateral[1]) > kThetaSoftMax_3 && (dir_tipover[1]*omega_filters[1].filtered_value) > kOmegaSoftMax_3);
 
   // slip recovery
   // executes a blocking maneuver where legs on the tipping side touch down
