@@ -32,7 +32,7 @@ void setup() {
     SERIAL_USB.println("touchdown");
     actuation_phase = ActuationPhases::kTouchDown;
     digitalWrite(LED, LOW);
-    updateTouchdown();
+    updateTouchdown(gait_phase, kVelLegMaxContact);
     while (!isInContact[gait_phase * 2] || !isInContact[gait_phase * 2 + 1]) {
       updateFunctions();
       updateTouchdownTorque(gait_phase);
@@ -63,7 +63,6 @@ void loop() {
 
 void updateFunctions() {
   handleODriveCANMsg();
-  parseTeensySerial();
   updateStates();
   updateMotorCommands();
   sendTelemetry();
