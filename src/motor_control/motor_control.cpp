@@ -5,16 +5,16 @@
 
 ODriveTeensyCAN ODrive_CAN = ODriveTeensyCAN(kODriveCANBaudRate);
 
-std::vector<Actuator> motors = {Actuator(ODrive_CAN, SERIAL_USB, 0, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax,
+std::vector<Actuator> motors = {Actuator(ODrive_CAN, SERIAL_USB, 0, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMedMax,
                                 kVelLegMax, kCurrentLegMax, kAccelLegTrajSwing, kDecelLegTrajSwing, kVelLegTrajSwing),
 
-                                Actuator(ODrive_CAN, SERIAL_USB, 1, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax,
+                                Actuator(ODrive_CAN, SERIAL_USB, 1, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMedMax,
                                 kVelLegMax, kCurrentLegMax, kAccelLegTrajSwing, kDecelLegTrajSwing, kVelLegTrajSwing),
 
-                                Actuator(ODrive_CAN, SERIAL_USB, 2, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax,
+                                Actuator(ODrive_CAN, SERIAL_USB, 2, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegLatMax,
                                 kVelLegMax, kCurrentLegMax, kAccelLegTrajSwing, kDecelLegTrajSwing, kVelLegTrajSwing),
 
-                                Actuator(ODrive_CAN, SERIAL_USB, 3, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegMax,
+                                Actuator(ODrive_CAN, SERIAL_USB, 3, kDirectionLeg, kTxRatioLeg, k_KV_to_KT / k_KV_D5312S, kQLegMin, kQLegLatMax,
                                 kVelLegMax, kCurrentLegMax, kAccelLegTrajSwing, kDecelLegTrajSwing, kVelLegTrajSwing),
 
                                 Actuator(ODrive_CAN, SERIAL_USB, 4, kDirectionTrans, kTxRatioTrans, k_KV_to_KT / k_KV_GL60, -kQTransMax, kQTransMax,

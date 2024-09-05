@@ -34,10 +34,10 @@ float swing_percent_at_translate = leg_swing_percent;     // 0.5; percentage of 
 float trans_percent_at_touchdown = 0.7;                   // 0.4; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
 float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw command from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
-std::vector<float> q_leg_contact = {kQLegMax, kQLegMax, kQLegMax, kQLegMax};  // position of the swing leg actuators when they were last in contact
-std::vector<float> q_leg_swing = {kQLegMin, kQLegMin, kQLegMin, kQLegMin};    // position setpoint of swing leg actuators during leg retraction
-std::deque<int> idx_motor_mp;                                           // motors in touchdown as part of a motion primitive
-uint32_t t_start_contact = 0;                                                 // time at which leg contact begins
+std::vector<float> q_leg_contact = {kQLegMedMax, kQLegMedMax, kQLegLatMax, kQLegLatMax};  // position of the swing leg actuators when they were last in contact
+std::vector<float> q_leg_swing = {kQLegMin, kQLegMin, kQLegMin, kQLegMin};                // position setpoint of swing leg actuators during leg retraction
+std::deque<int> idx_motor_mp;                                                             // motors in touchdown as part of a motion primitive
+uint32_t t_start_contact = 0;                                                             // time at which leg contact begins
 
 uint8_t counts_steady_x = 0;                              // number of times a steay x command was received
 uint8_t counts_steady_y = 0;                              // number of times a steay y command was received

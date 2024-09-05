@@ -55,7 +55,7 @@ const float kMinDqClearance = -20;      // minimum required leg retraction for s
 
 // body height regulation parameters
 const float kZBodyMin = 100;            // minimum allowable value for z_body_local
-const float kZBodyMax = 450;            // maximum allowable value for z_body_local
+const float kZBodyMax = 550;            // maximum allowable value for z_body_local
 
 // translational inertia related parameters
 const float kZBodyTall = 300;           // body height in mm above which translational velocity is reduced
