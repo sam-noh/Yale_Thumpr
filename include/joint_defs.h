@@ -50,7 +50,7 @@ const float stance_length[2] = {kL_1, kW_2};
 // mechanical joint limits and offsets
 const float kQLegMin = 0;               // min leg joint position in mm
 const float kQLegMedMax = 760;          // max medial leg joint position in mm
-const float kQLegLatMax = 590;          // max lateral leg joint position in mm
+const float kQLegLatMax = 515;          // max lateral leg joint position in mm
 const float kQLegUnstuck = 10;          // leg joint position limit in mm used for checking stuck legs
 const float kQLegNearLimit = 100;       // leg joint position limit in mm used for applying torque limit
 const float kLegOffset = 0;             // vertical distance between medial and lateral body in mm; used to adjust leg setpoints

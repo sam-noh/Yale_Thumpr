@@ -4,11 +4,22 @@
 #include "../motor_control/motor_control.h"
 #include "../state_estimation/state_estimation.h"
 
-std::vector<std::vector<float>> torque_profile_touchdown = {
-  {0.40, 0.32, 0.25, 0.16}, // 0.4, 0.35, 0.25, 0.12 or 0.14
-  {0.40, 0.32, 0.25, 0.16},
-  {0.40, 0.32, 0.25, 0.16},
-  {0.40, 0.32, 0.25, 0.16}
+std::vector<std::vector<float>> torque_profile_touchdown = 
+
+// before leg change on September 9, 2024
+// {
+//   {0.40, 0.32, 0.25, 0.16},
+//   {0.40, 0.32, 0.25, 0.16},
+//   {0.40, 0.32, 0.25, 0.16},
+//   {0.40, 0.32, 0.25, 0.16}
+// };
+
+// after leg change on September 9, 2024
+{
+  {0.45, 0.4, 0.4, 0.3},
+  {0.45, 0.4, 0.4, 0.3},
+  {0.45, 0.4, 0.35, 0.25},
+  {0.45, 0.4, 0.35, 0.25}
 };
 
 // gait variables
@@ -31,7 +42,7 @@ float q_trans_prev = 0;                                     // translation joint
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
 float swing_percent_at_translate = leg_swing_percent;     // 0.5; percentage of swing leg retraction after which translation begins; values closer to 1 can cause swing legs to collide with rough terrains
-float trans_percent_at_touchdown = 0.7;                   // 0.4; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
+float trans_percent_at_touchdown = 0.95;                  // 0.7; 0.4; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
 float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw command from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
 std::vector<float> q_leg_contact = {kQLegMedMax, kQLegMedMax, kQLegLatMax, kQLegLatMax};  // position of the swing leg actuators when they were last in contact
@@ -361,42 +372,42 @@ void regulateBodyPose() {
   // while the stance leg pairs are driven in torque control to regulate the Euler angle corresponding to the swing body
   // this will override an ongoing non-blocking motion primitives such as single-stance pose regulation
 
-  if (!isBlocking                           // if currently there's no blocking motion primitive
-      && !isScheduled                       // AND slip recovery was not just completed (prevents slip recovery from triggering again right away so that single-stance pose regulation can occur)
-      && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
-     ){
+  // if (!isBlocking                           // if currently there's no blocking motion primitive
+  //     && !isScheduled                       // AND slip recovery was not just completed (prevents slip recovery from triggering again right away so that single-stance pose regulation can occur)
+  //     && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
+  //    ){
 
-    // slip recovery overrides any ongoing motion primitives
-    // assume that motors currently involved in a motion primitive will complete their motion and/or
-    // will be overriden by the slip recovery motion primitive
-    idx_motor_mp.clear();
+  //   // slip recovery overrides any ongoing motion primitives
+  //   // assume that motors currently involved in a motion primitive will complete their motion and/or
+  //   // will be overriden by the slip recovery motion primitive
+  //   idx_motor_mp.clear();
                                                                                                                                           
-    // stop the locomotion mechanism
-    holdLocomotionMechanism();
+  //   // stop the locomotion mechanism
+  //   holdLocomotionMechanism();
 
-    // determine which legs to touchdown
-    if (isTippingRoll) {
-      dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
-    }
+  //   // determine which legs to touchdown
+  //   if (isTippingRoll) {
+  //     dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
+  //   }
 
-    if (isTippingPitch) {
-      dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
-    }
+  //   if (isTippingPitch) {
+  //     dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
+  //   }
 
-    // for each leg pair touching down
-    for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
-      updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][1], kVelLegFootSlip);  // apply the torque command
-      resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
-      q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
-    }
+  //   // for each leg pair touching down
+  //   for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
+  //     updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][1], kVelLegFootSlip);  // apply the torque command
+  //     resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
+  //     q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
+  //   }
 
-    t_start_contact = millis(); // update the time variable for contact detection
+  //   t_start_contact = millis(); // update the time variable for contact detection
 
-    motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
-    isBlocking = true;
-    isScheduled = true;
-    actuation_phase = ActuationPhases::kTouchDown;
-  }
+  //   motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
+  //   isBlocking = true;
+  //   isScheduled = true;
+  //   actuation_phase = ActuationPhases::kTouchDown;
+  // }
   
   // single-stance pose regulation (tilt and height)
   if (!motion_primitive                                                                        // if currently there's no motion primitive

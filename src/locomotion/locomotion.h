@@ -58,7 +58,7 @@ const float kZBodyMin = 100;            // minimum allowable value for z_body_lo
 const float kZBodyMax = 550;            // maximum allowable value for z_body_local
 
 // translational inertia related parameters
-const float kZBodyTall = 300;           // body height in mm above which translational velocity is reduced
+const float kZBodyTall = 280;           // body height in mm above which translational velocity is reduced
 const float kStepShort = 0.4;           // cmd_vector[1] below which translational velocity is reduced; to be updated to joint space value
 
 // gait cycle parameter limits

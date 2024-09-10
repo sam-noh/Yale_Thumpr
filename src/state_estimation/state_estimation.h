@@ -8,7 +8,7 @@
 #include "../../include/joint_defs.h"
 
 #define USE_VELOCITY_THRESHOLD
-#define USE_DECELERATION_THRESHOLD
+// #define USE_DECELERATION_THRESHOLD
 // #define USE_SCALED_VELOCITY_THRESHOLD
 
 //////////////////////////////////////////////////////////////////////////////////////
