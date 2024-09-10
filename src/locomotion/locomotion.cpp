@@ -423,9 +423,10 @@ void regulateBodyPose() {
       dq_stance[1] -= dq_tilt / 2;
     }
 
-    // regulate body height only during lateral body swing for better stability
+    // regulate body height in single-stance if the medial body is in stance AND the current body height is not high
     if (fabs(z_error) > kZErrorSoftMax
-       && gait_phase == GaitPhases::kLateralSwing) {
+       && gait_phase == GaitPhases::kLateralSwing
+       && z_body_local < kZBodyTall) {
       dq_stance[0] -= z_error;
       dq_stance[1] -= z_error;
     }
