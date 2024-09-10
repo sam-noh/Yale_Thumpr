@@ -8,7 +8,7 @@
 #include <algorithm>
 
 // #define USE_TIPOVER_RECOVERY
-#define USE_TELEOP
+// #define USE_TELEOP
 
 const int kNumOfGaitPhases = 2;             // number of gait phases in a gait cycle
 const int kNumOfActuationPhases = 3;        // number of actuation phases in swing

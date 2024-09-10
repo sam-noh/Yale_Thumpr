@@ -342,7 +342,7 @@ void updateTrajectory() {
 
   #else
   // update any planned motion parameters here
-  z_body_nominal = 300;
+  z_body_nominal = 220;
 
   // update translation motor velocity based on step length and body height
   if (z_body_nominal > kZBodyTall) {
@@ -863,7 +863,7 @@ void moveLocomotionMechanism() {
 
   #else
   // track a planned trajectory
-  motors[MotorID::kMotorTranslate].states_.q_d = 0;
+  motors[MotorID::kMotorTranslate].states_.q_d = 60*pow(-1, gait_phase + 1);
   motors[MotorID::kMotorYaw].states_.q_d = 0;
   #endif
 }

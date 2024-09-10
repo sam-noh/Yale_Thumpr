@@ -76,7 +76,7 @@ const float kDecelYawTraj = 5;                  // yaw motor trapezoidal traject
 
 // motor current limits
 const float kCurrentLegMax = 60;                // leg motor current limit in ampere
-const float kCurrentLegMaxHoming = 11;          // leg motor current limit while homing in ampere
+const float kCurrentLegMaxHoming = 15;          // leg motor current limit while homing in ampere
 const float kCurrentTransMax = 8;               // translation motor current limit in ampere
 const float kCurrentYawMax = 5;                 // yaw motor current limit in ampere
 const float kCurrentTransMaxHoming = 6;         // translation motor current limit while homing in ampere
