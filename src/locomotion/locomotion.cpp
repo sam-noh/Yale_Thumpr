@@ -23,7 +23,7 @@ std::vector<std::vector<float>> torque_profile_touchdown =
 };
 
 // gait variables
-std::vector<float> cmd_vector = {1, 0};                 // command vector: {forward-back, yaw angle}
+std::vector<float> cmd_vector = {0, 0};                 // command vector: {forward-back, yaw angle}
 uint8_t gait_phase = GaitPhases::kLateralSwing;         // current gait phase/swing body; (0 medial swing/lateral stance) -> (1 medial stance/lateral swing); double support is omitted
 uint8_t actuation_phase = ActuationPhases::kRetractLeg; // current actuation phase of the swing legs; 0 retract -> 1 translate -> 2 touchdown
 uint32_t gait_cycles = 0;                               // number of completed gait cycles
@@ -268,6 +268,8 @@ void updateLocomotion() {
 
 // update desired motion vector, body height, trajectories, etc. based on higher-level input/planner
 void updateTrajectory() {
+  #ifdef USE_TELEOP
+  
   // apply deadzone to front-back joystick input to prevent undesired translation during in-place turning
   float input_x_filtered = max(abs(input_x) - kGUIJoystickXDeadZone, 0);
   int dir_x = (input_x > 0) - (input_x < 0);
@@ -331,13 +333,25 @@ void updateTrajectory() {
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
   swing_percent_at_translate = leg_swing_percent;                                       // set translation transition percentage equal to swing retraction percentage
                                                                                         // the idea is: if large retraction is needed, then translation should also occur later
-
   // update translation motor velocity based on step length and body height
   if (fabs(cmd_vector[0]) < kStepShort || z_body_nominal > kZBodyTall) {
     motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTrajSlow;
   } else {
     motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTraj;
   }
+
+  #else
+  // update any planned motion parameters here
+  z_body_nominal = 300;
+
+  // update translation motor velocity based on step length and body height
+  if (z_body_nominal > kZBodyTall) {
+    motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTrajSlow;
+  } else {
+    motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTraj;
+  }
+
+  #endif
   
 }
 
@@ -354,6 +368,7 @@ void regulateBodyPose() {
     dir_tipover[i] = (rpy_lateral[i] > 0) - (rpy_lateral[i] < 0);
   }
 
+  #ifdef USE_TIPOVER_RECOVERY
   // check if the body is tipping over; two velocity ranges
   bool isTippingRoll = (fabs(rpy_lateral[0]) > kThetaSoftMax_1 && (dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_1)
                        || (fabs(rpy_lateral[0]) > kThetaSoftMax_2 && (dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_2)
@@ -372,42 +387,44 @@ void regulateBodyPose() {
   // while the stance leg pairs are driven in torque control to regulate the Euler angle corresponding to the swing body
   // this will override an ongoing non-blocking motion primitives such as single-stance pose regulation
 
-  // if (!isBlocking                           // if currently there's no blocking motion primitive
-  //     && !isScheduled                       // AND slip recovery was not just completed (prevents slip recovery from triggering again right away so that single-stance pose regulation can occur)
-  //     && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
-  //    ){
+  if (!isBlocking                           // if currently there's no blocking motion primitive
+      && !isScheduled                       // AND slip recovery was not just completed (prevents slip recovery from triggering again right away so that single-stance pose regulation can occur)
+      && (isTippingRoll || isTippingPitch)  // AND the body is tipping over
+     ){
 
-  //   // slip recovery overrides any ongoing motion primitives
-  //   // assume that motors currently involved in a motion primitive will complete their motion and/or
-  //   // will be overriden by the slip recovery motion primitive
-  //   idx_motor_mp.clear();
+    // slip recovery overrides any ongoing motion primitives
+    // assume that motors currently involved in a motion primitive will complete their motion and/or
+    // will be overriden by the slip recovery motion primitive
+    idx_motor_mp.clear();
                                                                                                                                           
-  //   // stop the locomotion mechanism
-  //   holdLocomotionMechanism();
+    // stop the locomotion mechanism
+    holdLocomotionMechanism();
 
-  //   // determine which legs to touchdown
-  //   if (isTippingRoll) {
-  //     dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
-  //   }
+    // determine which legs to touchdown
+    if (isTippingRoll) {
+      dir_tipover[0] > 0 ? idx_motor_mp.push_back(MotorID::kMotorLateralRight) : idx_motor_mp.push_back(MotorID::kMotorLateralLeft);
+    }
 
-  //   if (isTippingPitch) {
-  //     dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
-  //   }
+    if (isTippingPitch) {
+      dir_tipover[1] > 0 ? idx_motor_mp.push_back(MotorID::kMotorMedialFront) : idx_motor_mp.push_back(MotorID::kMotorMedialRear);
+    }
 
-  //   // for each leg pair touching down
-  //   for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
-  //     updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][1], kVelLegFootSlip);  // apply the torque command
-  //     resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
-  //     q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
-  //   }
+    // for each leg pair touching down
+    for (std::deque<int>::iterator idx_motor = idx_motor_mp.begin(); idx_motor != idx_motor_mp.end(); ++idx_motor) {
+      updateMotorTorque(*idx_motor, torque_profile_touchdown[*idx_motor][1], kVelLegFootSlip);  // apply the torque command
+      resetLegMotorContactState(*idx_motor);                                                    // clear the contact states on the new touchdown legs
+      q_leg_init[*idx_motor] = motors[*idx_motor].states_.q;                                    // update q_leg_init for the touchdown legs, which is used in updateLegMotorContactState()
+    }
 
-  //   t_start_contact = millis(); // update the time variable for contact detection
+    t_start_contact = millis(); // update the time variable for contact detection
 
-  //   motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
-  //   isBlocking = true;
-  //   isScheduled = true;
-  //   actuation_phase = ActuationPhases::kTouchDown;
-  // }
+    motion_primitive = ReactiveBehaviors::kSwingTorque;   // the legs are considered to be in swing because the feet have slipped and therefore not in stance
+    isBlocking = true;
+    isScheduled = true;
+    actuation_phase = ActuationPhases::kTouchDown;
+  }
+
+  #endif
   
   // single-stance pose regulation (tilt and height)
   if (!motion_primitive                                                                        // if currently there's no motion primitive
@@ -595,11 +612,14 @@ bool isReadyForTransition(uint8_t phase) {
   } else if (phase == ActuationPhases::kLocomote) { // if currently translating or turning
     bool isTranslated = false, isTurned = false;
 
+    float q_trans_transition = q_trans_prev + trans_percent_at_touchdown*(motors[MotorID::kMotorTranslate].states_.q_d - q_trans_prev);
+    int dir_gait = pow(-1, gait_phase + 1);
+
+    #ifdef USE_TELEOP
     // if there is a translation command
     if (fabs(cmd_vector[0]) > EPS) {
       int dir_cmd = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                              // direction of translation command
-      int dir_gait = pow(-1, gait_phase + 1);
-      float q_trans_transition = q_trans_prev + trans_percent_at_touchdown*(motors[MotorID::kMotorTranslate].states_.q_d - q_trans_prev);
+      
       if (dir_cmd*dir_gait == 1) {
         isTranslated = q[JointID::kJointTranslate] > q_trans_transition;    // don't check yaw; assume that any concurrent yaw motion will be completed in time
       } else {
@@ -613,6 +633,16 @@ bool isReadyForTransition(uint8_t phase) {
       // isTurned = dir * pow(-1, gait_phase) * q[JointID::kJointYaw] > q_yaw_transition;  // the yaw joint has reached the transition point
       isTurned = fabs(motors[MotorID::kMotorYaw].states_.q - motors[MotorID::kMotorYaw].states_.q_d) < 3;
     }
+    
+    #else
+    // for now, assume only forward motion when following a trajectory
+    if (dir_gait == 1) {
+      isTranslated = q[JointID::kJointTranslate] > q_trans_transition;
+    } else {
+      isTranslated = q[JointID::kJointTranslate] < q_trans_transition;
+    }
+    
+    #endif
 
     return isTranslated || isTurned;
 
@@ -642,12 +672,16 @@ void updateGaitSetpoints() {
       q_trans_prev = q[JointID::kJointTranslate];  // remember the translation joint starting position 
       isScheduled = false;
 
+      #ifdef USE_TELEOP
       if (fabs(cmd_vector[0]) < EPS && fabs(cmd_vector[1]) < EPS) {   // if no translation or yaw command
         holdLocomotionMechanism();
 
       } else {  // else, move according to the current command
         moveLocomotionMechanism();
       }
+      #else
+      moveLocomotionMechanism();
+      #endif
 
     } else if (actuation_phase == ActuationPhases::kLocomote) { // if currently translating or turning
       updateTouchdown(gait_phase, kVelLegMaxContact);
@@ -657,15 +691,6 @@ void updateGaitSetpoints() {
       isScheduledTrans = false;
       updateStanceBodyTorque(gait_phase);
 
-      // if the robot's NESM is high enough (estimated by terrain slope and translational position),
-      // advance the gait phase
-      // else, retract the same legs again and translate back to the acceptable joint range
-      // if (q[JointID::kJointTranslate] + kQErrorMax > q_trans_limit[0] && q[JointID::kJointTranslate] - kQErrorMax < q_trans_limit[1]) {
-      //   gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
-      //   if (gait_phase == 0) {
-      //     gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles
-      //   }
-      // }
       gait_phase = (gait_phase + 1) % kNumOfGaitPhases;
       if (gait_phase == 0) {
         gait_cycles++; // if the gait phase is back to 0, increment the number of completed gait cycles
@@ -685,12 +710,16 @@ void updateGaitSetpoints() {
       
     } else if (actuation_phase == ActuationPhases::kLocomote) {     // if currently translating or turning
       
+      #ifdef USE_TELEOP
       if (fabs(cmd_vector[0]) < EPS && fabs(cmd_vector[1]) < EPS) {   // if no translation or yaw command
         holdLocomotionMechanism();
 
       } else {  // else, move according to the current command
         moveLocomotionMechanism();
       }
+      #else
+      moveLocomotionMechanism();
+      #endif
       
     } else if (actuation_phase == ActuationPhases::kTouchDown) {    // if currently touching down
       updateTouchdownTorque(gait_phase);
@@ -813,6 +842,8 @@ void updateBodyLegsPosition(uint8_t idx_body, std::vector<float> dq, float vel_l
 }
 
 void moveLocomotionMechanism() {
+  #ifdef USE_TELEOP
+
   int dir_cmd = (cmd_vector[0] > 0) - (cmd_vector[0] < 0);                                              // direction of translation command
   int dir_gait = pow(-1, gait_phase + 1);
   float q_trans_min, q_trans_max;
@@ -829,6 +860,12 @@ void moveLocomotionMechanism() {
   if (fabs(kQTransMax - fabs(q_trans)) < kDqTransEndYawLimit) q_yaw = pow(-1, gait_phase)*(kQYawMax - kDqYawLimit)*cmd_vector[1];
   !isScheduledTrans ? motors[MotorID::kMotorTranslate].states_.q_d = q_trans : motors[MotorID::kMotorTranslate].states_.q_d = 0;
   motors[MotorID::kMotorYaw].states_.q_d = q_yaw;
+
+  #else
+  // track a planned trajectory
+  motors[MotorID::kMotorTranslate].states_.q_d = 0;
+  motors[MotorID::kMotorYaw].states_.q_d = 0;
+  #endif
 }
 
 void holdLocomotionMechanism() {

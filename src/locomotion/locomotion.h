@@ -7,6 +7,9 @@
 #include <functional>
 #include <algorithm>
 
+// #define USE_TIPOVER_RECOVERY
+#define USE_TELEOP
+
 const int kNumOfGaitPhases = 2;             // number of gait phases in a gait cycle
 const int kNumOfActuationPhases = 3;        // number of actuation phases in swing
 
@@ -59,7 +62,7 @@ const float kZBodyMax = 550;            // maximum allowable value for z_body_lo
 
 // translational inertia related parameters
 const float kZBodyTall = 250;           // body height in mm above which translational velocity is reduced
-const float kStepShort = 0.4;           // cmd_vector[1] below which translational velocity is reduced; to be updated to joint space value
+const float kStepShort = 0.4;           // cmd_vector[0] below which translational velocity is reduced; to be updated to joint space value
 
 // gait cycle parameter limits
 const float kLegSwingPercentMax = 0.9;
