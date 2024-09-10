@@ -16,7 +16,7 @@ std::vector<std::vector<float>> torque_profile_touchdown =
 
 // after leg change on September 9, 2024
 {
-  {0.45, 0.4, 0.4, 0.3},
+  {0.45, 0.4, 0.4, 0.35},
   {0.45, 0.4, 0.4, 0.3},
   {0.45, 0.4, 0.35, 0.25},
   {0.45, 0.4, 0.35, 0.25}
@@ -35,7 +35,7 @@ bool isScheduledTrans = false;                          // true if a motion prim
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 float z_body_nominal = 180;                                 // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
-float leg_swing_percent = 0.9;                              // swing leg stroke as a percentage of its stroke at last stance phase
+float leg_swing_percent = 0.1;                              // swing leg stroke as a percentage of its stroke at last stance phase
 std::vector<float> q_trans_limit = {-kQTransSoftMax, kQTransSoftMax};  // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
 float q_trans_prev = 0;                                     // translation joint position at last ground contact; used for phase transition check
 
@@ -342,7 +342,7 @@ void updateTrajectory() {
 
   #else
   // update any planned motion parameters here
-  z_body_nominal = 300;
+  z_body_nominal = 350;
 
   // update translation motor velocity based on step length and body height
   if (z_body_nominal > kZBodyTall) {

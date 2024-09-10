@@ -77,7 +77,7 @@ const float kTerrainPitchMax = 30;      // maximum terrain pitch in degrees used
 
 // motion primitive parameters
 const float kZErrorSoftMax = 20;        // body height deviation in mm above which non-blocking regulation is executed
-const float kZErrorHardMax = 60;        // body height deviation in mm above which blocking regulation is executed
+const float kZErrorHardMax = 30;        // body height deviation in mm above which blocking regulation is executed
 const float kThetaNominal = 1;          // body Euler angle above which non-blocking regulation is executed
 const float kThetaSoftMax_1 = 4;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_1
 const float kThetaSoftMax_2 = 6;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_2
