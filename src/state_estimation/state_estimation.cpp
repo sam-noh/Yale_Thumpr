@@ -602,7 +602,7 @@ void updateKinematics() {
     t_last_kinematics_update = t_current;
 
     // update local body height
-    if (gait_phase == GaitPhases::kMedialSwing) {
+    if (isInContact[GaitPhases::kLateralSwing * 2] && isInContact[GaitPhases::kLateralSwing * 2 + 1]) {
       z_body_local = (q[4] + q[5] + q[6] + q[7])/4;
     }
     

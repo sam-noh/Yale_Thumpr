@@ -251,6 +251,7 @@ void standUp() {
 
   // run necessary function calls and gait initialization here
   updateStanceTorque(stance);
+  z_body_local = z_body_nominal;
   
   snprintf(sent_data, sizeof(sent_data), "Starting\n");
   writeToSerial();
@@ -366,7 +367,7 @@ void regulateBodyPose() {
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
   #ifdef USE_TIPOVER_RECOVERY
-  
+
   int dir_tipover[2] = {0, 0};  // direction of tipover; e.g. if pitch angle is negative, positive pitch velocity is stabilizing and negative pitch velocity is tipping
   for(auto i = 0; i < 2; ++i) {
     dir_tipover[i] = (rpy_lateral[i] > 0) - (rpy_lateral[i] < 0);
@@ -445,6 +446,7 @@ void regulateBodyPose() {
 
     // regulate body height in single-stance if the medial body is in stance AND the current body height is not high
     if (fabs(z_error) > kZErrorSoftMax
+       && fabs(z_error) < kZErrorHardMax
        && gait_phase == GaitPhases::kLateralSwing
        && z_body_local < kZBodyTall) {
       dq_stance[0] -= z_error;
@@ -673,7 +675,11 @@ void updateGaitSetpoints() {
     if (actuation_phase == ActuationPhases::kRetractLeg) {  // if currently retracting leg
 
       #ifndef USE_TELEOP
-      ++idx_q_trans_traj;
+      if (idx_q_trans_traj < (int) q_trans_traj.size()-1) {
+        ++idx_q_trans_traj;
+      } else {
+        stop_signal = true;
+      }
       #endif
 
       q_trans_prev = q[JointID::kJointTranslate];  // remember the translation joint starting position 
