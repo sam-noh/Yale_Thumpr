@@ -38,6 +38,8 @@ float z_body_nominal = 180;                                 // nominal body heig
 float leg_swing_percent = 0.1;                              // swing leg stroke as a percentage of its stroke at last stance phase
 std::vector<float> q_trans_limit = {-kQTransSoftMax, kQTransSoftMax};  // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
 float q_trans_prev = 0;                                     // translation joint position at last ground contact; used for phase transition check
+std::vector<float> q_trans_traj = {80, -80, 50, -50, 30, -30};       // translation joint trajectory setpoints
+int32_t idx_q_trans_traj = -1;                              // index of the current translation joint trajectory setpoint
 
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
@@ -363,12 +365,13 @@ void regulateBodyPose() {
   float z_error = z_body_local - z_body_nominal;
   float dq_tilt = stance_width[gait_phase] * tan(rpy_lateral[gait_phase] * DEG2RAD);
 
+  #ifdef USE_TIPOVER_RECOVERY
+  
   int dir_tipover[2] = {0, 0};  // direction of tipover; e.g. if pitch angle is negative, positive pitch velocity is stabilizing and negative pitch velocity is tipping
   for(auto i = 0; i < 2; ++i) {
     dir_tipover[i] = (rpy_lateral[i] > 0) - (rpy_lateral[i] < 0);
   }
 
-  #ifdef USE_TIPOVER_RECOVERY
   // check if the body is tipping over; two velocity ranges
   bool isTippingRoll = (fabs(rpy_lateral[0]) > kThetaSoftMax_1 && (dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_1)
                        || (fabs(rpy_lateral[0]) > kThetaSoftMax_2 && (dir_tipover[0]*omega_filters[0].filtered_value) > kOmegaSoftMax_2)
@@ -669,6 +672,10 @@ void updateGaitSetpoints() {
 
     if (actuation_phase == ActuationPhases::kRetractLeg) {  // if currently retracting leg
 
+      #ifndef USE_TELEOP
+      ++idx_q_trans_traj;
+      #endif
+
       q_trans_prev = q[JointID::kJointTranslate];  // remember the translation joint starting position 
       isScheduled = false;
 
@@ -863,7 +870,7 @@ void moveLocomotionMechanism() {
 
   #else
   // track a planned trajectory
-  motors[MotorID::kMotorTranslate].states_.q_d = 75*pow(-1, gait_phase + 1);
+  motors[MotorID::kMotorTranslate].states_.q_d = q_trans_traj[idx_q_trans_traj];
   motors[MotorID::kMotorYaw].states_.q_d = 0;
   #endif
 }

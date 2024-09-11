@@ -19,7 +19,7 @@ void setup() {
 }
 
 void loop() {
-  while (!stop_signal) {
+  while (!stop_signal || idx_q_trans_traj < q_trans_traj.size()) {
     handleODriveCANMsg();
     parseJetsonSerial();
     updateStates();

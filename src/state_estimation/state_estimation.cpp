@@ -602,8 +602,6 @@ void updateKinematics() {
     t_last_kinematics_update = t_current;
 
     // update local body height
-    uint8_t stance = (gait_phase + 1) % kNumOfGaitPhases;
-    // z_body_local = (motors[stance * 2].states_.q + motors[stance * 2 + 1].states_.q) / 2 - gait_phase * kBodyZOffset;
     if (gait_phase == GaitPhases::kMedialSwing) {
       z_body_local = (q[4] + q[5] + q[6] + q[7])/4;
     }

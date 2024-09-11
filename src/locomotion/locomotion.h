@@ -77,7 +77,7 @@ const float kTerrainPitchMax = 30;      // maximum terrain pitch in degrees used
 
 // motion primitive parameters
 const float kZErrorSoftMax = 20;        // body height deviation in mm above which non-blocking regulation is executed
-const float kZErrorHardMax = 30;        // body height deviation in mm above which blocking regulation is executed
+const float kZErrorHardMax = 50;        // body height deviation in mm above which blocking regulation is executed
 const float kThetaNominal = 1;          // body Euler angle above which non-blocking regulation is executed
 const float kThetaSoftMax_1 = 4;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_1
 const float kThetaSoftMax_2 = 6;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_2
@@ -113,6 +113,8 @@ extern float z_body_nominal;                // nominal body height over local te
 extern float leg_swing_percent;             // swing leg stroke as a percentage of its stroke at last stance phase
 extern std::vector<float> q_trans_limit;    // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
 extern float q_trans_prev;                  // translation joint position at last ground contact; used for phase transition check
+extern std::vector<float> q_trans_traj;     // translation joint trajectory setpoints
+extern int32_t idx_q_trans_traj;           // index of the current translation joint trajectory setpoint
 
 extern std::vector<float> q_leg_contact;            // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;              // position setpoint of swing leg actuators during leg retraction
