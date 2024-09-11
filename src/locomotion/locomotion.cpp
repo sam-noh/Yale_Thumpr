@@ -4,6 +4,10 @@
 #include "../motor_control/motor_control.h"
 #include "../state_estimation/state_estimation.h"
 
+std::vector<float> q_trans_traj = {80,-58,80,-80,57,-46,80,0,74,-80,64,-46,80,-28,46,-80,64,-46,80,-28,46,-80,64,-46,80,-28,46,-80,64,-74,80,0,46,-80,0,-80,80,-57,80,-80
+};    // translation joint trajectory setpoints
+int32_t idx_q_trans_traj = -1;                                    // index of the current translation joint trajectory setpoint
+
 std::vector<std::vector<float>> torque_profile_touchdown = 
 
 // before leg change on September 9, 2024
@@ -38,8 +42,6 @@ float z_body_nominal = 180;                                 // nominal body heig
 float leg_swing_percent = 0.1;                              // swing leg stroke as a percentage of its stroke at last stance phase
 std::vector<float> q_trans_limit = {-kQTransSoftMax, kQTransSoftMax};  // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
 float q_trans_prev = 0;                                     // translation joint position at last ground contact; used for phase transition check
-std::vector<float> q_trans_traj = {80, -80, 50, -50, 30, -30};       // translation joint trajectory setpoints
-int32_t idx_q_trans_traj = -1;                              // index of the current translation joint trajectory setpoint
 
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
@@ -336,25 +338,23 @@ void updateTrajectory() {
   leg_swing_percent = max(min(input_swing, kLegSwingPercentMax), kLegSwingPercentMin);  // bound the leg swing percentage with min/max
   swing_percent_at_translate = leg_swing_percent;                                       // set translation transition percentage equal to swing retraction percentage
                                                                                         // the idea is: if large retraction is needed, then translation should also occur later
-  // update translation motor velocity based on step length and body height
-  if (fabs(cmd_vector[0]) < kStepShort || z_body_nominal > kZBodyTall) {
-    motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTrajSlow;
-  } else {
-    motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTraj;
-  }
 
   #else
   // update any planned motion parameters here
   z_body_nominal = 350;
 
-  // update translation motor velocity based on step length and body height
+  #endif
+
+  // update translation control parameters based on body height
   if (z_body_nominal > kZBodyTall) {
+    motors[MotorID::kMotorTranslate].states_.trap_traj_accel_limit = kAccelTransTrajSlow;
+    motors[MotorID::kMotorTranslate].states_.trap_traj_decel_limit = kDecelTransTrajSlow;
     motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTrajSlow;
   } else {
+    motors[MotorID::kMotorTranslate].states_.trap_traj_accel_limit = kAccelTransTraj;
+    motors[MotorID::kMotorTranslate].states_.trap_traj_decel_limit = kDecelTransTraj;
     motors[MotorID::kMotorTranslate].states_.trap_traj_vel_limit = kVelTransTraj;
   }
-
-  #endif
   
 }
 

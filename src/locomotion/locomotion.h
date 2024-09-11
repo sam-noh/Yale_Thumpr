@@ -87,6 +87,9 @@ const float kOmegaSoftMax_2 = 12;       // body angular velocity above which sli
 const float kOmegaSoftMax_3 = 7;        // body angular velocity above which slip recovery is executed at kThetaSoftMax_3 or greater tilt
 const float kThetaHardMax = 40;         // body Euler angle above which robot is stopped
 
+extern std::vector<float> q_trans_traj;     // translation joint trajectory setpoints
+extern int32_t idx_q_trans_traj;           // index of the current translation joint trajectory setpoint
+
 // motor torque setpoints during leg touchdown; determined heuristically
 // the first torque is the minimum necessary to initiate motion
 // the second torque command is the minimum necessary to maintain motion
@@ -113,8 +116,6 @@ extern float z_body_nominal;                // nominal body height over local te
 extern float leg_swing_percent;             // swing leg stroke as a percentage of its stroke at last stance phase
 extern std::vector<float> q_trans_limit;    // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
 extern float q_trans_prev;                  // translation joint position at last ground contact; used for phase transition check
-extern std::vector<float> q_trans_traj;     // translation joint trajectory setpoints
-extern int32_t idx_q_trans_traj;           // index of the current translation joint trajectory setpoint
 
 extern std::vector<float> q_leg_contact;            // position of the swing leg actuators when they were last in contact
 extern std::vector<float> q_leg_swing;              // position setpoint of swing leg actuators during leg retraction

@@ -59,24 +59,26 @@ const float kVelLegTrajSwing = 40;              // 45; leg motor trapezoidal tra
 const float kVelLegTrajStandup = 25;            // leg motor trapezoidal trajectory velocity when standing up in turns/s
 const float kVelLegTrajSlow = 10;               // leg motor trapezoidal trajectory velocity when tilt correcting in turns/s
 const float kVelTransTraj = 16;                 // translation motor trapezoidal trajectory velocity
-const float kVelTransTrajSlow = 5;              // translation motor trapezoidal trajectory velocity when the step length is short or the body height is high
+const float kVelTransTrajSlow = 8;              // translation motor trapezoidal trajectory velocity when the body height is high
 const float kVelYawTraj = 0.4;                  // yaw motor trapezoidal trajectory velocity
 
 // motor trapezoidal trajectory accel/deceleratioin parameters
 const float kAccelLegTrajSwing = 250;           // 300; leg motor trapezoidal trajectory acceleration when retracting legs in turns/s^2
 const float kAccelLegTrajStandup = 100;         // 80; leg motor trapezoidal trajectory acceleration when changing height in turns/s^2
-const float kAccelTransTraj = 15;               // 25; translation motor trapezoidal trajectory acceleration;
+const float kAccelTransTraj = 20;               // 25; translation motor trapezoidal trajectory acceleration;
+const float kAccelTransTrajSlow = 10;           // translation motor trapezoidal trajectory acceleration when the body height is high
 const float kAccelYawTraj = 10;                 // yaw motor trapezoidal trajectory acceleration
 
 const float kDecelLegTrajSwing = 150;           // 250; leg motor trapezoidal trajectory deceleration when retracting legs in turns/s^2
 const float kDecelLegTrajStandup = 80;          // 60; leg motor trapezoidal trajectory deceleration when changing height in turns/s^2;
 const float kDecelLegTrajTilt = 30;             // leg motor trapezoidal trajectory deceleration when tilt correcting in turns/s^2;
 const float kDecelTransTraj = 15;               // 18; translation motor trapezoidal trajectory acceleration;
+const float kDecelTransTrajSlow = 10;           // translation motor trapezoidal trajectory deceleration when the body height is high
 const float kDecelYawTraj = 5;                  // yaw motor trapezoidal trajectory acceleration
 
 // motor current limits
 const float kCurrentLegMax = 60;                // leg motor current limit in ampere
-const float kCurrentLegMaxHoming = 15;          // leg motor current limit while homing in ampere
+const float kCurrentLegMaxHoming = 11;          // leg motor current limit while homing in ampere
 const float kCurrentTransMax = 8;               // translation motor current limit in ampere
 const float kCurrentYawMax = 5;                 // yaw motor current limit in ampere
 const float kCurrentTransMaxHoming = 6;         // translation motor current limit while homing in ampere
