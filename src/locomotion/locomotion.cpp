@@ -16,8 +16,8 @@ std::vector<std::vector<float>> torque_profile_touchdown =
 
 // after leg change on September 9, 2024
 {
-  {0.45, 0.4, 0.4, 0.35},
-  {0.45, 0.4, 0.4, 0.3},
+  {0.45, 0.4, 0.4, 0.2},
+  {0.45, 0.4, 0.4, 0.2},
   {0.45, 0.4, 0.35, 0.25},
   {0.45, 0.4, 0.35, 0.25}
 };
