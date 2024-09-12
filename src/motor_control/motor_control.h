@@ -57,7 +57,7 @@ const float kVelYawMax = 5.8;                   // yaw motor controller velocity
 
 const float kVelLegTrajSwing = 40;              // 45; leg motor trapezoidal trajectory velocity in swing phase in turns/s; 35
 const float kVelLegTrajStandup = 25;            // leg motor trapezoidal trajectory velocity when standing up in turns/s
-const float kVelLegTrajSlow = 10;               // leg motor trapezoidal trajectory velocity when tilt correcting in turns/s
+const float kVelLegTrajSlow = 6;               // leg motor trapezoidal trajectory velocity when tilt correcting in turns/s
 const float kVelTransTraj = 16;                 // translation motor trapezoidal trajectory velocity
 const float kVelTransTrajSlow = 8;              // translation motor trapezoidal trajectory velocity when the body height is high
 const float kVelYawTraj = 0.4;                  // yaw motor trapezoidal trajectory velocity
@@ -78,7 +78,7 @@ const float kDecelYawTraj = 5;                  // yaw motor trapezoidal traject
 
 // motor current limits
 const float kCurrentLegMax = 60;                // leg motor current limit in ampere
-const float kCurrentLegMaxHoming = 11;          // leg motor current limit while homing in ampere
+const float kCurrentLegMaxHoming = 13;          // leg motor current limit while homing in ampere
 const float kCurrentTransMax = 8;               // translation motor current limit in ampere
 const float kCurrentYawMax = 5;                 // yaw motor current limit in ampere
 const float kCurrentTransMaxHoming = 6;         // translation motor current limit while homing in ampere
