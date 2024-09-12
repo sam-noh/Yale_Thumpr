@@ -4,7 +4,10 @@
 #include "../motor_control/motor_control.h"
 #include "../state_estimation/state_estimation.h"
 
-std::vector<float> q_trans_traj = {80,-58,80,-80,57,-46,80,0,74,-80,64,-46,80,-28,46,-80,64,-46,80,-28,46,-80,64,-46,80,-28,46,-80,64,-74,80,0,46,-80,0,-80,80,-57,80,-80
+std::vector<float> q_trans_traj = {80,-58,80,-80,57,-46,80,0,74,-80,
+                                   64,-46,80,-28,46,-80,64,-46,80,-28,
+                                   46,-80,64,-40,80,-28,46,-80,64,-74 //46,-80,64,-46,80,-28,46,-80,64,-74
+                                   ,80,0,46,-80,0,-80,80,-57,80,-80
 };    // translation joint trajectory setpoints
 int32_t idx_q_trans_traj = -1;                                    // index of the current translation joint trajectory setpoint
 
@@ -446,7 +449,6 @@ void regulateBodyPose() {
 
     // regulate body height in single-stance if the medial body is in stance AND the current body height is not high
     if (fabs(z_error) > kZErrorSoftMax
-       && fabs(z_error) < kZErrorHardMax
        && gait_phase == GaitPhases::kLateralSwing
        && z_body_local < kZBodyTall) {
       dq_stance[0] -= z_error;
@@ -875,9 +877,21 @@ void moveLocomotionMechanism() {
   motors[MotorID::kMotorYaw].states_.q_d = q_yaw;
 
   #else
-  // track a planned trajectory
-  motors[MotorID::kMotorTranslate].states_.q_d = q_trans_traj[idx_q_trans_traj];
+
+  // walk a straight line
+  motors[MotorID::kMotorTranslate].states_.q_d = 80*pow(-1, gait_phase + 1);
   motors[MotorID::kMotorYaw].states_.q_d = 0;
+
+  // // track a planned trajectory
+  // motors[MotorID::kMotorTranslate].states_.q_d = q_trans_traj[idx_q_trans_traj];
+
+  // // yaw heading compensation during medial body swing
+  // if(gait_phase == GaitPhases::kLateralSwing) {
+  //   motors[MotorID::kMotorYaw].states_.q_d = 0;
+  // } else {
+  //   motors[MotorID::kMotorYaw].states_.q_d = -0.5;
+  // }
+  
   #endif
 }
 

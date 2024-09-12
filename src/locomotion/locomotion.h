@@ -61,7 +61,7 @@ const float kZBodyMin = 100;            // minimum allowable value for z_body_lo
 const float kZBodyMax = 550;            // maximum allowable value for z_body_local
 
 // translational inertia related parameters
-const float kZBodyTall = 250;           // body height in mm above which translational velocity is reduced
+const float kZBodyTall = 300;           // body height in mm above which translational velocity is reduced
 const float kStepShort = 0.4;           // cmd_vector[0] below which translational velocity is reduced; to be updated to joint space value
 
 // gait cycle parameter limits
@@ -77,7 +77,7 @@ const float kTerrainPitchMax = 30;      // maximum terrain pitch in degrees used
 
 // motion primitive parameters
 const float kZErrorSoftMax = 20;        // body height deviation in mm above which non-blocking regulation is executed
-const float kZErrorHardMax = 50;        // body height deviation in mm above which blocking regulation is executed
+const float kZErrorHardMax = 60;        // body height deviation in mm above which blocking regulation is executed
 const float kThetaNominal = 1;          // body Euler angle above which non-blocking regulation is executed
 const float kThetaSoftMax_1 = 4;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_1
 const float kThetaSoftMax_2 = 6;        // body Euler angle above which slip recovery is executed; used with kOmegaSoftMax_2
