@@ -42,14 +42,14 @@ bool isScheduledTrans = false;                          // true if a motion prim
 // nominal leg trajectory parameters; can be updated by a high-level planner
 // exact trajectory is determined by the motor controller's trapezoidal trajectory generation: acceleration, deceleration, max velocity
 float z_body_nominal = 180;                                 // nominal body height over local terrain in mm; currently taken as avg of stance leg motors joint position
-float leg_swing_percent = 0.1;                              // swing leg stroke as a percentage of its stroke at last stance phase
+float leg_swing_percent = 0.7;                              // 0.1; swing leg stroke as a percentage of its stroke at last stance phase
 std::vector<float> q_trans_limit = {-kQTransSoftMax, kQTransSoftMax};  // [q_trans_min, q_trans_max]; the two values will change signs and values according to the current gait phase, terrain slope and body tilt
 float q_trans_prev = 0;                                     // translation joint position at last ground contact; used for phase transition check
 
 // actuation phase transition parameters
 // these are currently fixed and not exposed for easier teleop
-float swing_percent_at_translate = leg_swing_percent;     // 0.5; percentage of swing leg retraction after which translation begins; values closer to 1 can cause swing legs to collide with rough terrains
-float trans_percent_at_touchdown = 0.95;                  // 0.7; 0.4; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
+float swing_percent_at_translate = 0.5;     // leg_swing_percent; percentage of swing leg retraction after which translation begins; values closer to 1 can cause swing legs to collide with rough terrains
+float trans_percent_at_touchdown = 0.7;                  // 0.95; 0.4; percentage of translatonal displacement from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the translation completes, resulting in some backward motion after stance switch
 float yaw_percent_at_touchdown = 0.9;                     // percentage of yaw command from midpoint after which leg touchdown begins; values closer to 0 can result in leg touchdown before the turning completes, resulting in some backward motion after stance switch
 
 std::vector<float> q_leg_contact = {kQLegMedMax, kQLegMedMax, kQLegLatMax, kQLegLatMax};  // position of the swing leg actuators when they were last in contact
