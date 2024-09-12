@@ -604,6 +604,11 @@ void updateKinematics() {
     // update local body height
     if (isInContact[GaitPhases::kLateralSwing * 2] && isInContact[GaitPhases::kLateralSwing * 2 + 1]) {
       z_body_local = (q[4] + q[5] + q[6] + q[7])/4;
+    } 
+    // walking on stairs requires this to be disabled since height estimation can vary depending on whether medial or later legs are standing
+    // TO DO: improve body height estimation across both stances 
+    else if (isInContact[GaitPhases::kMedialSwing * 2] && isInContact[GaitPhases::kMedialSwing * 2 + 1]) {
+      z_body_local = (q[0] + q[1] + q[2] + q[3])/4;
     }
     
   }
